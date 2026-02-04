@@ -8,7 +8,8 @@
  *   /snippets - List and interact with code snippets from last assistant message
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { Key, matchesKey, visibleWidth } from "@mariozechner/pi-tui";
 import { spawnSync } from "node:child_process";
 import { platform } from "node:os";
 
@@ -154,6 +155,12 @@ async function copyToClipboard(text: string, ctx: any): Promise<void> {
 	}
 }
 
+function padToWidth(str: string, targetWidth: number): string {
+	const currentWidth = visibleWidth(str);
+	if (currentWidth >= targetWidth) return str;
+	return str + " ".repeat(targetWidth - currentWidth);
+}
+
 export default function snippetsExtension(pi: ExtensionAPI) {
 	pi.registerCommand("snippets", {
 		description: "List code snippets from last assistant message",
@@ -176,40 +183,140 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			// Build selection items
-			const items = codeBlocks.map((block) => {
-				const description = describeCodeBlock(block);
-				return `snippet ${block.index}: ${description}`;
+			const result = await ctx.ui.custom<{ action: string; block: CodeBlock } | null>((tui, theme, _kb, done) => {
+				let cursor = 0;
+				let scrollOffset = 0;
+				let previewScrollOffset = 0;
+				const LIST_WIDTH = 45;
+				const VISIBLE_ITEMS = 12;
+				const PREVIEW_LINES = VISIBLE_ITEMS + 3; // header + source label + blank
+
+				return {
+					render(width: number) {
+						const lines: string[] = [];
+						const border = theme.fg("accent", "\u2500".repeat(width));
+						const previewWidth = Math.max(20, width - LIST_WIDTH - 3);
+
+						// Header
+						lines.push(border);
+
+						// Title row
+						const countInfo = codeBlocks.length > VISIBLE_ITEMS ? ` (${cursor + 1}/${codeBlocks.length})` : "";
+						const titleLeft = " " + theme.fg("accent", theme.bold("Snippets")) + theme.fg("dim", countInfo);
+						const currentBlock = codeBlocks[cursor];
+						lines.push(padToWidth(titleLeft, LIST_WIDTH) + theme.fg("borderMuted", "\u2502"));
+
+						// Blank separator
+						lines.push(padToWidth("", LIST_WIDTH) + theme.fg("borderMuted", "\u2502"));
+
+						// Prepare preview lines for current snippet
+						const previewCodeLines: string[] = [];
+						if (currentBlock) {
+							const codeLines = currentBlock.code.split("\n");
+							for (let i = previewScrollOffset; i < codeLines.length && previewCodeLines.length < PREVIEW_LINES - 3; i++) {
+								const line = codeLines[i];
+								const truncated = line.length > previewWidth - 4
+									? line.substring(0, previewWidth - 7) + "..."
+									: line;
+								previewCodeLines.push("  " + truncated);
+							}
+						}
+
+						// Content area: list on left, preview on right
+						for (let i = 0; i < VISIBLE_ITEMS; i++) {
+							const itemIndex = scrollOffset + i;
+							let listLine = "";
+
+							if (itemIndex < codeBlocks.length) {
+								const block = codeBlocks[itemIndex];
+								const isCursor = itemIndex === cursor;
+
+								const cursorIndicator = isCursor ? "\u25B8" : " ";
+								const lineCount = block.code.split("\n").length;
+
+								listLine = ` ${cursorIndicator} #${block.index} [${lineCount} lines]`;
+
+								// Truncate if too long for list width
+								if (visibleWidth(listLine) > LIST_WIDTH - 1) {
+									listLine = listLine.substring(0, LIST_WIDTH - 4) + "...";
+								}
+
+								if (isCursor) {
+									listLine = theme.fg("accent", listLine);
+								} else {
+									listLine = theme.fg("text", listLine);
+								}
+							}
+
+							const paddedLine = padToWidth(listLine, LIST_WIDTH);
+							const previewLine = previewCodeLines[i] || "";
+							lines.push(paddedLine + theme.fg("borderMuted", "\u2502") + theme.fg("text", previewLine));
+						}
+
+						// Footer
+						lines.push("");
+						lines.push(" " + theme.fg("dim", "\u2191\u2193 navigate \u2022 enter to copy \u2022 e explain \u2022 esc to cancel"));
+						const totalCodeLines = currentBlock ? currentBlock.code.split("\n").length : 0;
+						if (totalCodeLines > PREVIEW_LINES - 3) {
+							lines.push(" " + theme.fg("dim", `\u2190\u2192 scroll preview (${previewScrollOffset + 1}-${Math.min(previewScrollOffset + PREVIEW_LINES - 3, totalCodeLines)}/${totalCodeLines})`));
+						}
+						lines.push(border);
+
+						return lines;
+					},
+					invalidate() {},
+					handleInput(data: string) {
+						const currentBlock = codeBlocks[cursor];
+
+						if (matchesKey(data, Key.up)) {
+							cursor = Math.max(0, cursor - 1);
+							previewScrollOffset = 0;
+							if (cursor < scrollOffset) {
+								scrollOffset = cursor;
+							}
+							tui.requestRender();
+						} else if (matchesKey(data, Key.down)) {
+							cursor = Math.min(codeBlocks.length - 1, cursor + 1);
+							previewScrollOffset = 0;
+							if (cursor >= scrollOffset + VISIBLE_ITEMS) {
+								scrollOffset = cursor - VISIBLE_ITEMS + 1;
+							}
+							tui.requestRender();
+						} else if (matchesKey(data, Key.left)) {
+							// Scroll preview up
+							previewScrollOffset = Math.max(0, previewScrollOffset - 3);
+							tui.requestRender();
+						} else if (matchesKey(data, Key.right)) {
+							// Scroll preview down
+							if (currentBlock) {
+								const maxScroll = Math.max(0, currentBlock.code.split("\n").length - (PREVIEW_LINES - 3));
+								previewScrollOffset = Math.min(maxScroll, previewScrollOffset + 3);
+								tui.requestRender();
+							}
+						} else if (matchesKey(data, Key.enter)) {
+							if (currentBlock) {
+								done({ action: "copy", block: currentBlock });
+							}
+						} else if (data === "e" || data === "E") {
+							if (currentBlock) {
+								done({ action: "explain", block: currentBlock });
+							}
+						} else if (matchesKey(data, Key.escape)) {
+							done(null);
+						}
+					},
+				};
 			});
 
-			// Show selection
-			const selected = await ctx.ui.select("Select a snippet:", items);
-			if (!selected) {
-				return; // User cancelled
-			}
-
-			// Find the selected block
-			const selectedIndex = parseInt(selected.match(/snippet (\d+):/)?.[1] || "0");
-			const selectedBlock = codeBlocks.find((b) => b.index === selectedIndex);
-			
-			if (!selectedBlock) {
-				ctx.ui.notify("Could not find selected snippet", "error");
+			if (!result) {
+				ctx.ui.notify("Snippets cancelled", "info");
 				return;
 			}
 
-			// Show action menu
-			const action = await ctx.ui.select("What do you want to do?", ["Copy", "Explain"]);
-			
-			if (!action) {
-				return; // User cancelled
-			}
-
-			if (action === "Copy") {
-				// Copy snippet to clipboard
-				await copyToClipboard(selectedBlock.code, ctx);
-			} else {
-				// Send user message with the snippet and prompt
-				const snippetFormatted = `\`\`\`${selectedBlock.language}\n${selectedBlock.code}\n\`\`\``;
+			if (result.action === "copy") {
+				await copyToClipboard(result.block.code, ctx);
+			} else if (result.action === "explain") {
+				const snippetFormatted = `\`\`\`${result.block.language}\n${result.block.code}\n\`\`\``;
 				pi.sendUserMessage(`Explain this snippet:\n\n${snippetFormatted}`);
 			}
 		},
