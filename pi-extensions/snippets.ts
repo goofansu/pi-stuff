@@ -10,6 +10,7 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { spawnSync } from "node:child_process";
+import { platform } from "node:os";
 
 interface CodeBlock {
 	language: string;
@@ -105,34 +106,49 @@ function getLastAssistantMessage(ctx: any): string | null {
 }
 
 /**
- * Copy text to clipboard (using pbcopy on macOS or xclip on Linux)
+ * Copy text to clipboard using OS-specific commands
  */
 async function copyToClipboard(text: string, ctx: any): Promise<void> {
+	const os = platform();
+	
 	try {
-		// Try pbcopy (macOS) first
-		const pbcopy = spawnSync("pbcopy", [], {
-			input: text,
-			encoding: "utf-8",
-		});
-		
-		if (pbcopy.status === 0) {
-			ctx.ui.notify("Snippet copied to clipboard!", "info");
-			return;
+		if (os === "darwin") {
+			// macOS: use pbcopy
+			const result = spawnSync("pbcopy", [], {
+				input: text,
+				encoding: "utf-8",
+			});
+			
+			if (result.status === 0) {
+				ctx.ui.notify("Snippet copied to clipboard!", "info");
+				return;
+			}
+		} else if (os === "linux") {
+			// Linux: use xclip
+			const result = spawnSync("xclip", ["-selection", "clipboard"], {
+				input: text,
+				encoding: "utf-8",
+			});
+			
+			if (result.status === 0) {
+				ctx.ui.notify("Snippet copied to clipboard!", "info");
+				return;
+			}
+		} else if (os === "win32") {
+			// Windows: use clip.exe
+			const result = spawnSync("clip.exe", [], {
+				input: text,
+				encoding: "utf-8",
+			});
+			
+			if (result.status === 0) {
+				ctx.ui.notify("Snippet copied to clipboard!", "info");
+				return;
+			}
 		}
 		
-		// Try xclip (Linux)
-		const xclip = spawnSync("xclip", ["-selection", "clipboard"], {
-			input: text,
-			encoding: "utf-8",
-		});
-		
-		if (xclip.status === 0) {
-			ctx.ui.notify("Snippet copied to clipboard!", "info");
-			return;
-		}
-		
-		// Fallback: clipboard not available
-		ctx.ui.notify("Clipboard tool not found (install pbcopy or xclip)", "warning");
+		// Fallback: clipboard not available for this OS
+		ctx.ui.notify(`Clipboard not supported on ${os}`, "warning");
 	} catch (error) {
 		ctx.ui.notify("Could not copy to clipboard", "warning");
 	}
