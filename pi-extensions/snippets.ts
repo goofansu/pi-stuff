@@ -164,7 +164,7 @@ function padToWidth(str: string, targetWidth: number): string {
 export default function snippetsExtension(pi: ExtensionAPI) {
 	pi.registerCommand("snippets", {
 		description: "List code snippets from last assistant message",
-		handler: async (_args, ctx) => {
+		handler: async (_args, ctx: ExtensionContext) => {
 			if (!ctx.hasUI) {
 				return;
 			}
@@ -172,7 +172,7 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 			// Get last assistant message
 			const lastMessage = getLastAssistantMessage(ctx);
 			if (!lastMessage) {
-				ctx.ui.notify("No assistant message found in conversation", "warning");
+				ctx.ui.notify("No assistant message found in conversation", "info");
 				return;
 			}
 
