@@ -235,13 +235,20 @@ function getFinalOutput(messages: any[]): string {
 	return "";
 }
 
+const PREFERRED_PROVIDER = "kimi-coding";
+const PREFERRED_MODEL_ID = "k2p5";
+const PREFERRED_MODEL = `${PREFERRED_PROVIDER}/${PREFERRED_MODEL_ID}`;
+
 async function runLibrarian(
 	task: string,
 	cwd: string,
 	signal: AbortSignal | undefined,
 	onUpdate?: (partial: SubagentResult, messages: any[]) => void,
+	model?: string,
 ): Promise<SubagentResult> {
 	const args: string[] = ["--mode", "json", "-p", "--no-session", "--tools", "bash,read"];
+
+	if (model) args.push("--model", model);
 
 	let tmpDir: string | null = null;
 	let tmpPath: string | null = null;
@@ -380,6 +387,11 @@ export default function librarianExtension(pi: ExtensionAPI) {
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const { query } = params as { query: string };
 
+			// Use modelRegistry API to detect preferred model
+			const preferredModel = ctx.modelRegistry.find(PREFERRED_PROVIDER, PREFERRED_MODEL_ID)
+				? PREFERRED_MODEL
+				: undefined;
+
 			const makeDetails = (partial: SubagentResult): LibrarianDetails => ({
 				query,
 				toolCalls: partial.toolCalls,
@@ -396,7 +408,7 @@ export default function librarianExtension(pi: ExtensionAPI) {
 						details: makeDetails(partial),
 					});
 				}
-			});
+			}, preferredModel);
 
 			if (result.exitCode !== 0 || !result.output) {
 				const errorMsg = result.error || result.output || "Librarian failed with no output";
