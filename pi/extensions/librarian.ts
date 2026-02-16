@@ -235,8 +235,8 @@ function getFinalOutput(messages: any[]): string {
 	return "";
 }
 
-const PREFERRED_PROVIDER = "kimi-coding";
-const PREFERRED_MODEL_ID = "k2p5";
+const PREFERRED_PROVIDER = "opencode";
+const PREFERRED_MODEL_ID = "claude-sonnet-4-5";
 const PREFERRED_MODEL = `${PREFERRED_PROVIDER}/${PREFERRED_MODEL_ID}`;
 
 async function runLibrarian(
