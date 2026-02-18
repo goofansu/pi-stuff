@@ -22,7 +22,7 @@ import * as path from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
-import { Type } from "@mariozechner/pi-ai";
+import { Type, type Api, type Model } from "@mariozechner/pi-ai";
 
 // ── Agent definition (inline — no .md file needed) ──────────────────────────
 
@@ -251,9 +251,70 @@ function getFinalOutput(messages: any[]): string {
 	return "";
 }
 
-const PREFERRED_PROVIDER = "kimi-coding";
-const PREFERRED_MODEL_ID = "k2p5";
-const PREFERRED_MODEL = `${PREFERRED_PROVIDER}/${PREFERRED_MODEL_ID}`;
+const KIMI_MODEL_ID = "k2p5";
+const SONNET_MODEL_ID = "claude-sonnet-4-6";
+
+function modelToCliId(model: Model<Api> | undefined): string | undefined {
+	if (!model) return undefined;
+
+	const candidate = model as Model<Api> & {
+		id?: string;
+		provider?: string | { id?: string };
+		providerId?: string;
+		fullId?: string;
+		providerModelId?: string;
+	};
+
+	if (typeof candidate.providerModelId === "string" && candidate.providerModelId) {
+		return candidate.providerModelId;
+	}
+
+	if (typeof candidate.fullId === "string" && candidate.fullId) {
+		return candidate.fullId;
+	}
+
+	if (typeof candidate.id === "string") {
+		const providerId =
+			typeof candidate.provider === "string"
+				? candidate.provider
+				: candidate.provider?.id || candidate.providerId;
+		if (providerId) {
+			return `${providerId}/${candidate.id}`;
+		}
+		return candidate.id;
+	}
+
+	return undefined;
+}
+
+/**
+ * Prefer Kimi K2.5 for librarian when available, then Sonnet, then current model.
+ */
+async function selectLibrarianModel(
+	currentModel: Model<Api> | undefined,
+	modelRegistry: {
+		find: (provider: string, modelId: string) => Model<Api> | undefined;
+		getApiKey: (model: Model<Api>) => Promise<string | undefined>;
+	},
+): Promise<string | undefined> {
+	const kimiModel = modelRegistry.find("kimi-coding", KIMI_MODEL_ID);
+	if (kimiModel) {
+		const apiKey = await modelRegistry.getApiKey(kimiModel);
+		if (apiKey) {
+			return `kimi-coding/${KIMI_MODEL_ID}`;
+		}
+	}
+
+	const sonnetModel = modelRegistry.find("anthropic", SONNET_MODEL_ID);
+	if (sonnetModel) {
+		const apiKey = await modelRegistry.getApiKey(sonnetModel);
+		if (apiKey) {
+			return `anthropic/${SONNET_MODEL_ID}`;
+		}
+	}
+
+	return modelToCliId(currentModel);
+}
 
 async function runLibrarian(
 	task: string,
@@ -415,10 +476,7 @@ export default function librarianExtension(pi: ExtensionAPI) {
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const { query } = params as { query: string };
 
-			// Use modelRegistry API to detect preferred model
-			const preferredModel = ctx.modelRegistry.find(PREFERRED_PROVIDER, PREFERRED_MODEL_ID)
-				? PREFERRED_MODEL
-				: undefined;
+			const selectedModel = await selectLibrarianModel(ctx.model, ctx.modelRegistry);
 
 			const makeDetails = (partial: SubagentResult): LibrarianDetails => ({
 				query,
@@ -436,7 +494,7 @@ export default function librarianExtension(pi: ExtensionAPI) {
 						details: makeDetails(partial),
 					});
 				}
-			}, preferredModel);
+			}, selectedModel);
 
 			if (result.exitCode !== 0 || !result.output) {
 				const errorMsg = result.error || result.output || "Librarian failed with no output";
