@@ -25,7 +25,7 @@ All extension files are in the [`extensions`](extensions) directory:
 
 All skill files are in the [`skills`](skills) directory:
 
-- [`commit`](skills/commit) - For creating git commits with concise Conventional Commits-style subjects. ([source](https://github.com/mitsuhiko/agent-stuff/tree/main/skills/commit))
+- [`commit`](skills/commit) - For creating git commits using concise Conventional Commits-style subjects. ([source](https://github.com/mitsuhiko/agent-stuff/tree/main/skills/commit))
 - [`gh-issue-sync`](skills/gh-issue-sync) - For using `gh-issue-sync` command to manage GitHub issues. ([source](https://github.com/mitsuhiko/gh-issue-sync/blob/main/skill/SKILL.md))
 - [`mlwcli`](skills/mlwcli) - For using `mlwcli` command to manage Miniflux, Linkding, and Wallabag. ([source](https://github.com/goofansu/mlwcli/blob/main/skill/SKILL.md))
-- [`web-browser`](skills/web-browser) - For browsing the web by controlling Chrome/Chromium via CDP actions. ([source](https://github.com/mitsuhiko/agent-stuff/tree/main/skills/web-browser))
+- [`web-browser`](skills/web-browser) - For using Puppeteer in a Node environment to browse the web. ([source](https://github.com/mitsuhiko/agent-stuff/tree/main/skills/web-browser))
