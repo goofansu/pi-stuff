@@ -13,13 +13,13 @@ pi install ~/code/pi-stuff
 
 All extension files are in the [`extensions`](extensions) directory:
 
-- [`answer.ts`](extensions/answer.ts) - Interactive TUI for answering questions one by one. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/answer.ts))
-- [`context.ts`](extensions/context.ts) - Quick context breakdown (extensions, skills, AGENTS.md/CLAUDE.md) + token usage; highlights skills that were actually read/loaded. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/context.ts))
-- [`notify.ts`](extensions/notify.ts) - Sends native desktop notifications when the agent finishes (OSC 777 compatible terminals). ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/notify.ts))
-- [`review.ts`](extensions/review.ts) - Code review command inspired by Codex. Supports reviewing uncommitted changes, against a base branch (PR style), specific commits, pull requests, or with custom instructions. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/review.ts))
-- [`librarian.ts`](extensions/librarian.ts) - Cross-repository code research subagent. Spawns an isolated `pi` process to search and read code across GitHub repositories using `gh` CLI.
-- [`oracle.ts`](extensions/oracle.ts) - Second opinion reasoning subagent. Spawns an isolated `pi` process for complex analysis, debugging, and review tasks.
-- [`snippets.ts`](extensions/snippets.ts) - Code snippet viewer for the last assistant message. Lists markdown code blocks and lets you copy them to clipboard or ask for an explanation with custom instructions.
+- [`answer.ts`](extensions/answer.ts) - Custom interactive TUI for answering questions. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/answer.ts))
+- [`context.ts`](extensions/context.ts) - Small TUI view showing what’s loaded and available (extensions, skills, project context files, and token/cost usage). ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/context.ts))
+- [`notify.ts`](extensions/notify.ts) - Sends a native desktop notification when the agent finishes and is waiting for input. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/notify.ts))
+- [`review.ts`](extensions/review.ts) - Provides a `/review` command that prompts the agent to review code changes. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/review.ts))
+- [`librarian.ts`](extensions/librarian.ts) - Cross-repository code research subagent.
+- [`oracle.ts`](extensions/oracle.ts) - Second opinion subagent for complex analysis, debugging, and review tasks.
+- [`snippets.ts`](extensions/snippets.ts) - Lists markdown code blocks from the last assistant message for selection.
 
 ## Skills
 

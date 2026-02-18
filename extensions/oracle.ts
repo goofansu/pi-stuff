@@ -2,7 +2,7 @@
  * Oracle Extension — Second opinion subagent using a powerful reasoning model
  *
  * Spawns an isolated `pi` process with a strong reasoning model
- * for complex analysis, debugging, and review tasks. The oracle runs in its own
+ * for complex analysis and debugging tasks. The oracle runs in its own
  * context window with access to bash and read tools, so it can independently
  * investigate code while reasoning about the problem.
  *
@@ -32,14 +32,14 @@ import { Type } from "@mariozechner/pi-ai";
 
 // ── Agent definition ─────────────────────────────────────────────────────────
 
-const ORACLE_SYSTEM_PROMPT = `You are the Oracle — a second-opinion reasoning subagent consulted for complex analysis, debugging, and review tasks.
+const ORACLE_SYSTEM_PROMPT = `You are the Oracle — a second-opinion reasoning subagent consulted for complex analysis and debugging tasks.
 
 ## Role
 
 You provide deep, careful analysis when the main coding agent encounters something that benefits from a second perspective. You have access to bash and read tools to investigate code independently. You excel at:
 
 - Complex debugging: tracing subtle bugs through multiple layers of code
-- Code review: identifying correctness issues, edge cases, and architectural problems
+- Root-cause analysis: identifying correctness issues, edge cases, and architectural problems
 - Algorithm analysis: evaluating complexity, correctness, and alternative approaches
 - Refactoring guidance: finding the right abstraction level and backwards-compatible changes
 - Architecture decisions: weighing trade-offs between different approaches
@@ -383,7 +383,7 @@ export default function oracleExtension(pi: ExtensionAPI) {
       "Get a second opinion from a powerful reasoning subagent on complex problems.",
       "The Oracle runs in its own context with access to bash, read, grep, and glob tools,",
       "so it can independently investigate code while reasoning about the problem.",
-      "Use for difficult debugging, subtle code review, algorithm analysis,",
+      "Use for difficult debugging, root-cause analysis, algorithm analysis,",
       "refactoring decisions, or any task requiring deep reasoning.",
       "The oracle is slower and more expensive, so use it selectively when the problem",
       "genuinely benefits from deeper analysis.",
