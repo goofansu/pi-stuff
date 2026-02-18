@@ -14,7 +14,7 @@ pi install ~/code/pi-stuff
 All extension files are in the [`extensions`](extensions) directory:
 
 - [`answer.ts`](extensions/answer.ts) - Custom interactive TUI for answering questions. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/answer.ts))
-- [`context.ts`](extensions/context.ts) - Small TUI view showing what’s loaded and available (extensions, skills, project context files, and token/cost usage). ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/context.ts))
+- [`context.ts`](extensions/context.ts) - Small TUI view showing what’s loaded and available. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/context.ts))
 - [`notify.ts`](extensions/notify.ts) - Sends a native desktop notification when the agent finishes and is waiting for input. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/notify.ts))
 - [`review.ts`](extensions/review.ts) - Provides a `/review` command that prompts the agent to review code changes. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/review.ts))
 - [`librarian.ts`](extensions/librarian.ts) - Cross-repository code research subagent.
