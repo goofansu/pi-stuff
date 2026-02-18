@@ -18,7 +18,7 @@ All extension files are in the [`extensions`](extensions) directory:
 - [`notify.ts`](extensions/notify.ts) - Sends a native desktop notification when the agent finishes and is waiting for input. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/notify.ts))
 - [`review.ts`](extensions/review.ts) - Provides a `/review` command that prompts the agent to review code changes. ([source](https://github.com/mitsuhiko/agent-stuff/blob/main/pi-extensions/review.ts))
 - [`librarian.ts`](extensions/librarian.ts) - Cross-repository code research subagent.
-- [`oracle.ts`](extensions/oracle.ts) - Second opinion subagent for complex analysis, debugging, and review tasks.
+- [`oracle.ts`](extensions/oracle.ts) - Second opinion subagent for complex analysis and debugging tasks.
 - [`snippets.ts`](extensions/snippets.ts) - Lists markdown code blocks from the last assistant message for selection.
 
 ## Skills
