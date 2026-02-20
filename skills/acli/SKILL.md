@@ -5,6 +5,20 @@ description: "Use acli to interact with Atlassian Jira and Confluence from the c
 
 Use `acli` to interact with Atlassian Jira (and Confluence) from the command line.
 
+## Prerequisites
+
+Before running any `acli` commands, verify it is installed:
+
+```bash
+which acli
+```
+
+If the command is not found, stop and tell the user:
+
+> `acli` is not installed. Please install it first: https://developer.atlassian.com/console/install/acli
+
+Do not proceed until the user confirms it is installed.
+
 ## Check a Jira Issue
 
 To view a Jira issue by its ID:
