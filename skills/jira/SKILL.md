@@ -1,6 +1,6 @@
 ---
 name: jira
-description: "Use acli to interact with Atlassian Jira from the command line"
+description: "Use acli to interact with Atlassian Jira from the command line."
 ---
 
 Use `acli` to interact with Atlassian Jira (and Confluence) from the command line.

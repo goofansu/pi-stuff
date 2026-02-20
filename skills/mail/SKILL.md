@@ -1,6 +1,6 @@
 ---
 name: mail
-description: "Search and manage emails indexed by notmuch from the command line"
+description: "Search and manage emails indexed by notmuch from the command line."
 ---
 
 Use `notmuch` to search, read, tag, and count emails. Run `notmuch help <command>` or `notmuch help search-terms` for full syntax reference.
