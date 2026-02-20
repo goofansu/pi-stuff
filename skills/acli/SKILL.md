@@ -17,8 +17,6 @@ If the command is not found, stop and tell the user:
 
 > `acli` is not installed. Please install it first: https://developer.atlassian.com/cloud/acli/guides/install-acli/
 
-Do not proceed until the user confirms it is installed.
-
 ## Check a Jira Issue
 
 To view a Jira issue by its ID:
