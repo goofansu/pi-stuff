@@ -81,16 +81,17 @@ EOF
 When the user asks you to **create a denote note**:
 
 1. **Check for a running server**: Run `emacsclient -s gui -e "t"`. Stop and report if it fails.
-2. **Determine parameters**: From the user's request, extract:
+2. **Fetch existing keywords**: Run `emacsclient -s gui -e "(denote-keywords)"` to get the list of known keywords.
+3. **Determine parameters**: From the user's request and the note's content, determine:
    - **Title** (required)
-   - **Keywords/tags** (optional; ask if unclear)
+   - **Keywords/tags**: Choose at most **3** tags that best describe the note content. Prefer existing keywords from step 2; only introduce a new keyword if no existing one fits.
    - **Note type**: work notes go in the `work` subdirectory; general notes use the default directory
    - **Date** (optional; only needed for back-dated notes)
-3. **Create the note** with `emacsclient -s gui -e '(denote ...)'` — always pass `(quote org)` as FILE-TYPE.
-4. **Strip surrounding quotes** from the returned path: `NOTE=$(echo "$NOTE" | tr -d '"')`
-5. **Append content** under a `* Context` heading using `cat >> "$NOTE"`.
-6. **Refresh the buffer**: Run `emacsclient -s gui -e "(with-current-buffer (find-file-noselect \"$NOTE\") (revert-buffer t t))"` so Emacs picks up the new content.
-7. **Report the result**: Show the file path to the user.
+4. **Create the note** with `emacsclient -s gui -e '(denote ...)'` — always pass `(quote org)` as FILE-TYPE.
+5. **Strip surrounding quotes** from the returned path: `NOTE=$(echo "$NOTE" | tr -d '"')`
+6. **Append content** under a `* Context` heading using `cat >> "$NOTE"`.
+7. **Refresh the buffer**: Run `emacsclient -s gui -e "(with-current-buffer (find-file-noselect \"$NOTE\") (revert-buffer t t))"` so Emacs picks up the new content.
+8. **Report the result**: Show the file path to the user.
 
 ---
 
@@ -102,7 +103,7 @@ When the user asks you to **create a denote note**:
   ```bash
   emacsclient -s gui -e "denote-directory"
   ```
-- To list known keywords:
+- To list all known keywords (user-defined + inferred from existing notes):
   ```bash
-  emacsclient -s gui -e "denote-known-keywords"
+  emacsclient -s gui -e "(denote-keywords)"
   ```
