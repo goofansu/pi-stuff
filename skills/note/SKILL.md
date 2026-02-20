@@ -59,16 +59,39 @@ emacsclient -s gui -e '(denote "Meeting notes" (list "work") (quote org) (concat
 emacsclient -s gui -e '(denote "Old entry" (list "journal") (quote org) nil "2024-01-15")'
 ```
 
-After creating the note, append content under a `* Context` heading:
+After creating the note, append content to the file:
 
 ```bash
 cat >> "/path/to/note.org" << 'EOF'
 
-* Context
-
 <content here>
 EOF
 ```
+
+### Org-mode Formatting
+
+Notes are org-mode files. Always use org-mode syntax — never Markdown.
+
+| Element        | Org syntax                              | ❌ Not Markdown         |
+|----------------|-----------------------------------------|-------------------------|
+| Inline code    | `~code~`                                | `` `code` ``            |
+| Verbatim       | `=literal=`                             | `` `literal` ``         |
+| Code block     | `#+begin_src lang … #+end_src`          | ` ```lang … ``` `       |
+| Bold           | `*bold*`                                | `**bold**`              |
+| Italic         | `/italic/`                              | `*italic*`              |
+| Heading        | `* Heading` / `** Subheading`           | `# Heading`             |
+| List item      | `- item` or `1. item`                   | same                    |
+
+**Code block example:**
+
+```
+#+begin_src python
+def greet(name):
+    return f"Hello, {name}"
+#+end_src
+```
+
+Use `~code~` for inline references to commands, variables, filenames, and short code snippets. Use `=verbatim=` for exact literal strings (e.g., keybindings, output).
 
 ---
 
@@ -83,7 +106,7 @@ EOF
    - **Date**: only if back-dating.
 4. **Create the note** with `emacsclient -s gui -e '(denote ...)'`.
 5. **Strip surrounding quotes** from the returned path: `NOTE=$(echo "$NOTE" | tr -d '"')`
-6. **Append content** under a `* Context` heading using `cat >> "$NOTE"`.
+6. **Append content** using `cat >> "$NOTE"`.
 7. **Report**: Show the file path and ask the user to refresh the buffer in Emacs.
 
 ---
