@@ -28,7 +28,3 @@ If the command is not found, stop and tell the user:
 - [jira sprint](JIRA_SPRINT.md) — list-workitems
 - [jira workitem](JIRA_WORKITEM.md) — archive, assign, attachment, clone, comment, create, create-bulk, delete, edit, link, search, transition, unarchive, view, watcher
 
-## Notes
-
-- The Jira subcommand uses `workitem`, not `issue` (e.g. `acli jira workitem view`, not `acli jira issue view`).
-- Use `acli confluence --help` for Confluence commands.
