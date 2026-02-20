@@ -16,7 +16,7 @@ All extension files are in the [`extensions`](extensions) directory:
 
 ## Skills
 
-Local skill files are in the [`skills`](skills) directory:
+All skill files are in the [`skills`](skills) directory:
 
 - [`jira`](skills/jira) - For interacting with Atlassian Jira via `acli` (view, create, edit, transition issues, JQL search, etc.).
 - [`note`](skills/note) - For creating and managing Denote notes in Emacs via `emacsclient`.
