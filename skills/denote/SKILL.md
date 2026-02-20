@@ -90,8 +90,7 @@ When the user asks you to **create a denote note**:
 4. **Create the note** with `emacsclient -s gui -e '(denote ...)'` — always pass `(quote org)` as FILE-TYPE.
 5. **Strip surrounding quotes** from the returned path: `NOTE=$(echo "$NOTE" | tr -d '"')`
 6. **Append content** under a `* Context` heading using `cat >> "$NOTE"`.
-7. **Refresh the buffer**: Run `emacsclient -s gui -e "(with-current-buffer (find-file-noselect \"$NOTE\") (revert-buffer t t))"` so Emacs picks up the new content.
-8. **Report the result**: Show the file path to the user.
+7. **Report the result**: Show the file path to the user and ask them to refresh the buffer manually in Emacs.
 
 ---
 
