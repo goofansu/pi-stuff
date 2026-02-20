@@ -10,3 +10,6 @@ add-skills:
 
 update-skills:
 	npx skills update
+
+list-skills:
+	npx skills ls -g
