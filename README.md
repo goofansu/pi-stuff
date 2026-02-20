@@ -2,13 +2,6 @@
 
 This repository stores customizations for the [pi coding agent](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/).
 
-## Install
-
-```bash
-gh repo clone goofansu/pi-stuff ~/code/pi-stuff
-pi install ~/code/pi-stuff
-```
-
 ## Extensions
 
 All extension files are in the [`extensions`](extensions) directory:
