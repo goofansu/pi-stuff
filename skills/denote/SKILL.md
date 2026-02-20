@@ -94,6 +94,39 @@ When the user asks you to **create a denote note**:
 
 ---
 
+## Renaming Notes / Updating Filetags
+
+Use `denote-rename-file` to rename a note or update its keywords. It updates both the filename and the front matter atomically.
+
+**Function signature:**
+```elisp
+(denote-rename-file FILE TITLE KEYWORDS SIGNATURE DATE IDENTIFIER)
+```
+
+Pass the symbol `'keep-current` for any parameter you don't want to change.
+
+**Suppress confirmation prompts** by binding `denote-rename-confirmations` to `nil`, auto-save by binding `denote-save-buffers` to `t`, and set `default-directory` to `denote-directory` so that Denote's internal `git mv` resolves paths against the correct repository:
+
+```bash
+# Update keywords only, keep everything else
+emacsclient -s gui -e '(let ((denote-rename-confirmations nil) (denote-save-buffers t) (default-directory (denote-directory))) (denote-rename-file "/path/to/note.org" (quote keep-current) (list "tag1" "tag2") (quote keep-current) (quote keep-current) (quote keep-current)))'
+
+# Update title only
+emacsclient -s gui -e '(let ((denote-rename-confirmations nil) (denote-save-buffers t) (default-directory (denote-directory))) (denote-rename-file "/path/to/note.org" "New Title" (quote keep-current) (quote keep-current) (quote keep-current) (quote keep-current)))'
+```
+
+> **Important:** Always bind `default-directory` to `(denote-directory)`. Without it, Emacs may compute `git mv` paths relative to its current working directory (e.g. a different repo), causing a fatal git error.
+
+### Workflow: updating filetags
+
+1. Find the note file (use `find` or the identifier).
+2. Read the current `#+filetags:` line to see existing keywords.
+3. Determine the new keyword list (sorted alphabetically; prefer existing keywords from `(denote-keywords)`).
+4. Run `denote-rename-file` with `denote-rename-confirmations` bound to `nil`, `denote-save-buffers` bound to `t`, and `default-directory` bound to `(denote-directory)`, passing the new keyword list and `'keep-current` for all other parameters.
+5. Report the new file path and ask the user to refresh the buffer manually in Emacs.
+
+---
+
 ## Tips
 
 - Use single-quoted shell strings containing the Elisp to avoid escaping issues.
