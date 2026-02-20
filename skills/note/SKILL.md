@@ -1,5 +1,5 @@
 ---
-name: denote
+name: note
 description: "Create and manage Denote notes in Emacs via emacsclient -s gui"
 ---
 
