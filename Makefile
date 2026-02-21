@@ -13,3 +13,6 @@ update-skills:
 
 list-skills:
 	npx skills ls -g
+
+vendor-extensions:
+	make -C extensions
