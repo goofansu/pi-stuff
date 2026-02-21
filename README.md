@@ -4,9 +4,10 @@ This repository stores customizations for the [pi coding agent](https://github.c
 
 ## Extensions
 
-All extension files are in the [`extensions`](extensions) directory — both ones I wrote and ones sourced from others. That keeps everything in one place, easy to maintain.
+All extension files are in the [`extensions`](extensions) directory — both ones I wrote and ones sourced from others (through [`extensions/Makefile`](extensions/Makefile)). That keeps everything in one place, easy to maintain. 
 
-These are my extensions:
+Here is a list of extensions I wrote:
+
 - [`librarian.ts`](extensions/librarian.ts) - Searches code across GitHub repositories in a subagent.
 - [`oracle.ts`](extensions/oracle.ts) - Research with GPT 5.2 medium thinking level in a subagent.
 - [`snippets.ts`](extensions/snippets.ts) - Lists code blocks from the last assistant message for further action.
