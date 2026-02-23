@@ -50,6 +50,14 @@ function shQuote(value: string): string {
 }
 
 function toGuestPath(localCwd: string, localPath: string): string {
+  // If the model already supplied a guest path, pass it through unchanged.
+  if (
+    localPath === GUEST_WORKSPACE ||
+    localPath.startsWith(GUEST_WORKSPACE + "/")
+  ) {
+    return localPath;
+  }
+
   // pi tools pass absolute local paths; map them into /workspace.
   const rel = path.relative(localCwd, localPath);
   if (rel === "") return GUEST_WORKSPACE;
