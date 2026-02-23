@@ -343,7 +343,7 @@ export default function (pi: ExtensionAPI) {
     await ensureVm(ctx);
     const modified = event.systemPrompt.replace(
       `Current working directory: ${localCwd}`,
-      `Current working directory: ${localCwd} (mounted as ${GUEST_WORKSPACE} in Gondolin VM)`,
+      `Current working directory: ${GUEST_WORKSPACE} (Gondolin VM, mounted from host: ${localCwd})`,
     );
     return { systemPrompt: modified };
   });
