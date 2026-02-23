@@ -1,6 +1,9 @@
-install:
+install: gondolin
 	pi install .
 	cp keybindings.json ~/.pi/agent/keybindings.json
+
+gondolin:
+	npm install @earendil-works/gondolin
 
 add-skills:
 	npx skills add anthropics/skills -s skill-creator -g -a codex -y
