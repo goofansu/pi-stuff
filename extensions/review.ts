@@ -28,7 +28,7 @@
 
 import type { ExtensionAPI, ExtensionContext, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { DynamicBorder, BorderedLoader } from "@mariozechner/pi-coding-agent";
-import { Container, type SelectItem, SelectList, Text } from "@mariozechner/pi-tui";
+import { Container, fuzzyFilter, getEditorKeybindings, Input, type SelectItem, SelectList, Text } from "@mariozechner/pi-tui";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 
@@ -515,6 +515,109 @@ export default function reviewExtension(pi: ExtensionAPI) {
 		return "commit";
 	}
 
+	async function showSearchableSelect(
+		ctx: ExtensionContext,
+		options: {
+			title: string;
+			items: SelectItem[];
+			noMatchText: string;
+			helperText: string;
+			initialSelectedValue?: string;
+			maxVisibleItems?: number;
+			searchText?: (item: SelectItem) => string;
+		},
+	): Promise<string | null> {
+		const {
+			title,
+			items,
+			noMatchText,
+			helperText,
+			initialSelectedValue,
+			maxVisibleItems = 10,
+			searchText = (item) => `${item.label} ${item.value} ${item.description ?? ""}`,
+		} = options;
+
+		return ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
+			const container = new Container();
+			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
+			container.addChild(new Text(theme.fg("accent", theme.bold(title))));
+
+			const searchInput = new Input();
+			container.addChild(searchInput);
+
+			let filteredItems = items;
+			let selectList: SelectList | null = null;
+			const listContainer = new Container();
+			container.addChild(listContainer);
+
+			const rebuildList = () => {
+				listContainer.clear();
+				if (filteredItems.length === 0) {
+					listContainer.addChild(new Text(theme.fg("warning", `  ${noMatchText}`), 0, 0));
+					selectList = null;
+					return;
+				}
+
+				selectList = new SelectList(filteredItems, Math.min(filteredItems.length, maxVisibleItems), {
+					selectedPrefix: (text) => theme.fg("accent", text),
+					selectedText: (text) => theme.fg("accent", text),
+					description: (text) => theme.fg("muted", text),
+					scrollInfo: (text) => theme.fg("dim", text),
+					noMatch: (text) => theme.fg("warning", text),
+				});
+
+				if (!searchInput.getValue().trim() && initialSelectedValue) {
+					const index = filteredItems.findIndex((item) => item.value === initialSelectedValue);
+					if (index >= 0) {
+						selectList.setSelectedIndex(index);
+					}
+				}
+
+				selectList.onSelect = (item) => done(String(item.value));
+				selectList.onCancel = () => done(null);
+				listContainer.addChild(selectList);
+			};
+
+			const applyFilter = () => {
+				const query = searchInput.getValue().trim();
+				filteredItems = query ? fuzzyFilter(items, query, searchText) : items;
+				rebuildList();
+			};
+
+			applyFilter();
+			container.addChild(new Text(theme.fg("dim", helperText)));
+			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
+
+			return {
+				render(width: number) {
+					return container.render(width);
+				},
+				invalidate() {
+					container.invalidate();
+				},
+				handleInput(data: string) {
+					const kb = getEditorKeybindings();
+					if (
+						kb.matches(data, "selectUp") ||
+						kb.matches(data, "selectDown") ||
+						kb.matches(data, "selectConfirm") ||
+						kb.matches(data, "selectCancel")
+					) {
+						if (selectList) {
+							selectList.handleInput(data);
+						} else if (kb.matches(data, "selectCancel")) {
+							done(null);
+						}
+					} else {
+						searchInput.handleInput(data);
+						applyFilter();
+					}
+					tui.requestRender();
+				},
+			};
+		});
+	}
+
 	/**
 	 * Show the review preset selector
 	 */
@@ -529,43 +632,12 @@ export default function reviewExtension(pi: ExtensionAPI) {
 		const smartDefaultIndex = items.findIndex((item) => item.value === smartDefault);
 
 		while (true) {
-			const result = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
-				const container = new Container();
-				container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
-				container.addChild(new Text(theme.fg("accent", theme.bold("Select a review preset"))));
-
-				const selectList = new SelectList(items, Math.min(items.length, 10), {
-					selectedPrefix: (text) => theme.fg("accent", text),
-					selectedText: (text) => theme.fg("accent", text),
-					description: (text) => theme.fg("muted", text),
-					scrollInfo: (text) => theme.fg("dim", text),
-					noMatch: (text) => theme.fg("warning", text),
-				});
-
-				// Preselect the smart default without reordering the list
-				if (smartDefaultIndex >= 0) {
-					selectList.setSelectedIndex(smartDefaultIndex);
-				}
-
-				selectList.onSelect = (item) => done(item.value);
-				selectList.onCancel = () => done(null);
-
-				container.addChild(selectList);
-				container.addChild(new Text(theme.fg("dim", "Press enter to confirm or esc to go back")));
-				container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
-
-				return {
-					render(width: number) {
-						return container.render(width);
-					},
-					invalidate() {
-						container.invalidate();
-					},
-					handleInput(data: string) {
-						selectList.handleInput(data);
-						tui.requestRender();
-					},
-				};
+			const result = await showSearchableSelect(ctx, {
+				title: "Select a review preset",
+				items,
+				noMatchText: "No matching presets",
+				helperText: "Type to filter • enter to confirm • esc to go back",
+				initialSelectedValue: smartDefaultIndex >= 0 ? String(items[smartDefaultIndex]?.value) : undefined,
 			});
 
 			if (!result) return null;
@@ -643,41 +715,11 @@ export default function reviewExtension(pi: ExtensionAPI) {
 			description: branch === defaultBranch ? "(default)" : "",
 		}));
 
-		const result = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
-			const container = new Container();
-			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
-			container.addChild(new Text(theme.fg("accent", theme.bold("Select base branch"))));
-
-			const selectList = new SelectList(items, Math.min(items.length, 10), {
-				selectedPrefix: (text) => theme.fg("accent", text),
-				selectedText: (text) => theme.fg("accent", text),
-				description: (text) => theme.fg("muted", text),
-				scrollInfo: (text) => theme.fg("dim", text),
-				noMatch: (text) => theme.fg("warning", text),
-			});
-
-			// Enable search
-			selectList.searchable = true;
-
-			selectList.onSelect = (item) => done(item.value);
-			selectList.onCancel = () => done(null);
-
-			container.addChild(selectList);
-			container.addChild(new Text(theme.fg("dim", "Type to filter • enter to select • esc to cancel")));
-			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
-
-			return {
-				render(width: number) {
-					return container.render(width);
-				},
-				invalidate() {
-					container.invalidate();
-				},
-				handleInput(data: string) {
-					selectList.handleInput(data);
-					tui.requestRender();
-				},
-			};
+		const result = await showSearchableSelect(ctx, {
+			title: "Select base branch",
+			items,
+			noMatchText: "No matching branches",
+			helperText: "Type to filter • enter to select • esc to cancel",
 		});
 
 		if (!result) return null;
@@ -701,52 +743,18 @@ export default function reviewExtension(pi: ExtensionAPI) {
 			description: "",
 		}));
 
-		const result = await ctx.ui.custom<{ sha: string; title: string } | null>((tui, theme, _kb, done) => {
-			const container = new Container();
-			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
-			container.addChild(new Text(theme.fg("accent", theme.bold("Select commit to review"))));
-
-			const selectList = new SelectList(items, Math.min(items.length, 10), {
-				selectedPrefix: (text) => theme.fg("accent", text),
-				selectedText: (text) => theme.fg("accent", text),
-				description: (text) => theme.fg("muted", text),
-				scrollInfo: (text) => theme.fg("dim", text),
-				noMatch: (text) => theme.fg("warning", text),
-			});
-
-			// Enable search
-			selectList.searchable = true;
-
-			selectList.onSelect = (item) => {
-				const commit = commits.find((c) => c.sha === item.value);
-				if (commit) {
-					done(commit);
-				} else {
-					done(null);
-				}
-			};
-			selectList.onCancel = () => done(null);
-
-			container.addChild(selectList);
-			container.addChild(new Text(theme.fg("dim", "Type to filter • enter to select • esc to cancel")));
-			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
-
-			return {
-				render(width: number) {
-					return container.render(width);
-				},
-				invalidate() {
-					container.invalidate();
-				},
-				handleInput(data: string) {
-					selectList.handleInput(data);
-					tui.requestRender();
-				},
-			};
+		const selectedSha = await showSearchableSelect(ctx, {
+			title: "Select commit to review",
+			items,
+			noMatchText: "No matching commits",
+			helperText: "Type to filter • enter to select • esc to cancel",
+			searchText: (item) => `${item.label} ${item.value}`,
 		});
 
-		if (!result) return null;
-		return { type: "commit", sha: result.sha, title: result.title };
+		if (!selectedSha) return null;
+		const commit = commits.find((c) => c.sha === selectedSha);
+		if (!commit) return null;
+		return { type: "commit", sha: commit.sha, title: commit.title };
 	}
 
 	/**
