@@ -39,6 +39,7 @@ let reviewOriginId: string | undefined = undefined;
 let endReviewInProgress = false;
 
 const REVIEW_STATE_TYPE = "review-session";
+const REVIEW_ANCHOR_TYPE = "review-anchor";
 
 type ReviewSessionState = {
 	active: boolean;
@@ -854,10 +855,15 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
 		// Handle fresh session mode
 		if (useFreshSession) {
-			// Store current position (where we'll return to)
-			const originId = ctx.sessionManager.getLeafId() ?? undefined;
+			// Store current position (where we'll return to).
+			// In an empty session there is no leaf yet, so create a lightweight anchor first.
+			let originId = ctx.sessionManager.getLeafId() ?? undefined;
 			if (!originId) {
-				ctx.ui.notify("Failed to determine review origin. Try again from a session with messages.", "error");
+				pi.appendEntry(REVIEW_ANCHOR_TYPE, { createdAt: new Date().toISOString() });
+				originId = ctx.sessionManager.getLeafId() ?? undefined;
+			}
+			if (!originId) {
+				ctx.ui.notify("Failed to determine review origin.", "error");
 				return;
 			}
 			reviewOriginId = originId;
@@ -865,38 +871,35 @@ export default function reviewExtension(pi: ExtensionAPI) {
 			// Keep a local copy so session_tree events during navigation don't wipe it
 			const lockedOriginId = originId;
 
-			// Find the first user message in the session
+			// Find the first user message in the session.
+			// If none exists (e.g. brand-new session), we'll stay on the current leaf.
 			const entries = ctx.sessionManager.getEntries();
 			const firstUserMessage = entries.find(
 				(e) => e.type === "message" && e.message.role === "user",
 			);
 
-			if (!firstUserMessage) {
-				ctx.ui.notify("No user message found in session", "error");
-				reviewOriginId = undefined;
-				return;
-			}
-
-			// Navigate to first user message to create a new branch from that point
-			// Label it as "code-review" so it's visible in the tree
-			try {
-				const result = await ctx.navigateTree(firstUserMessage.id, { summarize: false, label: "code-review" });
-				if (result.cancelled) {
+			if (firstUserMessage) {
+				// Navigate to first user message to create a new branch from that point
+				// Label it as "code-review" so it's visible in the tree
+				try {
+					const result = await ctx.navigateTree(firstUserMessage.id, { summarize: false, label: "code-review" });
+					if (result.cancelled) {
+						reviewOriginId = undefined;
+						return;
+					}
+				} catch (error) {
+					// Clean up state if navigation fails
 					reviewOriginId = undefined;
+					ctx.ui.notify(`Failed to start review: ${error instanceof Error ? error.message : String(error)}`, "error");
 					return;
 				}
-			} catch (error) {
-				// Clean up state if navigation fails
-				reviewOriginId = undefined;
-				ctx.ui.notify(`Failed to start review: ${error instanceof Error ? error.message : String(error)}`, "error");
-				return;
+
+				// Clear the editor (navigating to user message fills it with the message text)
+				ctx.ui.setEditorText("");
 			}
 
 			// Restore origin after navigation events (session_tree can reset it)
 			reviewOriginId = lockedOriginId;
-
-			// Clear the editor (navigating to user message fills it with the message text)
-			ctx.ui.setEditorText("");
 
 			// Show widget indicating review is active
 			setReviewWidget(ctx, true);
@@ -1076,7 +1079,8 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				const entries = ctx.sessionManager.getEntries();
 				const messageCount = entries.filter((e) => e.type === "message").length;
 
-				let useFreshSession = false;
+				// In an empty session, default to fresh review mode so /end-review works consistently.
+				let useFreshSession = messageCount === 0;
 
 				if (messageCount > 0) {
 					// Existing session - ask user which mode they want
@@ -1093,7 +1097,6 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
 					useFreshSession = choice === "Empty branch";
 				}
-				// If messageCount === 0, useFreshSession stays false (current session mode)
 
 				await executeReview(ctx, target, useFreshSession);
 				return;
