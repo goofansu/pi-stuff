@@ -28,7 +28,16 @@
 
 import type { ExtensionAPI, ExtensionContext, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { DynamicBorder, BorderedLoader } from "@mariozechner/pi-coding-agent";
-import { Container, fuzzyFilter, getEditorKeybindings, Input, type SelectItem, SelectList, Text } from "@mariozechner/pi-tui";
+import {
+	Container,
+	fuzzyFilter,
+	getEditorKeybindings,
+	Input,
+	type SelectItem,
+	SelectList,
+	Spacer,
+	Text,
+} from "@mariozechner/pi-tui";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 
@@ -37,13 +46,23 @@ import { promises as fs } from "node:fs";
 // This is intentional - the UI and /end-review command assume a single active review.
 let reviewOriginId: string | undefined = undefined;
 let endReviewInProgress = false;
+let reviewLoopFixingEnabled = false;
+let reviewLoopInProgress = false;
 
 const REVIEW_STATE_TYPE = "review-session";
 const REVIEW_ANCHOR_TYPE = "review-anchor";
+const REVIEW_SETTINGS_TYPE = "review-settings";
+const REVIEW_LOOP_MAX_ITERATIONS = 10;
+const REVIEW_LOOP_START_TIMEOUT_MS = 15000;
+const REVIEW_LOOP_START_POLL_MS = 50;
 
 type ReviewSessionState = {
 	active: boolean;
 	originId?: string;
+};
+
+type ReviewSettingsState = {
+	loopFixingEnabled?: boolean;
 };
 
 function setReviewWidget(ctx: ExtensionContext, active: boolean) {
@@ -54,7 +73,12 @@ function setReviewWidget(ctx: ExtensionContext, active: boolean) {
 	}
 
 	ctx.ui.setWidget("review", (_tui, theme) => {
-		const text = new Text(theme.fg("warning", "Review session active, return with /end-review"), 0, 0);
+		const message = reviewLoopInProgress
+			? "Review session active (loop fixing running)"
+			: reviewLoopFixingEnabled
+				? "Review session active (loop fixing enabled), return with /end-review"
+				: "Review session active, return with /end-review";
+		const text = new Text(theme.fg("warning", message), 0, 0);
 		return {
 			render(width: number) {
 				return text.render(width);
@@ -90,6 +114,238 @@ function applyReviewState(ctx: ExtensionContext) {
 	setReviewWidget(ctx, false);
 }
 
+function getReviewSettings(ctx: ExtensionContext): ReviewSettingsState {
+	let state: ReviewSettingsState | undefined;
+	for (const entry of ctx.sessionManager.getEntries()) {
+		if (entry.type === "custom" && entry.customType === REVIEW_SETTINGS_TYPE) {
+			state = entry.data as ReviewSettingsState | undefined;
+		}
+	}
+
+	return {
+		loopFixingEnabled: state?.loopFixingEnabled === true,
+	};
+}
+
+function applyReviewSettings(ctx: ExtensionContext) {
+	const state = getReviewSettings(ctx);
+	reviewLoopFixingEnabled = state.loopFixingEnabled === true;
+}
+
+function parseMarkdownHeading(line: string): { level: number; title: string } | null {
+	const headingMatch = line.match(/^\s*(#{1,6})\s+(.+?)\s*$/);
+	if (!headingMatch) {
+		return null;
+	}
+
+	const rawTitle = headingMatch[2].replace(/\s+#+\s*$/, "").trim();
+	return {
+		level: headingMatch[1].length,
+		title: rawTitle,
+	};
+}
+
+function getFindingsSectionBounds(lines: string[]): { start: number; end: number } | null {
+	let start = -1;
+	let findingsHeadingLevel: number | null = null;
+
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		const heading = parseMarkdownHeading(line);
+		if (heading && /^findings\b/i.test(heading.title)) {
+			start = i + 1;
+			findingsHeadingLevel = heading.level;
+			break;
+		}
+		if (/^\s*findings\s*:?\s*$/i.test(line)) {
+			start = i + 1;
+			break;
+		}
+	}
+
+	if (start < 0) {
+		return null;
+	}
+
+	let end = lines.length;
+	for (let i = start; i < lines.length; i++) {
+		const line = lines[i];
+		const heading = parseMarkdownHeading(line);
+		if (heading) {
+			const normalizedTitle = heading.title.replace(/[*_`]/g, "").trim();
+			if (/^(review scope|verdict|overall verdict|fix queue|constraints(?:\s*&\s*preferences)?)\b:?/i.test(normalizedTitle)) {
+				end = i;
+				break;
+			}
+
+			if (/\[P[0-3]\]/i.test(heading.title)) {
+				continue;
+			}
+
+			if (findingsHeadingLevel !== null && heading.level <= findingsHeadingLevel) {
+				end = i;
+				break;
+			}
+		}
+
+		if (/^\s*(review scope|verdict|overall verdict|fix queue|constraints(?:\s*&\s*preferences)?)\b:?/i.test(line)) {
+			end = i;
+			break;
+		}
+	}
+
+	return { start, end };
+}
+
+function isLikelyFindingLine(line: string): boolean {
+	if (!/\[P[0-3]\]/i.test(line)) {
+		return false;
+	}
+
+	if (/^\s*(?:[-*+]|(?:\d+)[.)]|#{1,6})\s+priority\s+tag\b/i.test(line)) {
+		return false;
+	}
+
+	if (/^\s*(?:[-*+]|(?:\d+)[.)]|#{1,6})\s+\[P[0-3]\]\s*-\s*(?:drop everything|urgent|normal|low|nice to have)\b/i.test(line)) {
+		return false;
+	}
+
+	const allPriorityTags = line.match(/\[P[0-3]\]/gi) ?? [];
+	if (allPriorityTags.length > 1) {
+		return false;
+	}
+
+	if (/^\s*(?:[-*+]|(?:\d+)[.)])\s+/.test(line)) {
+		return true;
+	}
+
+	if (/^\s*#{1,6}\s+/.test(line)) {
+		return true;
+	}
+
+	if (/^\s*(?:\*\*|__)?\[P[0-3]\](?:\*\*|__)?(?=\s|:|-)/i.test(line)) {
+		return true;
+	}
+
+	return false;
+}
+
+function normalizeVerdictValue(value: string): string {
+	return value
+		.trim()
+		.replace(/^[-*+]\s*/, "")
+		.replace(/^['"`]+|['"`]+$/g, "")
+		.toLowerCase();
+}
+
+function isNeedsAttentionVerdictValue(value: string): boolean {
+	const normalized = normalizeVerdictValue(value);
+	if (!normalized.includes("needs attention")) {
+		return false;
+	}
+
+	if (/\bnot\s+needs\s+attention\b/.test(normalized)) {
+		return false;
+	}
+
+	// Reject rubric/choice phrasing like "correct or needs attention", but
+	// keep legitimate verdict text that may contain unrelated "or".
+	if (/\bcorrect\b/.test(normalized) && /\bor\b/.test(normalized)) {
+		return false;
+	}
+
+	return true;
+}
+
+function hasNeedsAttentionVerdict(messageText: string): boolean {
+	const lines = messageText.split(/\r?\n/);
+
+	for (const line of lines) {
+		const inlineMatch = line.match(/^\s*(?:[*-+]\s*)?(?:overall\s+)?verdict\s*:\s*(.+)$/i);
+		if (inlineMatch && isNeedsAttentionVerdictValue(inlineMatch[1])) {
+			return true;
+		}
+	}
+
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		const heading = parseMarkdownHeading(line);
+
+		let verdictLevel: number | null = null;
+		if (heading) {
+			const normalizedHeading = heading.title.replace(/[*_`]/g, "").trim();
+			if (!/^(?:overall\s+)?verdict\b/i.test(normalizedHeading)) {
+				continue;
+			}
+			verdictLevel = heading.level;
+		} else if (!/^\s*(?:overall\s+)?verdict\s*:?\s*$/i.test(line)) {
+			continue;
+		}
+
+		for (let j = i + 1; j < lines.length; j++) {
+			const verdictLine = lines[j];
+			const nextHeading = parseMarkdownHeading(verdictLine);
+			if (nextHeading) {
+				const normalizedNextHeading = nextHeading.title.replace(/[*_`]/g, "").trim();
+				if (verdictLevel === null || nextHeading.level <= verdictLevel) {
+					break;
+				}
+				if (/^(review scope|findings|fix queue|constraints(?:\s*&\s*preferences)?)\b:?/i.test(normalizedNextHeading)) {
+					break;
+				}
+			}
+
+			const trimmed = verdictLine.trim();
+			if (!trimmed) {
+				continue;
+			}
+
+			if (isNeedsAttentionVerdictValue(trimmed)) {
+				return true;
+			}
+
+			if (/\bcorrect\b/i.test(normalizeVerdictValue(trimmed))) {
+				break;
+			}
+		}
+	}
+
+	return false;
+}
+
+function hasBlockingReviewFindings(messageText: string): boolean {
+	const lines = messageText.split(/\r?\n/);
+	const bounds = getFindingsSectionBounds(lines);
+	const candidateLines = bounds ? lines.slice(bounds.start, bounds.end) : lines;
+
+	let inCodeFence = false;
+	let foundTaggedFinding = false;
+	for (const line of candidateLines) {
+		if (/^\s*```/.test(line)) {
+			inCodeFence = !inCodeFence;
+			continue;
+		}
+		if (inCodeFence) {
+			continue;
+		}
+
+		if (!isLikelyFindingLine(line)) {
+			continue;
+		}
+
+		foundTaggedFinding = true;
+		if (/\[(P0|P1|P2)\]/i.test(line)) {
+			return true;
+		}
+	}
+
+	if (foundTaggedFinding) {
+		return false;
+	}
+
+	return hasNeedsAttentionVerdict(messageText);
+}
+
 // Review target types (matching Codex's approach)
 type ReviewTarget =
 	| { type: "uncommitted" }
@@ -102,6 +358,9 @@ type ReviewTarget =
 // Prompts (adapted from Codex)
 const UNCOMMITTED_PROMPT =
 	"Review the current code changes (staged, unstaged, and untracked files) and provide prioritized findings.";
+
+const LOCAL_CHANGES_REVIEW_INSTRUCTIONS =
+	"Also include local working-tree changes (staged, unstaged, and untracked files) from this branch. Use `git status --porcelain`, `git diff`, `git diff --staged`, and `git ls-files --others --exclude-standard` so local fixes are part of this review cycle.";
 
 const BASE_BRANCH_PROMPT_WITH_MERGE_BASE =
 	"Review the code changes against the base branch '{baseBranch}'. The merge base commit for this comparison is {mergeBaseSha}. Run `git diff {mergeBaseSha}` to inspect the changes relative to {baseBranch}. Provide prioritized, actionable findings.";
@@ -399,20 +658,23 @@ async function getDefaultBranch(pi: ExtensionAPI): Promise<string> {
 /**
  * Build the review prompt based on target
  */
-async function buildReviewPrompt(pi: ExtensionAPI, target: ReviewTarget): Promise<string> {
+async function buildReviewPrompt(
+	pi: ExtensionAPI,
+	target: ReviewTarget,
+	options?: { includeLocalChanges?: boolean },
+): Promise<string> {
+	const includeLocalChanges = options?.includeLocalChanges === true;
+
 	switch (target.type) {
 		case "uncommitted":
 			return UNCOMMITTED_PROMPT;
 
 		case "baseBranch": {
 			const mergeBase = await getMergeBase(pi, target.branch);
-			if (mergeBase) {
-				return BASE_BRANCH_PROMPT_WITH_MERGE_BASE.replace(/{baseBranch}/g, target.branch).replace(
-					/{mergeBaseSha}/g,
-					mergeBase,
-				);
-			}
-			return BASE_BRANCH_PROMPT_FALLBACK.replace(/{branch}/g, target.branch);
+			const basePrompt = mergeBase
+				? BASE_BRANCH_PROMPT_WITH_MERGE_BASE.replace(/{baseBranch}/g, target.branch).replace(/{mergeBaseSha}/g, mergeBase)
+				: BASE_BRANCH_PROMPT_FALLBACK.replace(/{branch}/g, target.branch);
+			return includeLocalChanges ? `${basePrompt} ${LOCAL_CHANGES_REVIEW_INSTRUCTIONS}` : basePrompt;
 		}
 
 		case "commit":
@@ -426,17 +688,17 @@ async function buildReviewPrompt(pi: ExtensionAPI, target: ReviewTarget): Promis
 
 		case "pullRequest": {
 			const mergeBase = await getMergeBase(pi, target.baseBranch);
-			if (mergeBase) {
-				return PULL_REQUEST_PROMPT
-					.replace(/{prNumber}/g, String(target.prNumber))
-					.replace(/{title}/g, target.title)
-					.replace(/{baseBranch}/g, target.baseBranch)
-					.replace(/{mergeBaseSha}/g, mergeBase);
-			}
-			return PULL_REQUEST_PROMPT_FALLBACK
-				.replace(/{prNumber}/g, String(target.prNumber))
-				.replace(/{title}/g, target.title)
-				.replace(/{baseBranch}/g, target.baseBranch);
+			const basePrompt = mergeBase
+				? PULL_REQUEST_PROMPT
+						.replace(/{prNumber}/g, String(target.prNumber))
+						.replace(/{title}/g, target.title)
+						.replace(/{baseBranch}/g, target.baseBranch)
+						.replace(/{mergeBaseSha}/g, mergeBase)
+				: PULL_REQUEST_PROMPT_FALLBACK
+						.replace(/{prNumber}/g, String(target.prNumber))
+						.replace(/{title}/g, target.title)
+						.replace(/{baseBranch}/g, target.baseBranch);
+			return includeLocalChanges ? `${basePrompt} ${LOCAL_CHANGES_REVIEW_INSTRUCTIONS}` : basePrompt;
 		}
 
 		case "folder":
@@ -472,6 +734,67 @@ function getUserFacingHint(target: ReviewTarget): string {
 	}
 }
 
+type AssistantSnapshot = {
+	id: string;
+	text: string;
+	stopReason?: string;
+};
+
+function extractAssistantTextContent(content: unknown): string {
+	if (typeof content === "string") {
+		return content.trim();
+	}
+
+	if (!Array.isArray(content)) {
+		return "";
+	}
+
+	const textParts = content
+		.filter(
+			(part): part is { type: "text"; text: string } =>
+				Boolean(part && typeof part === "object" && "type" in part && part.type === "text" && "text" in part),
+		)
+		.map((part) => part.text);
+	return textParts.join("\n").trim();
+}
+
+function getLastAssistantSnapshot(ctx: ExtensionContext): AssistantSnapshot | null {
+	const entries = ctx.sessionManager.getBranch();
+	for (let i = entries.length - 1; i >= 0; i--) {
+		const entry = entries[i];
+		if (entry.type !== "message" || entry.message.role !== "assistant") {
+			continue;
+		}
+
+		const assistantMessage = entry.message as { content?: unknown; stopReason?: string };
+		return {
+			id: entry.id,
+			text: extractAssistantTextContent(assistantMessage.content),
+			stopReason: assistantMessage.stopReason,
+		};
+	}
+
+	return null;
+}
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForLoopTurnToStart(ctx: ExtensionContext, previousAssistantId?: string): Promise<boolean> {
+	const deadline = Date.now() + REVIEW_LOOP_START_TIMEOUT_MS;
+
+	while (Date.now() < deadline) {
+		const lastAssistantId = getLastAssistantSnapshot(ctx)?.id;
+		if (!ctx.isIdle() || ctx.hasPendingMessages() || (lastAssistantId && lastAssistantId !== previousAssistantId)) {
+			return true;
+		}
+		await sleep(REVIEW_LOOP_START_POLL_MS);
+	}
+
+	return false;
+}
+
 // Review preset options for the selector (keep this order stable)
 const REVIEW_PRESETS = [
 	{ value: "uncommitted", label: "Review uncommitted changes", description: "" },
@@ -482,17 +805,30 @@ const REVIEW_PRESETS = [
 	{ value: "custom", label: "Custom review instructions", description: "" },
 ] as const;
 
+const TOGGLE_LOOP_FIXING_VALUE = "toggleLoopFixing" as const;
+type ReviewPresetValue = (typeof REVIEW_PRESETS)[number]["value"] | typeof TOGGLE_LOOP_FIXING_VALUE;
+
 export default function reviewExtension(pi: ExtensionAPI) {
-	pi.on("session_start", (_event, ctx) => {
+	function setReviewLoopFixingEnabled(enabled: boolean) {
+		reviewLoopFixingEnabled = enabled;
+		pi.appendEntry(REVIEW_SETTINGS_TYPE, { loopFixingEnabled: enabled });
+	}
+
+	function applyAllReviewState(ctx: ExtensionContext) {
+		applyReviewSettings(ctx);
 		applyReviewState(ctx);
+	}
+
+	pi.on("session_start", (_event, ctx) => {
+		applyAllReviewState(ctx);
 	});
 
 	pi.on("session_switch", (_event, ctx) => {
-		applyReviewState(ctx);
+		applyAllReviewState(ctx);
 	});
 
 	pi.on("session_tree", (_event, ctx) => {
-		applyReviewState(ctx);
+		applyAllReviewState(ctx);
 	});
 
 	/**
@@ -515,50 +851,33 @@ export default function reviewExtension(pi: ExtensionAPI) {
 		return "commit";
 	}
 
-	async function showSearchableSelect(
-		ctx: ExtensionContext,
-		options: {
-			title: string;
-			items: SelectItem[];
-			noMatchText: string;
-			helperText: string;
-			initialSelectedValue?: string;
-			maxVisibleItems?: number;
-			searchText?: (item: SelectItem) => string;
-		},
-	): Promise<string | null> {
-		const {
-			title,
-			items,
-			noMatchText,
-			helperText,
-			initialSelectedValue,
-			maxVisibleItems = 10,
-			searchText = (item) => `${item.label} ${item.value} ${item.description ?? ""}`,
-		} = options;
+	/**
+	 * Show the review preset selector
+	 */
+	async function showReviewSelector(ctx: ExtensionContext): Promise<ReviewTarget | null> {
+		// Determine smart default (but keep the list order stable)
+		const smartDefault = await getSmartDefault();
+		const presetItems: SelectItem[] = REVIEW_PRESETS.map((preset) => ({
+			value: preset.value,
+			label: preset.label,
+			description: preset.description,
+		}));
+		const smartDefaultIndex = presetItems.findIndex((item) => item.value === smartDefault);
 
-		return ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
-			const container = new Container();
-			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
-			container.addChild(new Text(theme.fg("accent", theme.bold(title))));
+		while (true) {
+			const loopToggleLabel = reviewLoopFixingEnabled ? "Disable Loop Fixing" : "Enable Loop Fixing";
+			const loopToggleDescription = reviewLoopFixingEnabled ? "(currently on)" : "(currently off)";
+			const items: SelectItem[] = [
+				...presetItems,
+				{ value: TOGGLE_LOOP_FIXING_VALUE, label: loopToggleLabel, description: loopToggleDescription },
+			];
 
-			const searchInput = new Input();
-			container.addChild(searchInput);
+			const result = await ctx.ui.custom<ReviewPresetValue | null>((tui, theme, _kb, done) => {
+				const container = new Container();
+				container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
+				container.addChild(new Text(theme.fg("accent", theme.bold("Select a review preset"))));
 
-			let filteredItems = items;
-			let selectList: SelectList | null = null;
-			const listContainer = new Container();
-			container.addChild(listContainer);
-
-			const rebuildList = () => {
-				listContainer.clear();
-				if (filteredItems.length === 0) {
-					listContainer.addChild(new Text(theme.fg("warning", `  ${noMatchText}`), 0, 0));
-					selectList = null;
-					return;
-				}
-
-				selectList = new SelectList(filteredItems, Math.min(filteredItems.length, maxVisibleItems), {
+				const selectList = new SelectList(items, Math.min(items.length, 10), {
 					selectedPrefix: (text) => theme.fg("accent", text),
 					selectedText: (text) => theme.fg("accent", text),
 					description: (text) => theme.fg("muted", text),
@@ -566,81 +885,40 @@ export default function reviewExtension(pi: ExtensionAPI) {
 					noMatch: (text) => theme.fg("warning", text),
 				});
 
-				if (!searchInput.getValue().trim() && initialSelectedValue) {
-					const index = filteredItems.findIndex((item) => item.value === initialSelectedValue);
-					if (index >= 0) {
-						selectList.setSelectedIndex(index);
-					}
+				// Preselect the smart default without reordering the list
+				if (smartDefaultIndex >= 0) {
+					selectList.setSelectedIndex(smartDefaultIndex);
 				}
 
-				selectList.onSelect = (item) => done(String(item.value));
+				selectList.onSelect = (item) => done(item.value as ReviewPresetValue);
 				selectList.onCancel = () => done(null);
-				listContainer.addChild(selectList);
-			};
 
-			const applyFilter = () => {
-				const query = searchInput.getValue().trim();
-				filteredItems = query ? fuzzyFilter(items, query, searchText) : items;
-				rebuildList();
-			};
+				container.addChild(selectList);
+				container.addChild(new Text(theme.fg("dim", "Press enter to confirm or esc to go back")));
+				container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
 
-			applyFilter();
-			container.addChild(new Text(theme.fg("dim", helperText)));
-			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
-
-			return {
-				render(width: number) {
-					return container.render(width);
-				},
-				invalidate() {
-					container.invalidate();
-				},
-				handleInput(data: string) {
-					const kb = getEditorKeybindings();
-					if (
-						kb.matches(data, "selectUp") ||
-						kb.matches(data, "selectDown") ||
-						kb.matches(data, "selectConfirm") ||
-						kb.matches(data, "selectCancel")
-					) {
-						if (selectList) {
-							selectList.handleInput(data);
-						} else if (kb.matches(data, "selectCancel")) {
-							done(null);
-						}
-					} else {
-						searchInput.handleInput(data);
-						applyFilter();
-					}
-					tui.requestRender();
-				},
-			};
-		});
-	}
-
-	/**
-	 * Show the review preset selector
-	 */
-	async function showReviewSelector(ctx: ExtensionContext): Promise<ReviewTarget | null> {
-		// Determine smart default (but keep the list order stable)
-		const smartDefault = await getSmartDefault();
-		const items: SelectItem[] = REVIEW_PRESETS.map((preset) => ({
-			value: preset.value,
-			label: preset.label,
-			description: preset.description,
-		}));
-		const smartDefaultIndex = items.findIndex((item) => item.value === smartDefault);
-
-		while (true) {
-			const result = await showSearchableSelect(ctx, {
-				title: "Select a review preset",
-				items,
-				noMatchText: "No matching presets",
-				helperText: "Type to filter • enter to confirm • esc to go back",
-				initialSelectedValue: smartDefaultIndex >= 0 ? String(items[smartDefaultIndex]?.value) : undefined,
+				return {
+					render(width: number) {
+						return container.render(width);
+					},
+					invalidate() {
+						container.invalidate();
+					},
+					handleInput(data: string) {
+						selectList.handleInput(data);
+						tui.requestRender();
+					},
+				};
 			});
 
 			if (!result) return null;
+
+			if (result === TOGGLE_LOOP_FIXING_VALUE) {
+				const nextEnabled = !reviewLoopFixingEnabled;
+				setReviewLoopFixingEnabled(nextEnabled);
+				ctx.ui.notify(nextEnabled ? "Loop fixing enabled" : "Loop fixing disabled", "info");
+				continue;
+			}
 
 			// Handle each preset type
 			switch (result) {
@@ -654,6 +932,10 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				}
 
 				case "commit": {
+					if (reviewLoopFixingEnabled) {
+						ctx.ui.notify("Loop mode does not work with commit review.", "error");
+						break;
+					}
 					const target = await showCommitSelector(ctx);
 					if (target) return target;
 					break;
@@ -715,11 +997,83 @@ export default function reviewExtension(pi: ExtensionAPI) {
 			description: branch === defaultBranch ? "(default)" : "",
 		}));
 
-		const result = await showSearchableSelect(ctx, {
-			title: "Select base branch",
-			items,
-			noMatchText: "No matching branches",
-			helperText: "Type to filter • enter to select • esc to cancel",
+		const result = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
+			const container = new Container();
+			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
+			container.addChild(new Text(theme.fg("accent", theme.bold("Select base branch"))));
+
+			const searchInput = new Input();
+			container.addChild(searchInput);
+			container.addChild(new Spacer(1));
+
+			const listContainer = new Container();
+			container.addChild(listContainer);
+			container.addChild(new Text(theme.fg("dim", "Type to filter • enter to select • esc to cancel")));
+			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
+
+			let filteredItems = items;
+			let selectList: SelectList | null = null;
+
+			const updateList = () => {
+				listContainer.clear();
+				if (filteredItems.length === 0) {
+					listContainer.addChild(new Text(theme.fg("warning", "  No matching branches")));
+					selectList = null;
+					return;
+				}
+
+				selectList = new SelectList(filteredItems, Math.min(filteredItems.length, 10), {
+					selectedPrefix: (text) => theme.fg("accent", text),
+					selectedText: (text) => theme.fg("accent", text),
+					description: (text) => theme.fg("muted", text),
+					scrollInfo: (text) => theme.fg("dim", text),
+					noMatch: (text) => theme.fg("warning", text),
+				});
+
+				selectList.onSelect = (item) => done(item.value);
+				selectList.onCancel = () => done(null);
+				listContainer.addChild(selectList);
+			};
+
+			const applyFilter = () => {
+				const query = searchInput.getValue();
+				filteredItems = query
+					? fuzzyFilter(items, query, (item) => `${item.label} ${item.value} ${item.description ?? ""}`)
+					: items;
+				updateList();
+			};
+
+			applyFilter();
+
+			return {
+				render(width: number) {
+					return container.render(width);
+				},
+				invalidate() {
+					container.invalidate();
+				},
+				handleInput(data: string) {
+					const kb = getEditorKeybindings();
+					if (
+						kb.matches(data, "selectUp") ||
+						kb.matches(data, "selectDown") ||
+						kb.matches(data, "selectConfirm") ||
+						kb.matches(data, "selectCancel")
+					) {
+						if (selectList) {
+							selectList.handleInput(data);
+						} else if (kb.matches(data, "selectCancel")) {
+							done(null);
+						}
+						tui.requestRender();
+						return;
+					}
+
+					searchInput.handleInput(data);
+					applyFilter();
+					tui.requestRender();
+				},
+			};
 		});
 
 		if (!result) return null;
@@ -743,18 +1097,94 @@ export default function reviewExtension(pi: ExtensionAPI) {
 			description: "",
 		}));
 
-		const selectedSha = await showSearchableSelect(ctx, {
-			title: "Select commit to review",
-			items,
-			noMatchText: "No matching commits",
-			helperText: "Type to filter • enter to select • esc to cancel",
-			searchText: (item) => `${item.label} ${item.value}`,
+		const result = await ctx.ui.custom<{ sha: string; title: string } | null>((tui, theme, _kb, done) => {
+			const container = new Container();
+			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
+			container.addChild(new Text(theme.fg("accent", theme.bold("Select commit to review"))));
+
+			const searchInput = new Input();
+			container.addChild(searchInput);
+			container.addChild(new Spacer(1));
+
+			const listContainer = new Container();
+			container.addChild(listContainer);
+			container.addChild(new Text(theme.fg("dim", "Type to filter • enter to select • esc to cancel")));
+			container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
+
+			let filteredItems = items;
+			let selectList: SelectList | null = null;
+
+			const updateList = () => {
+				listContainer.clear();
+				if (filteredItems.length === 0) {
+					listContainer.addChild(new Text(theme.fg("warning", "  No matching commits")));
+					selectList = null;
+					return;
+				}
+
+				selectList = new SelectList(filteredItems, Math.min(filteredItems.length, 10), {
+					selectedPrefix: (text) => theme.fg("accent", text),
+					selectedText: (text) => theme.fg("accent", text),
+					description: (text) => theme.fg("muted", text),
+					scrollInfo: (text) => theme.fg("dim", text),
+					noMatch: (text) => theme.fg("warning", text),
+				});
+
+				selectList.onSelect = (item) => {
+					const commit = commits.find((c) => c.sha === item.value);
+					if (commit) {
+						done(commit);
+					} else {
+						done(null);
+					}
+				};
+				selectList.onCancel = () => done(null);
+				listContainer.addChild(selectList);
+			};
+
+			const applyFilter = () => {
+				const query = searchInput.getValue();
+				filteredItems = query
+					? fuzzyFilter(items, query, (item) => `${item.label} ${item.value} ${item.description ?? ""}`)
+					: items;
+				updateList();
+			};
+
+			applyFilter();
+
+			return {
+				render(width: number) {
+					return container.render(width);
+				},
+				invalidate() {
+					container.invalidate();
+				},
+				handleInput(data: string) {
+					const kb = getEditorKeybindings();
+					if (
+						kb.matches(data, "selectUp") ||
+						kb.matches(data, "selectDown") ||
+						kb.matches(data, "selectConfirm") ||
+						kb.matches(data, "selectCancel")
+					) {
+						if (selectList) {
+							selectList.handleInput(data);
+						} else if (kb.matches(data, "selectCancel")) {
+							done(null);
+						}
+						tui.requestRender();
+						return;
+					}
+
+					searchInput.handleInput(data);
+					applyFilter();
+					tui.requestRender();
+				},
+			};
 		});
 
-		if (!selectedSha) return null;
-		const commit = commits.find((c) => c.sha === selectedSha);
-		if (!commit) return null;
-		return { type: "commit", sha: commit.sha, title: commit.title };
+		if (!result) return null;
+		return { type: "commit", sha: result.sha, title: result.title };
 	}
 
 	/**
@@ -854,11 +1284,16 @@ export default function reviewExtension(pi: ExtensionAPI) {
 	/**
 	 * Execute the review
 	 */
-	async function executeReview(ctx: ExtensionCommandContext, target: ReviewTarget, useFreshSession: boolean): Promise<void> {
+	async function executeReview(
+		ctx: ExtensionCommandContext,
+		target: ReviewTarget,
+		useFreshSession: boolean,
+		options?: { includeLocalChanges?: boolean },
+	): Promise<boolean> {
 		// Check if we're already in a review
 		if (reviewOriginId) {
 			ctx.ui.notify("Already in a review. Use /end-review to finish first.", "warning");
-			return;
+			return false;
 		}
 
 		// Handle fresh session mode
@@ -872,7 +1307,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 			}
 			if (!originId) {
 				ctx.ui.notify("Failed to determine review origin.", "error");
-				return;
+				return false;
 			}
 			reviewOriginId = originId;
 
@@ -893,13 +1328,13 @@ export default function reviewExtension(pi: ExtensionAPI) {
 					const result = await ctx.navigateTree(firstUserMessage.id, { summarize: false, label: "code-review" });
 					if (result.cancelled) {
 						reviewOriginId = undefined;
-						return;
+						return false;
 					}
 				} catch (error) {
 					// Clean up state if navigation fails
 					reviewOriginId = undefined;
 					ctx.ui.notify(`Failed to start review: ${error instanceof Error ? error.message : String(error)}`, "error");
-					return;
+					return false;
 				}
 
 				// Clear the editor (navigating to user message fills it with the message text)
@@ -916,7 +1351,9 @@ export default function reviewExtension(pi: ExtensionAPI) {
 			pi.appendEntry(REVIEW_STATE_TYPE, { active: true, originId: lockedOriginId });
 		}
 
-		const prompt = await buildReviewPrompt(pi, target);
+		const prompt = await buildReviewPrompt(pi, target, {
+			includeLocalChanges: options?.includeLocalChanges === true,
+		});
 		const hint = getUserFacingHint(target);
 		const projectGuidelines = await loadProjectReviewGuidelines(ctx.cwd);
 
@@ -932,6 +1369,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
 		// Send as a user message that triggers a turn
 		pi.sendUserMessage(fullPrompt);
+		return true;
 	}
 
 	/**
@@ -1028,12 +1466,137 @@ export default function reviewExtension(pi: ExtensionAPI) {
 		};
 	}
 
+	function isLoopCompatibleTarget(target: ReviewTarget): boolean {
+		if (target.type !== "commit") {
+			return true;
+		}
+
+		return false;
+	}
+
+	async function runLoopFixingReview(ctx: ExtensionCommandContext, target: ReviewTarget): Promise<void> {
+		if (reviewLoopInProgress) {
+			ctx.ui.notify("Loop fixing review is already running.", "warning");
+			return;
+		}
+
+		reviewLoopInProgress = true;
+		setReviewWidget(ctx, Boolean(reviewOriginId));
+		try {
+			ctx.ui.notify(
+				"Loop fixing enabled: using Empty branch mode and cycling until no blocking findings remain.",
+				"info",
+			);
+
+			for (let pass = 1; pass <= REVIEW_LOOP_MAX_ITERATIONS; pass++) {
+				const reviewBaselineAssistantId = getLastAssistantSnapshot(ctx)?.id;
+				const started = await executeReview(ctx, target, true, { includeLocalChanges: true });
+				if (!started) {
+					ctx.ui.notify("Loop fixing stopped before starting the review pass.", "warning");
+					return;
+				}
+
+				const reviewTurnStarted = await waitForLoopTurnToStart(ctx, reviewBaselineAssistantId);
+				if (!reviewTurnStarted) {
+					ctx.ui.notify("Loop fixing stopped: review pass did not start in time.", "error");
+					return;
+				}
+
+				await ctx.waitForIdle();
+
+				const reviewSnapshot = getLastAssistantSnapshot(ctx);
+				if (!reviewSnapshot || reviewSnapshot.id === reviewBaselineAssistantId) {
+					ctx.ui.notify("Loop fixing stopped: could not read the review result.", "warning");
+					return;
+				}
+
+				if (reviewSnapshot.stopReason === "aborted") {
+					ctx.ui.notify("Loop fixing stopped: review was aborted.", "warning");
+					return;
+				}
+
+				if (reviewSnapshot.stopReason === "error") {
+					ctx.ui.notify("Loop fixing stopped: review failed with an error.", "error");
+					return;
+				}
+
+				if (reviewSnapshot.stopReason === "length") {
+					ctx.ui.notify("Loop fixing stopped: review output was truncated (stopReason=length).", "warning");
+					return;
+				}
+
+				if (!hasBlockingReviewFindings(reviewSnapshot.text)) {
+					const finalized = await executeEndReviewAction(ctx, "returnAndSummarize", {
+						showSummaryLoader: true,
+						notifySuccess: false,
+					});
+					if (finalized !== "ok") {
+						return;
+					}
+
+					ctx.ui.notify("Loop fixing complete: no blocking findings remain.", "info");
+					return;
+				}
+
+				ctx.ui.notify(`Loop fixing pass ${pass}: found blocking findings, returning to fix them...`, "info");
+
+				const fixBaselineAssistantId = getLastAssistantSnapshot(ctx)?.id;
+				const sentFixPrompt = await executeEndReviewAction(ctx, "returnAndFix", {
+					showSummaryLoader: true,
+					notifySuccess: false,
+				});
+				if (sentFixPrompt !== "ok") {
+					return;
+				}
+
+				const fixTurnStarted = await waitForLoopTurnToStart(ctx, fixBaselineAssistantId);
+				if (!fixTurnStarted) {
+					ctx.ui.notify("Loop fixing stopped: fix pass did not start in time.", "error");
+					return;
+				}
+
+				await ctx.waitForIdle();
+
+				const fixSnapshot = getLastAssistantSnapshot(ctx);
+				if (!fixSnapshot || fixSnapshot.id === fixBaselineAssistantId) {
+					ctx.ui.notify("Loop fixing stopped: could not read the fix pass result.", "warning");
+					return;
+				}
+				if (fixSnapshot.stopReason === "aborted") {
+					ctx.ui.notify("Loop fixing stopped: fix pass was aborted.", "warning");
+					return;
+				}
+				if (fixSnapshot.stopReason === "error") {
+					ctx.ui.notify("Loop fixing stopped: fix pass failed with an error.", "error");
+					return;
+				}
+				if (fixSnapshot.stopReason === "length") {
+					ctx.ui.notify("Loop fixing stopped: fix pass output was truncated (stopReason=length).", "warning");
+					return;
+				}
+			}
+
+			ctx.ui.notify(
+				`Loop fixing stopped after ${REVIEW_LOOP_MAX_ITERATIONS} passes (safety limit reached).`,
+				"warning",
+			);
+		} finally {
+			reviewLoopInProgress = false;
+			setReviewWidget(ctx, Boolean(reviewOriginId));
+		}
+	}
+
 	// Register the /review command
 	pi.registerCommand("review", {
 		description: "Review code changes (PR, uncommitted, branch, commit, folder, or custom)",
 		handler: async (args, ctx) => {
 			if (!ctx.hasUI) {
 				ctx.ui.notify("Review requires interactive mode", "error");
+				return;
+			}
+
+			if (reviewLoopInProgress) {
+				ctx.ui.notify("Loop fixing review is already running.", "warning");
 				return;
 			}
 
@@ -1079,6 +1642,20 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
 				if (!target) {
 					ctx.ui.notify("Review cancelled", "info");
+					return;
+				}
+
+				if (reviewLoopFixingEnabled && !isLoopCompatibleTarget(target)) {
+					ctx.ui.notify("Loop mode does not work with commit review.", "error");
+					if (fromSelector) {
+						target = null;
+						continue;
+					}
+					return;
+				}
+
+				if (reviewLoopFixingEnabled) {
+					await runLoopFixingReview(ctx, target);
 					return;
 				}
 
@@ -1153,6 +1730,11 @@ Instructions:
 5. End with: fixed items, deferred/skipped items (with reasons), and verification results.`;
 
 	type EndReviewAction = "returnOnly" | "returnAndFix" | "returnAndSummarize";
+	type EndReviewActionResult = "ok" | "cancelled" | "error";
+	type EndReviewActionOptions = {
+		showSummaryLoader?: boolean;
+		notifySuccess?: boolean;
+	};
 
 	function getActiveReviewOrigin(ctx: ExtensionContext): string | undefined {
 		if (reviewOriginId) {
@@ -1180,22 +1762,121 @@ Instructions:
 		pi.appendEntry(REVIEW_STATE_TYPE, { active: false });
 	}
 
+	async function navigateWithSummary(
+		ctx: ExtensionCommandContext,
+		originId: string,
+		showLoader: boolean,
+	): Promise<{ cancelled: boolean; error?: string } | null> {
+		if (showLoader && ctx.hasUI) {
+			return ctx.ui.custom<{ cancelled: boolean; error?: string } | null>((tui, theme, _kb, done) => {
+				const loader = new BorderedLoader(tui, theme, "Returning and summarizing review branch...");
+				loader.onAbort = () => done(null);
+
+				ctx.navigateTree(originId, {
+					summarize: true,
+					customInstructions: REVIEW_SUMMARY_PROMPT,
+					replaceInstructions: true,
+				})
+					.then(done)
+					.catch((err) => done({ cancelled: false, error: err instanceof Error ? err.message : String(err) }));
+
+				return loader;
+			});
+		}
+
+		try {
+			return await ctx.navigateTree(originId, {
+				summarize: true,
+				customInstructions: REVIEW_SUMMARY_PROMPT,
+				replaceInstructions: true,
+			});
+		} catch (error) {
+			return { cancelled: false, error: error instanceof Error ? error.message : String(error) };
+		}
+	}
+
+	async function executeEndReviewAction(
+		ctx: ExtensionCommandContext,
+		action: EndReviewAction,
+		options: EndReviewActionOptions = {},
+	): Promise<EndReviewActionResult> {
+		const originId = getActiveReviewOrigin(ctx);
+		if (!originId) {
+			if (!getReviewState(ctx)?.active) {
+				ctx.ui.notify("Not in a review branch (use /review first, or review was started in current session mode)", "info");
+			}
+			return "error";
+		}
+
+		const notifySuccess = options.notifySuccess ?? true;
+
+		if (action === "returnOnly") {
+			try {
+				const result = await ctx.navigateTree(originId, { summarize: false });
+				if (result.cancelled) {
+					ctx.ui.notify("Navigation cancelled. Use /end-review to try again.", "info");
+					return "cancelled";
+				}
+			} catch (error) {
+				ctx.ui.notify(`Failed to return: ${error instanceof Error ? error.message : String(error)}`, "error");
+				return "error";
+			}
+
+			clearReviewState(ctx);
+			if (notifySuccess) {
+				ctx.ui.notify("Review complete! Returned to original position.", "info");
+			}
+			return "ok";
+		}
+
+		const summaryResult = await navigateWithSummary(ctx, originId, options.showSummaryLoader ?? false);
+		if (summaryResult === null) {
+			ctx.ui.notify("Summarization cancelled. Use /end-review to try again.", "info");
+			return "cancelled";
+		}
+
+		if (summaryResult.error) {
+			ctx.ui.notify(`Summarization failed: ${summaryResult.error}`, "error");
+			return "error";
+		}
+
+		if (summaryResult.cancelled) {
+			ctx.ui.notify("Navigation cancelled. Use /end-review to try again.", "info");
+			return "cancelled";
+		}
+
+		clearReviewState(ctx);
+
+		if (action === "returnAndSummarize") {
+			if (!ctx.ui.getEditorText().trim()) {
+				ctx.ui.setEditorText("Act on the review findings");
+			}
+			if (notifySuccess) {
+				ctx.ui.notify("Review complete! Returned and summarized.", "info");
+			}
+			return "ok";
+		}
+
+		pi.sendUserMessage(REVIEW_FIX_FINDINGS_PROMPT, { deliverAs: "followUp" });
+		if (notifySuccess) {
+			ctx.ui.notify("Review complete! Returned and queued a follow-up to fix findings.", "info");
+		}
+		return "ok";
+	}
+
 	async function runEndReview(ctx: ExtensionCommandContext): Promise<void> {
 		if (!ctx.hasUI) {
 			ctx.ui.notify("End-review requires interactive mode", "error");
 			return;
 		}
 
-		if (endReviewInProgress) {
-			ctx.ui.notify("/end-review is already running", "info");
+		if (reviewLoopInProgress) {
+			ctx.ui.notify("Loop fixing review is running. Wait for it to finish.", "info");
 			return;
 		}
 
-		const originId = getActiveReviewOrigin(ctx);
-		if (!originId) {
-			if (!getReviewState(ctx)?.active) {
-				ctx.ui.notify("Not in a review branch (use /review first, or review was started in current session mode)", "info");
-			}
+		if (endReviewInProgress) {
+			ctx.ui.notify("/end-review is already running", "info");
 			return;
 		}
 
@@ -1218,65 +1899,11 @@ Instructions:
 					: choice === "Return and summarize"
 						? "returnAndSummarize"
 						: "returnOnly";
-			if (action === "returnOnly") {
-				try {
-					const result = await ctx.navigateTree(originId, { summarize: false });
-					if (result.cancelled) {
-						ctx.ui.notify("Navigation cancelled. Use /end-review to try again.", "info");
-						return;
-					}
-				} catch (error) {
-					ctx.ui.notify(`Failed to return: ${error instanceof Error ? error.message : String(error)}`, "error");
-					return;
-				}
 
-				clearReviewState(ctx);
-				ctx.ui.notify("Review complete! Returned to original position.", "info");
-				return;
-			}
-
-			const summaryResult = await ctx.ui.custom<{ cancelled: boolean; error?: string } | null>((tui, theme, _kb, done) => {
-				const loader = new BorderedLoader(tui, theme, "Returning and summarizing review branch...");
-				loader.onAbort = () => done(null);
-
-				ctx.navigateTree(originId, {
-					summarize: true,
-					customInstructions: REVIEW_SUMMARY_PROMPT,
-					replaceInstructions: true,
-				})
-					.then(done)
-					.catch((err) => done({ cancelled: false, error: err instanceof Error ? err.message : String(err) }));
-
-				return loader;
+			await executeEndReviewAction(ctx, action, {
+				showSummaryLoader: true,
+				notifySuccess: true,
 			});
-
-			if (summaryResult === null) {
-				ctx.ui.notify("Summarization cancelled. Use /end-review to try again.", "info");
-				return;
-			}
-
-			if (summaryResult.error) {
-				ctx.ui.notify(`Summarization failed: ${summaryResult.error}`, "error");
-				return;
-			}
-
-			if (summaryResult.cancelled) {
-				ctx.ui.notify("Navigation cancelled. Use /end-review to try again.", "info");
-				return;
-			}
-
-			clearReviewState(ctx);
-
-			if (action === "returnAndSummarize") {
-				if (!ctx.ui.getEditorText().trim()) {
-					ctx.ui.setEditorText("Act on the review findings");
-				}
-				ctx.ui.notify("Review complete! Returned and summarized.", "info");
-				return;
-			}
-
-			pi.sendUserMessage(REVIEW_FIX_FINDINGS_PROMPT, { deliverAs: "followUp" });
-			ctx.ui.notify("Review complete! Returned and queued a follow-up to fix findings.", "info");
 		} finally {
 			endReviewInProgress = false;
 		}

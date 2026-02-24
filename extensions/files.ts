@@ -848,10 +848,10 @@ const showFileSelector = async (
 ): Promise<{ selected: FileEntry | null; quickAction: "diff" | null }> => {
 	const items: SelectItem[] = files.map((file) => {
 		const directoryLabel = file.isDirectory ? " [directory]" : "";
+		const statusSuffix = file.status ? ` [${file.status}]` : "";
 		return {
 			value: file.canonicalPath,
-			label: `${file.displayPath}${directoryLabel}`,
-			description: file.status ? `[${file.status}]` : undefined,
+			label: `${file.displayPath}${directoryLabel}${statusSuffix}`,
 		};
 	});
 
