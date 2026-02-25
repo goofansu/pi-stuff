@@ -211,7 +211,11 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 						const countInfo = codeBlocks.length > VISIBLE_ITEMS ? ` (${cursor + 1}/${codeBlocks.length})` : "";
 						const titleLeft = " " + theme.fg("accent", theme.bold("Snippets")) + theme.fg("dim", countInfo);
 						const currentBlock = codeBlocks[cursor];
-						lines.push(padToWidth(titleLeft, LIST_WIDTH) + theme.fg("borderMuted", "\u2502"));
+						const language = currentBlock?.language || "text";
+						const languageBadgeText = `[${language}]`;
+						const languageBadge = theme.fg("accent", languageBadgeText);
+						const rightHeader = " " + languageBadge;
+						lines.push(padToWidth(titleLeft, LIST_WIDTH) + theme.fg("borderMuted", "\u2502") + rightHeader);
 
 						// Blank separator
 						lines.push(padToWidth("", LIST_WIDTH) + theme.fg("borderMuted", "\u2502"));
