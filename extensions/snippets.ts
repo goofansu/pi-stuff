@@ -77,41 +77,40 @@ function describeCodeBlock(block: CodeBlock): string {
 /**
  * Get the last assistant message from the session
  */
-function getLastAssistantMessage(ctx: any): string | null {
-	const entries = ctx.sessionManager.getEntries();
-	
-	// Search backwards for the last assistant message
+function getLastAssistantMessage(ctx: ExtensionContext): string | null {
+	// Use current branch, so /tree rewinds are respected.
+	const entries = ctx.sessionManager.getBranch();
+
 	for (let i = entries.length - 1; i >= 0; i--) {
 		const entry = entries[i];
-		if (entry.type === "message" && entry.message?.role === "assistant") {
-			const content = entry.message.content;
-			
-			// Extract text from content blocks
-			if (Array.isArray(content)) {
-				const textParts: string[] = [];
-				for (const block of content) {
-					if (block && typeof block === "object" && block.type === "text" && typeof block.text === "string") {
-						textParts.push(block.text);
-					}
-				}
-				if (textParts.length > 0) {
-					return textParts.join("\n");
-				}
-			} else if (typeof content === "string") {
-				return content;
+		if (entry.type !== "message" || entry.message?.role !== "assistant") {
+			continue;
+		}
+
+		const content = entry.message.content;
+		if (typeof content === "string") {
+			return content;
+		}
+
+		if (Array.isArray(content)) {
+			const textParts = content
+				.filter((block): block is { text: string } => !!block && typeof block === "object" && typeof (block as any).text === "string")
+				.map((block) => block.text);
+			if (textParts.length > 0) {
+				return textParts.join("\n");
 			}
 		}
 	}
-	
+
 	return null;
 }
 
 /**
  * Copy text to clipboard using OS-specific commands
  */
-async function copyToClipboard(text: string, ctx: any): Promise<void> {
+async function copyToClipboard(text: string, ctx: ExtensionContext): Promise<boolean> {
 	const os = platform();
-	
+
 	try {
 		if (os === "darwin") {
 			// macOS: use pbcopy
@@ -119,10 +118,9 @@ async function copyToClipboard(text: string, ctx: any): Promise<void> {
 				input: text,
 				encoding: "utf-8",
 			});
-			
+
 			if (result.status === 0) {
-				ctx.ui.notify("Snippet copied to clipboard!", "info");
-				return;
+				return true;
 			}
 		} else if (os === "linux") {
 			// Linux: use xclip
@@ -130,10 +128,9 @@ async function copyToClipboard(text: string, ctx: any): Promise<void> {
 				input: text,
 				encoding: "utf-8",
 			});
-			
+
 			if (result.status === 0) {
-				ctx.ui.notify("Snippet copied to clipboard!", "info");
-				return;
+				return true;
 			}
 		} else if (os === "win32") {
 			// Windows: use clip.exe
@@ -141,18 +138,19 @@ async function copyToClipboard(text: string, ctx: any): Promise<void> {
 				input: text,
 				encoding: "utf-8",
 			});
-			
+
 			if (result.status === 0) {
-				ctx.ui.notify("Snippet copied to clipboard!", "info");
-				return;
+				return true;
 			}
 		}
-		
+
 		// Fallback: clipboard not available for this OS
 		ctx.ui.notify(`Clipboard not supported on ${os}`, "warning");
 	} catch (error) {
 		ctx.ui.notify("Could not copy to clipboard", "warning");
 	}
+
+	return false;
 }
 
 function padToWidth(str: string, targetWidth: number): string {
@@ -183,13 +181,22 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			const result = await ctx.ui.custom<{ action: string; block: CodeBlock } | null>((tui, theme, _kb, done) => {
+			const result = await ctx.ui.custom<{ action: "explain"; block: CodeBlock } | null>((tui, theme, _kb, done) => {
 				let cursor = 0;
 				let scrollOffset = 0;
 				let previewScrollOffset = 0;
+				let copiedBlockIndex: number | null = null;
+				let copiedTimer: ReturnType<typeof setTimeout> | null = null;
 				const LIST_WIDTH = 45;
 				const VISIBLE_ITEMS = 12;
 				const PREVIEW_LINES = VISIBLE_ITEMS + 3; // header + source label + blank
+
+				const clearCopiedTimer = () => {
+					if (copiedTimer) {
+						clearTimeout(copiedTimer);
+						copiedTimer = null;
+					}
+				};
 
 				return {
 					render(width: number) {
@@ -230,8 +237,9 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 							if (itemIndex < codeBlocks.length) {
 								const block = codeBlocks[itemIndex];
 								const isCursor = itemIndex === cursor;
+								const isCopied = copiedBlockIndex === itemIndex;
 
-								const cursorIndicator = isCursor ? "\u25B8" : " ";
+								const cursorIndicator = isCopied ? "✓" : isCursor ? "\u25B8" : " ";
 								const lineCount = block.code.split("\n").length;
 
 								listLine = ` ${cursorIndicator} #${block.index} [${lineCount} lines]`;
@@ -241,7 +249,9 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 									listLine = listLine.substring(0, LIST_WIDTH - 4) + "...";
 								}
 
-								if (isCursor) {
+								if (isCopied) {
+									listLine = theme.fg("success", listLine);
+								} else if (isCursor) {
 									listLine = theme.fg("accent", listLine);
 								} else {
 									listLine = theme.fg("text", listLine);
@@ -295,13 +305,27 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 							}
 						} else if (matchesKey(data, Key.enter)) {
 							if (currentBlock) {
-								done({ action: "copy", block: currentBlock });
+								void copyToClipboard(currentBlock.code, ctx).then((copied) => {
+									if (!copied) {
+										return;
+									}
+									copiedBlockIndex = cursor;
+									tui.requestRender();
+									clearCopiedTimer();
+									copiedTimer = setTimeout(() => {
+										copiedBlockIndex = null;
+										copiedTimer = null;
+										tui.requestRender();
+									}, 1200);
+								});
 							}
 						} else if (data === "e" || data === "E") {
 							if (currentBlock) {
+								clearCopiedTimer();
 								done({ action: "explain", block: currentBlock });
 							}
 						} else if (matchesKey(data, Key.escape)) {
+							clearCopiedTimer();
 							done(null);
 						}
 					},
@@ -313,9 +337,7 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			if (result.action === "copy") {
-				await copyToClipboard(result.block.code, ctx);
-			} else if (result.action === "explain") {
+			if (result.action === "explain") {
 				const snippetFormatted = `\`\`\`${result.block.language}\n${result.block.code}\n\`\`\``;
 				pi.sendUserMessage(`Explain this snippet:\n\n${snippetFormatted}`);
 			}
