@@ -3,7 +3,7 @@
  *
  * Spawns an isolated `pi` process with a strong reasoning model
  * for complex analysis and debugging tasks. The oracle runs in its own
- * context window with access to bash and read tools, so it can independently
+ * context window with access to bash, read, grep, find, and ls tools, so it can independently
  * investigate code while reasoning about the problem.
  *
  * The oracle is slower and more expensive than the main agent's model, but excels
@@ -36,7 +36,7 @@ const ORACLE_SYSTEM_PROMPT = `You are the Oracle — a second-opinion reasoning 
 
 ## Role
 
-You provide deep, careful analysis when the main coding agent encounters something that benefits from a second perspective. You have access to bash and read tools to investigate code independently. You excel at:
+You provide deep, careful analysis when the main coding agent encounters something that benefits from a second perspective. You have access to bash, read, grep, find, and ls tools to investigate code independently. You excel at:
 
 - Complex debugging: tracing subtle bugs through multiple layers of code
 - Root-cause analysis: identifying correctness issues, edge cases, and architectural problems
@@ -225,7 +225,7 @@ async function runOracle(
     "--no-prompt-templates",
     "--no-themes",
     "--tools",
-    "bash,read,grep,glob",
+    "bash,read,grep,find,ls",
   ];
 
   if (model) args.push("--model", model);
@@ -382,7 +382,7 @@ export default function oracleExtension(pi: ExtensionAPI) {
     label: "Oracle",
     description: [
       "Get a second opinion from a powerful reasoning subagent on complex problems.",
-      "The Oracle runs in its own context with access to bash, read, grep, and glob tools,",
+      "The Oracle runs in its own context with access to bash, read, grep, find, and ls tools,",
       "so it can independently investigate code while reasoning about the problem.",
       "Use for difficult debugging, root-cause analysis, algorithm analysis,",
       "refactoring decisions, or any task requiring deep reasoning.",
