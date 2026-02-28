@@ -251,7 +251,7 @@ function getFinalOutput(messages: any[]): string {
 	return "";
 }
 
-const KIMI_MODEL_ID = "k2p5";
+const KIMI_MODEL_ID = "kimi-k2.5";
 const SONNET_MODEL_ID = "claude-sonnet-4-6";
 
 function modelToCliId(model: Model<Api> | undefined): string | undefined {
@@ -297,11 +297,11 @@ async function selectLibrarianModel(
 		getApiKey: (model: Model<Api>) => Promise<string | undefined>;
 	},
 ): Promise<string | undefined> {
-	const kimiModel = modelRegistry.find("kimi-coding", KIMI_MODEL_ID);
+	const kimiModel = modelRegistry.find("opencode", KIMI_MODEL_ID);
 	if (kimiModel) {
 		const apiKey = await modelRegistry.getApiKey(kimiModel);
 		if (apiKey) {
-			return `kimi-coding/${KIMI_MODEL_ID}`;
+			return `opencode/${KIMI_MODEL_ID}`;
 		}
 	}
 
