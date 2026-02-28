@@ -1,12 +1,13 @@
 ---
 name: check-upstream
-description: Check whether the upstream mitsuhiko/agent-stuff pi-extensions repository has new commits since the local vendored extensions were last updated. Use this skill whenever the user asks about upstream changes, new extensions from mitsuhiko, whether extensions are up to date, syncing with upstream, or anything like "any new commits?", "what's changed upstream?", "are there updates?", or "should I sync?".
+description: Check whether upstream GitHub repositories have new commits since the local vendored extensions were last updated. Supports multiple vendors — any repo referenced in extensions/Makefile is checked. Use this skill whenever the user asks about upstream changes, new extensions, whether extensions are up to date, syncing with upstream, or anything like "any new commits?", "what's changed upstream?", "are there updates?", or "should I sync?".
 ---
 
 # check-upstream
 
-Checks the upstream `mitsuhiko/agent-stuff/pi-extensions` repo for commits that
-postdate the local vendored extensions.
+Checks all upstream GitHub repositories referenced in `extensions/Makefile` for
+commits that postdate the local vendored extensions.  Supports multiple vendors
+(e.g. `mitsuhiko/agent-stuff`, `other-org/other-repo`, etc.).
 
 ## Usage
 
@@ -17,10 +18,11 @@ bash .pi/skills/check-upstream/scripts/check.sh
 ```
 
 The script automatically:
-1. Parses `extensions/Makefile` to identify vendored files (from `curl` lines in the `install` target) — so local-only extensions like `oracle.ts` don't skew the date
-2. Finds the most recent git commit date across those vendored files
-3. Queries the GitHub API for any `pi-extensions/` commits newer than that date
-4. Reports new commits (date, short SHA, message), or confirms you're up to date
+1. Parses `extensions/Makefile` to extract all `raw.githubusercontent.com` URLs
+2. Groups them by GitHub repository and path prefix
+3. For each upstream, finds the most recent local git commit date across its vendored files
+4. Queries the GitHub Commits API for any commits newer than that date
+5. Reports new commits per upstream, or confirms you're up to date
 
 ## What to do with the results
 
@@ -34,3 +36,9 @@ make -C extensions install   # re-downloads all vendored extensions from upstrea
 
 Review the diff after (`git diff extensions/`) before committing, since upstream
 changes may conflict with local modifications.
+
+## Adding a new vendor
+
+Just add `curl` lines to `extensions/Makefile` pointing at the new repo's
+`raw.githubusercontent.com` URLs.  The check script will automatically pick them
+up — no configuration needed.
