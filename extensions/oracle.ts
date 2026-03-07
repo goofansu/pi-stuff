@@ -205,7 +205,7 @@ function getFinalOutput(messages: any[]): string {
 }
 
 const PREFERRED_PROVIDER = "openai-codex";
-const PREFERRED_MODEL_ID = "gpt-5.2";
+const PREFERRED_MODEL_ID = "gpt-5.4";
 const PREFERRED_MODEL = `${PREFERRED_PROVIDER}/${PREFERRED_MODEL_ID}`;
 
 async function runOracle(
