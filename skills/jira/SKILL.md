@@ -30,6 +30,10 @@ If not found, tell the user:
 
 If a command fails with an authentication error, run `acli jira auth status` to check the current session. For auth setup, see [references/JIRA_AUTH.md](references/JIRA_AUTH.md).
 
+## Rich Formatting (ADF)
+
+To render headings, tables, lists, or code blocks in comments or descriptions, you must use Atlassian Document Format (ADF). See [references/JIRA_ADF_FORMATTING.md](references/JIRA_ADF_FORMATTING.md) for patterns and a Ruby builder.
+
 ## Jira Subcommand Reference
 
 - [jira auth](references/JIRA_AUTH.md) — login, logout, status, switch
