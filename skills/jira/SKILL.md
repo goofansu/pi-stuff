@@ -13,6 +13,10 @@ description: >
 
 Use `acli` to interact with Atlassian Jira from the command line.
 
+## Tool Constraint
+
+**Only use `acli` for all Jira operations.** Do not attempt alternative methods such as `curl`, REST API calls, Python scripts, or any other tool — even if an `acli` command fails or a flag seems unsupported. If something can't be done with `acli`, tell the user clearly rather than inventing a workaround.
+
 ## Prerequisites
 
 Verify `acli` is installed:
