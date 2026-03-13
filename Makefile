@@ -9,10 +9,10 @@ gondolin:
 	pnpm install @earendil-works/gondolin
 
 vendor-skills:
-	npx skills add anthropics/skills -s skill-creator -g -a codex -y
-	npx skills add mitsuhiko/agent-stuff -s commit -s web-browser -s mermaid -s summarize -g -a codex -y
-	npx skills add mitsuhiko/gh-issue-sync -g -a codex -y
-	npx skills add brave/brave-search-skills -s web-search -g -a codex -y
+	npx skills add anthropics/skills -s skill-creator -g -a codex -a claude-code -y
+	npx skills add mitsuhiko/agent-stuff -s commit -s web-browser -s mermaid -s summarize -g -a codex -a claude-code -y
+	npx skills add mitsuhiko/gh-issue-sync -g -a codex -a claude-code -y
+	npx skills add brave/brave-search-skills -s web-search -g -a codex -a claude-code -y
 
 vendor-extensions:
 	make -C extensions
