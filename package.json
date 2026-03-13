@@ -1,7 +1,10 @@
 {
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "*",
     "@mariozechner/pi-ai": "*",
+    "@mariozechner/pi-coding-agent": "*",
     "@mariozechner/pi-tui": "*"
+  },
+  "dependencies": {
+    "@earendil-works/gondolin": "^0.6.0"
   }
 }
