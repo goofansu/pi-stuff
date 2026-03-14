@@ -204,9 +204,7 @@ function getFinalOutput(messages: any[]): string {
   return "";
 }
 
-const PREFERRED_PROVIDER = "openai-codex";
-const PREFERRED_MODEL_ID = "gpt-5.4";
-const PREFERRED_MODEL = `${PREFERRED_PROVIDER}/${PREFERRED_MODEL_ID}`;
+const ORACLE_MODEL = "openai-codex/gpt-5.4";
 
 async function runOracle(
   task: string,
@@ -399,14 +397,6 @@ export default function oracleExtension(pi: ExtensionAPI) {
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
       const { query } = params as { query: string };
 
-      // Use modelRegistry API to detect preferred model
-      const preferredModel = ctx.modelRegistry.find(
-        PREFERRED_PROVIDER,
-        PREFERRED_MODEL_ID,
-      )
-        ? PREFERRED_MODEL
-        : undefined;
-
       const makeDetails = (partial: SubagentResult): OracleDetails => ({
         query,
         toolCalls: partial.toolCalls,
@@ -430,7 +420,7 @@ export default function oracleExtension(pi: ExtensionAPI) {
             });
           }
         },
-        preferredModel,
+        ORACLE_MODEL,
       );
 
       if (result.exitCode !== 0 || !result.output) {
