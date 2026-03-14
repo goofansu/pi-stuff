@@ -4,12 +4,12 @@ This repository stores customizations for the [pi coding agent](https://github.c
 
 ## Extensions
 
-All extension files are in the [`extensions`](extensions) directory — both ones I wrote and ones sourced from others (through [`extensions/Makefile`](extensions/Makefile)). That keeps everything in one place, easy to maintain. 
+All extension files are in the [`extensions`](extensions) directory — both ones I wrote and ones sourced from others (through [`extensions/Makefile`](extensions/Makefile)), which keeps everything in one place and easy to maintain.
 
 Here is a list of extensions I wrote:
 
-- [`librarian.ts`](extensions/librarian.ts) - Searches code across GitHub repositories in a subagent; prefers Kimi K2.5 (`kimi-coding/k2p5`), falls back to Claude Sonnet 4.6, at medium thinking level.
-- [`oracle.ts`](extensions/oracle.ts) - Second opinion reasoning subagent using GPT 5.4 (`openai-codex/gpt-5.4`) at medium thinking level.
+- [`librarian.ts`](extensions/librarian.ts) - Searches code across GitHub repositories in a subagent using Claude Haiku 4.5.
+- [`oracle.ts`](extensions/oracle.ts) - Second opinion reasoning subagent using GPT 5.4.
 - [`snippets.ts`](extensions/snippets.ts) - Lists code blocks from the last assistant message for further action.
 
 ## Skills
