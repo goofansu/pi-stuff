@@ -9,4 +9,5 @@ install:
 	curl -O https://raw.githubusercontent.com/mitsuhiko/agent-stuff/refs/heads/main/pi-extensions/loop.ts
 	curl -O https://raw.githubusercontent.com/mitsuhiko/agent-stuff/refs/heads/main/pi-extensions/control.ts
 	curl -O https://raw.githubusercontent.com/mitsuhiko/agent-stuff/refs/heads/main/pi-extensions/todos.ts
+	curl -O https://raw.githubusercontent.com/mitsuhiko/agent-stuff/refs/heads/main/pi-extensions/multi-edit.ts
 	curl -O https://raw.githubusercontent.com/HazAT/pi-config/refs/heads/main/extensions/ghostty.ts

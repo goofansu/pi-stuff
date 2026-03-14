@@ -5,6 +5,6 @@
     "@mariozechner/pi-tui": "*"
   },
   "dependencies": {
-    "@earendil-works/gondolin": "^0.6.0"
+    "diff": "^8.0.3"
   }
 }
