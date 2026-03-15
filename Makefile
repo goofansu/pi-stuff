@@ -1,12 +1,9 @@
-install: keybindings gondolin
+install: keybindings
 	pi install .
 	pi install https://github.com/davebcn87/pi-autoresearch
 
 keybindings:
 	cp keybindings.json ~/.pi/agent/keybindings.json
-
-gondolin:
-	pnpm install @earendil-works/gondolin
 
 vendor-skills:
 	npx skills add anthropics/skills -s skill-creator -g -a codex -a claude-code -y
