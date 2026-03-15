@@ -5,11 +5,14 @@ install: keybindings
 keybindings:
 	cp keybindings.json ~/.pi/agent/keybindings.json
 
+define skills-add
+	npx skills add $(1) $(foreach s,$(2),-s $(s)) -g -a codex -a claude-code -y
+endef
+
 vendor-skills:
-	npx skills add anthropics/skills -s skill-creator -g -a codex -a claude-code -y
-	npx skills add mitsuhiko/agent-stuff -s commit -s web-browser -s mermaid -s summarize -g -a codex -a claude-code -y
-	npx skills add mitsuhiko/gh-issue-sync -g -a codex -a claude-code -y
-	npx skills add brave/brave-search-skills -s web-search -g -a codex -a claude-code -y
+	$(call skills-add,anthropics/skills,skill-creator)
+	$(call skills-add,mitsuhiko/agent-stuff,commit web-browser mermaid summarize)
+	$(call skills-add,brave/brave-search-skills,web-search)
 
 vendor-extensions:
 	make -C extensions
