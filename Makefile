@@ -15,4 +15,4 @@ vendor-skills:
 	$(call skills-add,brave/brave-search-skills,web-search)
 
 vendor-extensions:
-	make -C extensions
+	make -C extensions install
