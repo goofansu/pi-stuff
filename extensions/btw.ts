@@ -194,8 +194,8 @@ export default function (pi: ExtensionAPI) {
 			if (answer === null || answer === false) return;
 
 			// ── 4. Show the answer in a dismissible overlay ───────────────────
-			// Returns true if user pressed Enter (insert answer into editor)
-			const insert = await ctx.ui.custom<boolean>(
+			// Enter inserts the answer into the editor; Escape dismisses.
+			await ctx.ui.custom<void>(
 				(tui, theme, _kb, done) => {
 					const md = new Markdown(answer.trim(), 1, 0, getMarkdownTheme());
 					let scrollOffset = 0;
@@ -281,8 +281,8 @@ export default function (pi: ExtensionAPI) {
 					}
 
 					function handleInput(data: string) {
-						if (matchesKey(data, Key.enter)) { done(true); return; }
-						if (matchesKey(data, Key.escape)) { done(false); return; }
+						if (matchesKey(data, Key.enter)) { ctx.ui.setEditorText(answer.trim()); done(); return; }
+						if (matchesKey(data, Key.escape)) { done(); return; }
 						if (matchesKey(data, Key.up)) { scrollBy(-1); tui.requestRender(); return; }
 						if (matchesKey(data, Key.down)) { scrollBy(1); tui.requestRender(); return; }
 						if (matchesKey(data, Key.left)) { scrollBy(-viewHeight || -1); tui.requestRender(); return; }
@@ -297,9 +297,7 @@ export default function (pi: ExtensionAPI) {
 				},
 			);
 
-			if (insert) {
-				ctx.ui.setEditorText(answer.trim());
-			}
+
 		},
 	});
 
