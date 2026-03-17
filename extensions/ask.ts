@@ -14,9 +14,9 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Key, Markdown, matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 
-const BTW_MODEL = "opencode/claude-haiku-4-5";
-const BTW_MAX_ITERATIONS = 5;
-const BTW_SEARCH_COUNT = 5;
+const ASK_MODEL = "opencode/claude-haiku-4-5";
+const ASK_MAX_ITERATIONS = 5;
+const ASK_SEARCH_COUNT = 5;
 
 // ── Web search via Brave API ─────────────────────────────────────────────────
 
@@ -36,7 +36,7 @@ async function braveSearch(query: string): Promise<SearchResponse> {
 	if (!apiKey) throw new Error("BRAVE_SEARCH_API_KEY is not set");
 
 	const url = "https://api.search.brave.com/res/v1/web/search?" +
-		new URLSearchParams({ q: query, count: BTW_SEARCH_COUNT.toString(), extra_snippets: "true" });
+		new URLSearchParams({ q: query, count: ASK_SEARCH_COUNT.toString(), extra_snippets: "true" });
 
 	const res = await fetch(url, {
 		headers: { "Accept": "application/json", "X-Subscription-Token": apiKey },
@@ -87,8 +87,8 @@ export default function (pi: ExtensionAPI) {
 				question = entered.trim();
 			}
 
-			// ── 2. Resolve model — prefer BTW_MODEL, fall back to active model ──
-			const [provider, modelId] = BTW_MODEL.split("/");
+			// ── 2. Resolve model — prefer ASK_MODEL, fall back to active model ──
+			const [provider, modelId] = ASK_MODEL.split("/");
 			const askModel = ctx.modelRegistry.find(provider, modelId) ?? ctx.model!;
 
 			// Only offer web search if the API key is present
@@ -122,7 +122,7 @@ export default function (pi: ExtensionAPI) {
 					const allSources: SearchSource[] = [];
 
 					// Tool-calling loop — model decides whether to search or answer directly
-					for (let i = 0; i < BTW_MAX_ITERATIONS; i++) {
+					for (let i = 0; i < ASK_MAX_ITERATIONS; i++) {
 						const response = await complete(
 							askModel,
 							{ messages, tools },
