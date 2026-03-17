@@ -8,7 +8,7 @@ All extension files are in the [`extensions`](extensions) directory — both one
 
 Here is a list of extensions I wrote:
 
-- [`btw.ts`](extensions/btw.ts) - Ask a quick context-free question (`/btw <question>`) using Claude Haiku 4.5 with no system prompt and no session history. Uses web search via Brave API if `BRAVE_SEARCH_API_KEY` is set.
+- [`ask.ts`](extensions/ask.ts) - Ask a quick context-free question (`/ask <question>`) using Claude Haiku 4.5 with no system prompt and no session history. Uses web search via Brave API if `BRAVE_SEARCH_API_KEY` is set.
 - [`gondolin.ts`](extensions/gondolin.ts) - Sandboxes all tool calls (read/write/edit/bash) inside a Gondolin micro-VM via `--gondolin` flag; mounts the current directory at `/workspace` in the VM.
 - [`librarian.ts`](extensions/librarian.ts) - Searches code across GitHub repositories in a subagent using Claude Haiku 4.5.
 - [`oracle.ts`](extensions/oracle.ts) - Second opinion reasoning subagent using GPT 5.4.

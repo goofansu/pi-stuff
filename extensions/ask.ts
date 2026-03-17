@@ -1,8 +1,8 @@
 /**
- * btw - Ask a quick question in a fresh, context-free conversation.
+ * ask - Ask a quick question in a fresh, context-free conversation.
  *
- * Usage: /btw <question>
- *        /btw  (prompts for input)
+ * Usage: /ask <question>
+ *        /ask  (prompts for input)
  *
  * The question is sent to the LLM with no system prompt and no session
  * history.  The answer is shown in a dismissible overlay panel and is
@@ -62,11 +62,11 @@ async function braveSearch(query: string): Promise<SearchResponse> {
 }
 
 export default function (pi: ExtensionAPI) {
-	pi.registerCommand("btw", {
+	pi.registerCommand("ask", {
 		description: "Ask a quick context-free question in a fresh conversation",
 		handler: async (args, ctx) => {
 			if (!ctx.hasUI) {
-				ctx.ui.notify("btw requires interactive mode", "error");
+				ctx.ui.notify("ask requires interactive mode", "error");
 				return;
 			}
 
@@ -79,7 +79,7 @@ export default function (pi: ExtensionAPI) {
 			let question = args?.trim() ?? "";
 
 			if (!question) {
-				const entered = await ctx.ui.input("btw", "Question:");
+				const entered = await ctx.ui.input("ask", "Question:");
 				if (!entered?.trim()) {
 					ctx.ui.notify("No question entered", "info");
 					return;
@@ -89,7 +89,7 @@ export default function (pi: ExtensionAPI) {
 
 			// ── 2. Resolve model — prefer BTW_MODEL, fall back to active model ──
 			const [provider, modelId] = BTW_MODEL.split("/");
-			const btwModel = ctx.modelRegistry.find(provider, modelId) ?? ctx.model!;
+			const askModel = ctx.modelRegistry.find(provider, modelId) ?? ctx.model!;
 
 			// Only offer web search if the API key is present
 			const hasWebSearch = Boolean(process.env.BRAVE_SEARCH_API_KEY);
@@ -98,7 +98,7 @@ export default function (pi: ExtensionAPI) {
 			// ── 3. Ask the LLM in a fresh, context-free session ──────────────
 			// null = user cancelled, false = error (already notified), string = answer
 			const answer = await ctx.ui.custom<string | null | false>((tui, theme, _kb, done) => {
-				const loader = new BorderedLoader(tui, theme, `btw: ${question}`);
+				const loader = new BorderedLoader(tui, theme, `ask: ${question}`);
 				loader.onAbort = () => done(null);
 
 				const spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -113,7 +113,7 @@ export default function (pi: ExtensionAPI) {
 				}
 
 				const doAsk = async () => {
-					const apiKey = await ctx.modelRegistry.getApiKey(btwModel);
+					const apiKey = await ctx.modelRegistry.getApiKey(askModel);
 					const messages: (UserMessage | AssistantMessage | ToolResultMessage)[] = [{
 						role: "user",
 						content: [{ type: "text", text: question }],
@@ -124,7 +124,7 @@ export default function (pi: ExtensionAPI) {
 					// Tool-calling loop — model decides whether to search or answer directly
 					for (let i = 0; i < BTW_MAX_ITERATIONS; i++) {
 						const response = await complete(
-							btwModel,
+							askModel,
 							{ messages, tools },
 							{ apiKey, signal: loader.signal },
 						);
@@ -166,7 +166,7 @@ export default function (pi: ExtensionAPI) {
 							} catch (e: any) {
 								text = `Search error: ${e.message}`;
 								isError = true;
-								ctx.ui.notify(`btw: search failed — ${e.message}`, "warning");
+								ctx.ui.notify(`ask: search failed — ${e.message}`, "warning");
 							}
 							messages.push({
 								role: "toolResult",
@@ -185,7 +185,7 @@ export default function (pi: ExtensionAPI) {
 
 				doAsk().then((result) => { if (!loader.signal.aborted) done(result); }).catch((e: any) => {
 					if (loader.signal.aborted) return; // abort already handled via onAbort
-					if (e?.message) ctx.ui.notify(`btw: ${e.message}`, "error");
+					if (e?.message) ctx.ui.notify(`ask: ${e.message}`, "error");
 					done(false);
 				});
 				return loader;
@@ -205,7 +205,7 @@ export default function (pi: ExtensionAPI) {
 					let mdCacheLines: string[] = [];
 
 					function buildTitleLine(width: number): string {
-						const titleText = " btw ";
+						const titleText = " ask ";
 						const titleWidth = visibleWidth(titleText);
 						if (titleWidth >= width) return truncateToWidth(theme.fg("accent", titleText.trim()), width);
 						const leftWidth = Math.max(0, Math.floor((width - titleWidth) / 2));
