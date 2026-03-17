@@ -4,9 +4,10 @@
  * Usage: /ask <question>
  *        /ask  (prompts for input)
  *
- * The question is sent to the LLM with no system prompt and no session
- * history.  The answer is shown in a dismissible overlay panel and is
- * never injected into the current conversation context.
+ * The question is sent to the LLM with a minimal system prompt (conciseness
+ * + Markdown + search policy) and no session history.  The answer is shown
+ * in a dismissible overlay panel and is never injected into the current
+ * conversation context.
  */
 
 import { complete, Type, type Tool, type UserMessage, type AssistantMessage, type ToolResultMessage } from "@mariozechner/pi-ai";
@@ -97,6 +98,10 @@ export default function (pi: ExtensionAPI) {
 
 			// ── 3. Ask the LLM in a fresh, context-free session ──────────────
 			// null = user cancelled, false = error (already notified), string = answer
+			const SYSTEM_PROMPT =
+				"You are a concise assistant. Answer questions directly and use Markdown formatting.\n" +
+				"Only call web_search for time-sensitive facts or information you are not confident about.\n" +
+				"Keep answers short unless depth is clearly needed.";
 			const answer = await ctx.ui.custom<string | null | false>((tui, theme, _kb, done) => {
 				const loader = new BorderedLoader(tui, theme, `ask: ${question}`);
 				loader.onAbort = () => done(null);
@@ -125,7 +130,7 @@ export default function (pi: ExtensionAPI) {
 					for (let i = 0; i < ASK_MAX_ITERATIONS; i++) {
 						const response = await complete(
 							askModel,
-							{ messages, tools },
+							{ messages, tools, system: SYSTEM_PROMPT },
 							{ apiKey, signal: loader.signal },
 						);
 
