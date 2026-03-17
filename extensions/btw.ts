@@ -63,7 +63,7 @@ async function braveSearch(query: string): Promise<SearchResponse> {
 
 export default function (pi: ExtensionAPI) {
 	pi.registerCommand("btw", {
-		description: "Ask a quick context-free question (answer is never injected into current context)",
+		description: "Ask a quick context-free question in a fresh conversation",
 		handler: async (args, ctx) => {
 			if (!ctx.hasUI) {
 				ctx.ui.notify("btw requires interactive mode", "error");
