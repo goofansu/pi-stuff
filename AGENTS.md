@@ -1,7 +1,11 @@
 # AGENTS.md
 
-## Code style
+## Extensions
 
-- When creating or modifying a pi extension, work in the `extensions/` directory.
+- Work in the `extensions/` directory when creating or modifying a pi extension.
 - Extensions are TypeScript files that follow the pi coding agent extension API.
+- Each extension is self-contained — do not extract shared helpers or utilities into separate files. When creating a new extension, copy code from the most similar existing extension rather than abstracting shared logic.
+
+## Documentation
+
 - When adding extensions or skills to README.md, sort them alphabetically.
