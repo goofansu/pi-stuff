@@ -11,7 +11,7 @@ endef
 
 vendor-skills:
 	$(call skills-add,anthropics/skills,skill-creator frontend-design pdf)
-	$(call skills-add,mitsuhiko/agent-stuff,commit web-browser mermaid summarize)
+	$(call skills-add,mitsuhiko/agent-stuff,commit mermaid summarize)
 	$(call skills-add,brave/brave-search-skills,web-search)
 
 vendor-extensions:
