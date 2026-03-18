@@ -9,18 +9,19 @@ Context from user: $@
 
 Always ask me for:
 - **Worktree parent directory** (where the worktree folder will be created)
-- **Base branch** to create the worktree from
+- **Base branch** to create the worktree from — only needed if no PR link was provided
 
-Then suggest a worktree directory name and a matching new branch name using the conventions below. Present both suggestions together and wait for confirmation before proceeding.
+If a PR link was provided, fetch the PR branch name from the PR (e.g. via `gh pr view <number> --json headRefName`) and use it as the branch for the worktree. Do not create a new branch in this case.
 
-### Naming conventions
+Otherwise, suggest a worktree directory name and a matching new branch name using the conventions below. Present both suggestions together and wait for confirmation before proceeding.
+
+### Naming conventions (no PR link only)
 
 Always use lowercase for both directory and branch names.
 
 **For Jira tickets:**
 - Directory: `<issue-key>-<short-summary>` (all lowercase, e.g. `proj-123-fix-login-timeout`)
-- Branch: `<issue-type>/<issue-key>-<short-summary>` (all lowercase, e.g. `proj-123`)
-- Example: directory `proj-123-fix-login-timeout`, branch `bug/proj-123-fix-login-timeout`
+- Branch: `<issue-type>/<issue-key>-<short-summary>` (all lowercase, e.g. `bug/proj-123-fix-login-timeout`)
 
 **For other work:**
 - Directory: `<short-summary>-<random-phrase>` (3 random words like `sleepy-churning-karp`)
@@ -34,19 +35,19 @@ If I provide my own names, use those instead.
 
 Before making changes:
 - Confirm the current directory is inside a git repository
-- Check the base branch exists locally or on the remote
 - Check the target directory does not already exist
+- If a PR link was provided: verify the PR branch exists on the remote and can be fetched
+- Otherwise: verify the base branch exists locally or on the remote
 - If anything is wrong, explain and ask how to proceed
 
 ## Step 3: Create the worktree
 
-- Create a new branch from the base branch and check it out in the worktree
-- If the base branch only exists on the remote, track it locally first
-- Do not overwrite existing directories
-
-```
-git worktree add -b <new-branch> <target-dir> <base-branch>
-```
+- If a PR link was provided, check out the existing PR branch in the worktree:
+  - Fetch the branch from the remote if it doesn't exist locally
+  - Use `git worktree add <target-dir> <pr-branch>` (no `-b` flag — the branch already exists)
+- Otherwise, create a new branch from the base branch:
+  - If the base branch only exists on the remote, track it locally first
+  - Use `git worktree add -b <new-branch> <target-dir> <base-branch>`
 
 ## Step 4: Write handoff.md
 
@@ -76,18 +77,18 @@ Create `handoff.md` in the worktree root. Structure it as follows:
 ## Context
 - **Worktree:** <path>
 - **Branch:** <branch>
-- **Base branch:** <base-branch>
+- **PR / Base branch:** <pr-link or base-branch>
 - **Created:** <date>
 ```
 
-Fill in every section from the current session's context and any user instructions provided above. Be specific — file paths, function names, error messages. The goal is for a cold-start session to pick up immediately.
+Fill in every section from the current session's context and any user instructions provided above. Be specific — file paths, function names, error messages. The goal is for a cold-start session to pick up immediately. Write "None" for any section that does not apply.
 
 ## Step 5: Summary
 
 Print a brief summary:
 - Worktree path
 - Branch name
-- Base branch
+- PR link or base branch (whichever applies)
 - Path to `handoff.md`
 - Output of `git worktree list`
 
