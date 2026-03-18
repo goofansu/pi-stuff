@@ -8,9 +8,9 @@
  * sends your question together with the entire current session history.
  * The model can see everything that's happened so far and answer accordingly.
  *
- * No tools are available — the model can only reason over what's already in
- * context.  The answer is shown in a dismissible overlay and nothing is
- * written back to the current session branch.
+ * No tools are available — the model reasons over what's already in context
+ * and answers in a single turn. The answer is shown in a dismissible overlay
+ * and nothing is written back to the current session branch.
  */
 
 import crypto from "node:crypto";
@@ -23,7 +23,7 @@ import { Key, Markdown, matchesKey, truncateToWidth, visibleWidth } from "@mario
 
 export default function (pi: ExtensionAPI) {
 	pi.registerCommand("btw", {
-		description: "Ask a question with full session context (no tools, stays on main branch)",
+		description: "Ask a question with full session context (single turn, no tools)",
 		handler: async (args, ctx) => {
 			if (!ctx.hasUI) {
 				ctx.ui.notify("btw requires interactive mode", "error");
@@ -86,7 +86,7 @@ export default function (pi: ExtensionAPI) {
 			// Use a minimal system prompt — the full agent prompt is tool-oriented
 			// and causes the model to attempt tool use (which isn't available here),
 			// resulting in truncated responses like "Let me check the full flow:".
-			const systemPrompt = "Answer the user's question concisely based on the conversation history. No tools are available.";
+			const systemPrompt = "Answer the user's question directly and completely in this single response. No tools are available — do not attempt to use them. Do not say what you are going to check or look at; just provide the answer immediately.";
 
 			// ── 3. Ask the LLM — no tools, no session writes ─────────────────
 			const answer = await ctx.ui.custom<string | null | false>((tui, theme, _kb, done) => {
