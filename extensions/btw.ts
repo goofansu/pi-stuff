@@ -13,6 +13,9 @@
  * written back to the current session branch.
  */
 
+import crypto from "node:crypto";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { join, relative } from "path";
 import { complete, type UserMessage, type AssistantMessage, type ToolResultMessage } from "@mariozechner/pi-ai";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
@@ -148,8 +151,9 @@ export default function (pi: ExtensionAPI) {
 					function buildActionLine(width: number, total: number, view: number, offset: number): string {
 						const back = theme.fg("dim", "esc back");
 						const insertHint = theme.fg("dim", "enter to insert");
+						const noteHint = theme.fg("dim", "ctrl+s to save");
 						const nav = theme.fg("dim", "↑/↓: move. ←/→: page.");
-						let line = [back, insertHint, nav].join(theme.fg("muted", " • "));
+						let line = [back, insertHint, noteHint, nav].join(theme.fg("muted", " • "));
 						if (total > view) {
 							const start = Math.min(total, offset + 1);
 							const end = Math.min(total, offset + view);
@@ -215,6 +219,26 @@ export default function (pi: ExtensionAPI) {
 						if (matchesKey(data, Key.down)) { scrollBy(1); tui.requestRender(); return; }
 						if (matchesKey(data, Key.left)) { scrollBy(-viewHeight || -1); tui.requestRender(); return; }
 						if (matchesKey(data, Key.right)) { scrollBy(viewHeight || 1); tui.requestRender(); return; }
+						if (matchesKey(data, Key.ctrl("s"))) {
+							try {
+								const dir = join(ctx.cwd, ".pi", "btw");
+								mkdirSync(dir, { recursive: true });
+								let id: string | undefined;
+								for (let attempt = 0; attempt < 10; attempt += 1) {
+									const candidate = crypto.randomBytes(4).toString("hex");
+									if (!existsSync(join(dir, `${candidate}.md`))) { id = candidate; break; }
+								}
+								if (!id) throw new Error("Failed to generate unique btw note id");
+								const filePath = join(dir, `${id}.md`);
+								const content = `# ${question.trim()}\n\n${answer.trim()}\n`;
+								writeFileSync(filePath, content, "utf-8");
+								ctx.ui.notify(`Saved note: ${relative(ctx.cwd, filePath)}`, "info");
+							} catch (error) {
+								const message = error instanceof Error ? error.message : String(error);
+								ctx.ui.notify(message, "error");
+							}
+							return;
+						}
 					}
 
 					return { render, invalidate: () => {}, handleInput };
