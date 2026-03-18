@@ -15,10 +15,12 @@ Then suggest a worktree directory name and a matching new branch name using the 
 
 ### Naming conventions
 
+Always use lowercase for both directory and branch names.
+
 **For Jira tickets:**
-- Directory: `<issue-type>-<issue-key>-<short-summary>` (lowercase slug)
-- Branch: `<issue-type>/<ISSUE-KEY>-<short-summary>` (key stays uppercase)
-- Example: directory `bug-proj-123-fix-login-timeout`, branch `bug/PROJ-123-fix-login-timeout`
+- Directory: `<issue-type>-<issue-key>-<short-summary>` (all lowercase, e.g. `proj-123`)
+- Branch: `<issue-type>/<issue-key>-<short-summary>` (all lowercase, e.g. `proj-123`)
+- Example: directory `bug-proj-123-fix-login-timeout`, branch `bug/proj-123-fix-login-timeout`
 
 **For other work:**
 - Directory: `<short-summary>-<random-phrase>` (3 random words like `sleepy-churning-karp`)
