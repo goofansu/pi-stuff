@@ -130,7 +130,7 @@ export default function (pi: ExtensionAPI) {
 					for (let i = 0; i < ASK_MAX_ITERATIONS; i++) {
 						const response = await complete(
 							askModel,
-							{ messages, tools, system: SYSTEM_PROMPT },
+							{ messages, tools, systemPrompt: SYSTEM_PROMPT },
 							{ apiKey, signal: loader.signal },
 						);
 

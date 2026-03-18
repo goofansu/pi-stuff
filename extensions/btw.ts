@@ -83,8 +83,10 @@ export default function (pi: ExtensionAPI) {
 				} satisfies UserMessage,
 			];
 
-			// Include the current system prompt so the model retains its persona/rules.
-			const systemPrompt = ctx.getSystemPrompt();
+			// Use a minimal system prompt — the full agent prompt is tool-oriented
+			// and causes the model to attempt tool use (which isn't available here),
+			// resulting in truncated responses like "Let me check the full flow:".
+			const systemPrompt = "Answer the user's question concisely based on the conversation history. No tools are available.";
 
 			// ── 3. Ask the LLM — no tools, no session writes ─────────────────
 			const answer = await ctx.ui.custom<string | null | false>((tui, theme, _kb, done) => {
@@ -129,6 +131,7 @@ export default function (pi: ExtensionAPI) {
 			await ctx.ui.custom<void>(
 				(tui, theme, _kb, done) => {
 					const md = new Markdown(answer.trim(), 1, 0, getMarkdownTheme());
+					let saved = false;
 					let scrollOffset = 0;
 					let viewHeight = 0;
 					let totalLines = 0;
@@ -151,7 +154,7 @@ export default function (pi: ExtensionAPI) {
 					function buildActionLine(width: number, total: number, view: number, offset: number): string {
 						const back = theme.fg("dim", "esc back");
 						const insertHint = theme.fg("dim", "enter to insert");
-						const noteHint = theme.fg("dim", "ctrl+s to save");
+						const noteHint = saved ? theme.fg("dim", "saved ✓") : theme.fg("dim", "ctrl+s to save");
 						const nav = theme.fg("dim", "↑/↓: move. ←/→: page.");
 						let line = [back, insertHint, noteHint, nav].join(theme.fg("muted", " • "));
 						if (total > view) {
@@ -219,7 +222,7 @@ export default function (pi: ExtensionAPI) {
 						if (matchesKey(data, Key.down)) { scrollBy(1); tui.requestRender(); return; }
 						if (matchesKey(data, Key.left)) { scrollBy(-viewHeight || -1); tui.requestRender(); return; }
 						if (matchesKey(data, Key.right)) { scrollBy(viewHeight || 1); tui.requestRender(); return; }
-						if (matchesKey(data, Key.ctrl("s"))) {
+						if (matchesKey(data, Key.ctrl("s")) && !saved) {
 							try {
 								const dir = join(ctx.cwd, ".pi", "btw");
 								mkdirSync(dir, { recursive: true });
@@ -232,6 +235,8 @@ export default function (pi: ExtensionAPI) {
 								const filePath = join(dir, `${id}.md`);
 								const content = `# ${question.trim()}\n\n${answer.trim()}\n`;
 								writeFileSync(filePath, content, "utf-8");
+								saved = true;
+								tui.requestRender();
 								ctx.ui.notify(`Saved note: ${relative(ctx.cwd, filePath)}`, "info");
 							} catch (error) {
 								const message = error instanceof Error ? error.message : String(error);
