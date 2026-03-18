@@ -56,25 +56,30 @@ export default function (pi: ExtensionAPI) {
 			// AgentMessage includes other roles (bashExecution, custom, etc.)
 			// that are not part of the standard provider protocol.
 			//
-			// Also strip ThinkingContent blocks from assistant messages. If thinking
-			// blocks are present in the history, Anthropic requires thinking to be
-			// enabled on the current request too — which would cause the btw
-			// response itself to contain thinking blocks (or <thinking> delimiters).
+			// Also strip ThinkingContent and toolCall blocks from assistant messages:
+			// - Thinking blocks require thinking to be enabled on the current request.
+			// - toolCall blocks cause the model to mimic tool-use behaviour even when
+			//   tools: [] is passed, resulting in truncated responses.
+			// Drop toolResult messages entirely — they are meaningless without the
+			// corresponding toolCall blocks and confuse the model.
 			const historyMessages = sessionCtx.messages
 				.filter(
 					(m): m is UserMessage | AssistantMessage | ToolResultMessage =>
-						m.role === "user" || m.role === "assistant" || m.role === "toolResult",
+						m.role === "user" || m.role === "assistant",
 				)
-				.map((m): UserMessage | AssistantMessage | ToolResultMessage => {
+				.map((m): UserMessage | AssistantMessage => {
 					if (m.role !== "assistant") return m;
 					return {
 						...m,
-						content: m.content.filter((block) => block.type !== "thinking"),
+						content: m.content.filter(
+							(block) => block.type !== "thinking" && block.type !== "toolCall",
+						),
 					} as AssistantMessage;
-				});
+				})
+				.filter((m) => m.role !== "assistant" || (m as AssistantMessage).content.length > 0);
 
 			// Append the btw question as a fresh user turn.
-			const messages: (UserMessage | AssistantMessage | ToolResultMessage)[] = [
+			const messages: (UserMessage | AssistantMessage)[] = [
 				...historyMessages,
 				{
 					role: "user",
