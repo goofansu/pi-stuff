@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Check for upstream commits across all GitHub repositories referenced in
-# extensions/Makefile.  Supports multiple vendors — any raw.githubusercontent.com
-# curl URL is detected and grouped by repo + path prefix.
+# Check for upstream changes across all GitHub repositories referenced in
+# extensions/Makefile by directly comparing local file content to upstream.
 #
-# For each upstream, the script finds the most recent local git-commit date
-# across the vendored files that came from that upstream, then queries the
-# GitHub Commits API for anything newer.
+# This approach is immune to the "local patch shifts the date cutoff" bug that
+# affects commit-date-based checks: it downloads each upstream file to a temp
+# location and diffs it against the local copy.
 
 set -e
 
@@ -17,75 +16,57 @@ if [ ! -f "$MAKEFILE" ]; then
   exit 1
 fi
 
-# Extract all raw.githubusercontent.com URLs from the Makefile.
-# Expected format:
-#   https://raw.githubusercontent.com/{owner}/{repo}/refs/heads/{branch}/{path}/{file}
-URLS=$(grep -oE 'https://raw\.githubusercontent\.com/[^[:space:]]+' "$MAKEFILE")
+TMPDIR_WORK=$(mktemp -d)
+trap 'rm -rf "$TMPDIR_WORK"' EXIT
 
-if [ -z "$URLS" ]; then
-  echo "No upstream URLs found in $MAKEFILE" >&2
-  exit 1
-fi
+ANY_DIFF=false
 
-# Build an associative array: key = "owner/repo::path-prefix", value = list of local filenames
-declare -A UPSTREAM_FILES  # local filenames per upstream key
-declare -A UPSTREAM_REPO   # "owner/repo" per key
-declare -A UPSTREAM_PATH   # API path prefix per key
+# Parse every curl line from the Makefile.
+# Handles two forms:
+#   curl -O <url>                  -> local filename = basename of url
+#   curl <url> -o <localname>      -> local filename = <localname>
+#   curl -o <localname> <url>      -> local filename = <localname>
+while IFS= read -r line; do
+  # Skip lines that don't contain a raw.githubusercontent.com URL
+  url=$(echo "$line" | grep -oE 'https://raw\.githubusercontent\.com/[^[:space:]]+') || continue
 
-while IFS= read -r url; do
-  # Strip the base and split:  owner/repo/refs/heads/branch/path.../file
-  stripped="${url#https://raw.githubusercontent.com/}"
-  owner=$(echo "$stripped" | cut -d/ -f1)
-  repo=$(echo "$stripped" | cut -d/ -f2)
-  # Everything after refs/heads/{branch}/ is the file path inside the repo
-  # Pattern: owner/repo/refs/heads/branch/rest...
-  rest=$(echo "$stripped" | sed -E 's|^[^/]+/[^/]+/refs/heads/[^/]+/||')
-  # path-prefix = directory portion, filename = basename
-  dir_prefix=$(dirname "$rest")
-  filename=$(basename "$rest")
+  # Determine local output filename
+  if echo "$line" | grep -qE '(curl -O |curl -sO )'; then
+    # -O: use the URL basename
+    local_name=$(basename "$url")
+  elif echo "$line" | grep -qE -- '-o '; then
+    # -o <name>: extract the argument after -o
+    local_name=$(echo "$line" | grep -oE -- '-o [^[:space:]]+' | head -1 | awk '{print $2}')
+  else
+    local_name=$(basename "$url")
+  fi
 
-  key="${owner}/${repo}::${dir_prefix}"
-  UPSTREAM_REPO["$key"]="${owner}/${repo}"
-  UPSTREAM_PATH["$key"]="$dir_prefix"
-  UPSTREAM_FILES["$key"]+="extensions/${filename} "
-done <<< "$URLS"
+  local_file="$REPO_ROOT/extensions/$local_name"
 
-ANY_UPDATES=false
-
-for key in $(echo "${!UPSTREAM_REPO[@]}" | tr ' ' '\n' | sort); do
-  repo="${UPSTREAM_REPO[$key]}"
-  api_path="${UPSTREAM_PATH[$key]}"
-  local_files="${UPSTREAM_FILES[$key]}"
-
-  echo "━━━ ${repo}  (path: ${api_path}) ━━━"
-
-  # Find the most recent commit date across the vendored files from this upstream
-  # shellcheck disable=SC2086
-  LAST_SYNC=$(git -C "$REPO_ROOT" log --format="%aI" -- $local_files 2>/dev/null | head -1)
-
-  if [ -z "$LAST_SYNC" ]; then
-    echo "  ⚠  Could not determine last sync date (files not yet committed?)."
-    echo "     Files: $local_files"
-    echo ""
+  if [ ! -f "$local_file" ]; then
+    echo "⚠  $local_name  (local file not found: $local_file)"
     continue
   fi
 
-  echo "  Last local update: $LAST_SYNC"
-
-  RESULT=$(curl -sf \
-    "https://api.github.com/repos/${repo}/commits?path=${api_path}&since=${LAST_SYNC}&per_page=20" \
-    | jq -r '.[] | "  \(.commit.author.date[:10])  \(.sha[:7])  \(.commit.message | split("\n")[0])"')
-
-  if [ -z "$RESULT" ]; then
-    echo "  ✓ Up to date."
-  else
-    echo "  New upstream commits:"
-    echo "$RESULT"
-    ANY_UPDATES=true
+  # Download upstream to a temp file
+  tmp_file="$TMPDIR_WORK/$local_name"
+  if ! curl -sf "$url" -o "$tmp_file" 2>/dev/null; then
+    echo "⚠  $local_name  (upstream fetch failed: $url)"
+    continue
   fi
-  echo ""
-done
 
-if [ "$ANY_UPDATES" = true ]; then
+  if ! diff -q "$local_file" "$tmp_file" > /dev/null 2>&1; then
+    echo "↑  $local_name  differs from upstream"
+    echo "   upstream: $url"
+    diff --unified=3 "$local_file" "$tmp_file" | head -40 || true
+    echo ""
+    ANY_DIFF=true
+  fi
+
+done < "$MAKEFILE"
+
+if [ "$ANY_DIFF" = false ]; then
+  echo "✓ All vendored extensions match upstream."
+else
   echo "Run 'make -C extensions install' to pull updates, then review with 'git diff extensions/'."
 fi
