@@ -113,7 +113,7 @@ Use `~code~` for inline references to commands, variables, filenames, and short 
 
 ## Renaming Notes / Updating Filetags
 
-Use `denote-rename-file` to rename a note or update its keywords. It updates both the filename and the front matter atomically.
+Use `denote-rename-file` to rename a note or update its keywords. In principle it can update both the filename and the front matter, but do **not** assume that succeeded just because the filename changed. Always verify the resulting file on disk before reporting success.
 
 ```elisp
 (denote-rename-file FILE TITLE KEYWORDS SIGNATURE DATE IDENTIFIER)
@@ -121,7 +121,7 @@ Use `denote-rename-file` to rename a note or update its keywords. It updates bot
 
 Pass `(quote keep-current)` for any parameter to leave unchanged.
 
-**Always** bind `denote-rename-confirmations` to `nil`, `denote-save-buffers` to `t`, and `default-directory` to `(denote-directory)`. Without `default-directory`, Emacs may compute `git mv` paths relative to the wrong repo.
+**Always** bind `denote-rename-confirmations` to `nil`, `denote-save-buffers` to `t`, and `default-directory` to `(denote-directory)`. Without `default-directory`, Emacs may compute `git mv` paths relative to the wrong repo. After the command returns, read the resulting file from disk and confirm that the front matter matches the requested title/keywords.
 
 ```bash
 # Update keywords only
@@ -134,10 +134,43 @@ emacsclient -s gui -e '(let ((denote-rename-confirmations nil) (denote-save-buff
 ### Rename/Retag Workflow
 
 1. Find the note file (use `find` or the identifier).
-2. Read the current `#+filetags:` line to see existing keywords.
-3. Determine the new keyword list (sorted alphabetically; prefer existing keywords from `(denote-keywords)`).
-4. Run `denote-rename-file` with the bindings above, passing new keywords and `(quote keep-current)` for all other parameters.
-5. **Report**: Show the new file path and ask the user to refresh the buffer in Emacs.
+2. Read the current front matter, especially `#+title:` and `#+filetags:`.
+3. Determine the requested changes:
+   - **Title**: if the user wants a rename, prepare the new title; otherwise use `(quote keep-current)`.
+   - **Keywords**: sort them alphabetically; prefer existing keywords from `(denote-keywords)`.
+   - **Other fields**: use `(quote keep-current)` unless the user explicitly asked to change them.
+4. Run `denote-rename-file` with the bindings above.
+5. Normalize the returned path and then **verify the file on disk**:
+   - the old path should be gone and the new path should exist;
+   - if the title changed, `#+title:` in the new file should match;
+   - if the keywords changed, `#+filetags:` in the new file should match.
+6. If the filename changed but `#+title:` or `#+filetags:` did **not** update, do **not** stop there. Repair the front matter in the renamed file via Emacs Lisp, save the buffer, and verify again.
+7. For org notes, use this fallback repair pattern on the renamed file:
+
+```bash
+emacsclient -s gui -e '(let* ((file "/path/to/note.org")
+                              (new-title "New Title")
+                              (new-keywords (sort (copy-sequence (list "tag1" "tag2")) (quote string<))))
+                         (with-current-buffer (find-file-noselect file)
+                           (save-excursion
+                             (goto-char (point-min))
+                             (when (re-search-forward "^#\\+title:.*$" nil t)
+                               (replace-match (format "#+title:      %s" new-title) t t))
+                             (goto-char (point-min))
+                             (when (re-search-forward "^#\\+filetags:.*$" nil t)
+                               (replace-match
+                                (format "#+filetags:   %s"
+                                        (denote-format-keywords-for-org-front-matter new-keywords))
+                                t t))
+                             (save-buffer))
+                           file))'
+```
+
+8. After the fallback, read the file from disk again. Only report success if both the filename and the front matter now match the requested result.
+9. If the fallback still does not produce matching `#+title:` / `#+filetags:`, report a genuine failure with the exact stale lines.
+10. **Report**:
+   - on full success, show the new file path and ask the user to refresh the buffer in Emacs;
+   - on failure, show the new path plus the stale front-matter lines so the user can inspect/fix them in Emacs.
 
 ---
 
@@ -145,3 +178,4 @@ emacsclient -s gui -e '(let ((denote-rename-confirmations nil) (denote-save-buff
 
 - Use single-quoted shell strings containing the Elisp to avoid shell escaping issues.
 - Keywords are **always a list**, even for a single tag: `(list "work")`.
+- For rename/retag operations, verify both the filename and the front matter on disk. A changed filename alone is not enough evidence that the operation fully succeeded.
