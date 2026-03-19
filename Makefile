@@ -1,5 +1,6 @@
 install: keybindings
 	pi install .
+	pi install ../pi-remote-control
 	pi install https://github.com/davebcn87/pi-autoresearch
 
 keybindings:
