@@ -1,6 +1,6 @@
 ---
 name: tmux
-description: "Remote control tmux sessions for interactive CLIs (python, gdb, etc.) by sending keystrokes and scraping pane output."
+description: "Use this skill whenever the user wants to run an interactive program (Python REPL, Node, psql, gdb, lldb, bash) inside tmux, open a tmux session in a Ghostty window, create a persistent session that survives terminal closure, or send commands to and monitor a running process. Always use this skill — even for seemingly simple requests like 'start a python repl' or 'open gdb in ghostty' — to ensure correct socket isolation, Ghostty window setup, and safe key injection."
 license: Vibecoded
 ---
 
@@ -85,19 +85,18 @@ Some special rules for processes:
 
 ## Opening a session in a terminal window (macOS)
 
-Write a script with the resolved socket path, then open it in a new terminal window:
+Pass the `tmux attach` command directly to Ghostty via `-e`. **Always create the tmux session before calling `open`** — there is no retry.
+
+**Important**: Expand `$SOCKET` and `$SESSION` to their literal values before passing to `open --args`, because `${TMPDIR}` may differ between shells and Ghostty won't expand variables in the arguments it receives.
 
 ```bash
 SOCKET="${TMPDIR:-/tmp}/claude-tmux-sockets/claude.sock"
+SESSION="claude-mysession"   # use the actual session name
 
-cat > /tmp/attach-mysession.sh << EOF
-#!/bin/bash
-tmux -S "$SOCKET" attach -t mysession
-EOF
-chmod +x /tmp/attach-mysession.sh
+open -na Ghostty.app --args -e tmux -S "$SOCKET" attach -t "$SESSION"
 ```
 
-`open -na Ghostty.app --args -e /tmp/attach-mysession.sh`
+> **Do not use a wrapper shell script** — on macOS, Ghostty's `-e` does not reliably execute scripts passed as a single argument. Pass the command and its arguments directly as shown above.
 
 To detach programmatically: `tmux -S "$SOCKET" detach-client -s "$SESSION"`
 
