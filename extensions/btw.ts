@@ -18,8 +18,8 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join, relative } from "path";
 import { complete, type UserMessage, type AssistantMessage, type ToolResultMessage } from "@mariozechner/pi-ai";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { BorderedLoader, getMarkdownTheme, keyHint, rawKeyHint } from "@mariozechner/pi-coding-agent";
-import { Key, Markdown, matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import { BorderedLoader, getMarkdownTheme, keyHint } from "@mariozechner/pi-coding-agent";
+import { Markdown, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 
 export default function (pi: ExtensionAPI) {
 	pi.registerCommand("btw", {
@@ -157,11 +157,11 @@ export default function (pi: ExtensionAPI) {
 					}
 
 					function buildActionLine(width: number, total: number, view: number, offset: number): string {
-						const back = keyHint("tui.select.cancel", "back");
+						const backHint = keyHint("tui.select.cancel", "back");
 						const insertHint = keyHint("tui.select.confirm", "insert");
-						const noteHint = saved ? theme.fg("dim", "saved ✓") : rawKeyHint("ctrl+s", "save");
-						const nav = theme.fg("dim", "↑/↓: move. ←/→: page.");
-						let line = [back, insertHint, noteHint, nav].join(theme.fg("muted", " • "));
+						const saveHint = saved ? theme.fg("success", "saved ✓") : theme.fg("dim", "s save");
+						const navHint = theme.fg("dim", "↑/↓: move. ←/→: page.");
+						let line = [backHint, insertHint, saveHint, navHint].join(theme.fg("muted", " • "));
 						if (total > view) {
 							const start = Math.min(total, offset + 1);
 							const end = Math.min(total, offset + view);
@@ -227,7 +227,7 @@ export default function (pi: ExtensionAPI) {
 						if (kb.matches(data, "tui.select.down")) { scrollBy(1); tui.requestRender(); return; }
 						if (kb.matches(data, "tui.editor.cursorLeft")) { scrollBy(-viewHeight || -1); tui.requestRender(); return; }
 						if (kb.matches(data, "tui.editor.cursorRight")) { scrollBy(viewHeight || 1); tui.requestRender(); return; }
-						if (matchesKey(data, Key.ctrl("s")) && !saved) {
+						if ((data === "s" || data === "S") && !saved) {
 							try {
 								const dir = join(ctx.cwd, ".pi", "btw");
 								mkdirSync(dir, { recursive: true });

@@ -14,6 +14,8 @@ import { complete, Type, type Tool, type UserMessage, type AssistantMessage, typ
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader, getMarkdownTheme, keyHint } from "@mariozechner/pi-coding-agent";
 import { Markdown, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import { spawnSync } from "node:child_process";
+import { platform } from "node:os";
 
 const ASK_MODEL = "opencode/claude-haiku-4-5";
 const ASK_MAX_ITERATIONS = 5;
@@ -28,6 +30,20 @@ const webSearchTool: Tool = {
 		query: Type.String({ description: "The search query" }),
 	}),
 };
+
+function copyToClipboard(text: string): boolean {
+	const os = platform();
+	try {
+		let cmd: string, args: string[];
+		if (os === "darwin") { cmd = "pbcopy"; args = []; }
+		else if (os === "linux") { cmd = "xclip"; args = ["-selection", "clipboard"]; }
+		else if (os === "win32") { cmd = "clip.exe"; args = []; }
+		else return false;
+		return spawnSync(cmd, args, { input: text, encoding: "utf-8" }).status === 0;
+	} catch {
+		return false;
+	}
+}
 
 interface SearchSource { title: string; url: string; }
 interface SearchResponse { text: string; sources: SearchSource[]; }
@@ -208,6 +224,8 @@ export default function (pi: ExtensionAPI) {
 					let totalLines = 0;
 					let mdCacheWidth = -1;
 					let mdCacheLines: string[] = [];
+					let copied = false;
+					let copiedTimer: ReturnType<typeof setTimeout> | null = null;
 
 					function buildTitleLine(width: number): string {
 						const titleText = " ask ";
@@ -223,10 +241,11 @@ export default function (pi: ExtensionAPI) {
 					}
 
 					function buildActionLine(width: number, total: number, view: number, offset: number): string {
-						const back = keyHint("tui.select.cancel", "back");
+						const backHint = keyHint("tui.select.cancel", "back");
 						const insertHint = keyHint("tui.select.confirm", "insert");
-						const nav = theme.fg("dim", "↑/↓: move. ←/→: page.");
-						let line = [back, insertHint, nav].join(theme.fg("muted", " • "));
+						const copyHint = copied ? theme.fg("success", "c copied ✓") : theme.fg("dim", "c copy");
+						const navHint = theme.fg("dim", "↑/↓: move. ←/→: page.");
+						let line = [backHint, insertHint, copyHint, navHint].join(theme.fg("muted", " • "));
 						if (total > view) {
 							const start = Math.min(total, offset + 1);
 							const end = Math.min(total, offset + view);
@@ -292,6 +311,21 @@ export default function (pi: ExtensionAPI) {
 						if (kb.matches(data, "tui.select.down")) { scrollBy(1); tui.requestRender(); return; }
 						if (kb.matches(data, "tui.editor.cursorLeft")) { scrollBy(-viewHeight || -1); tui.requestRender(); return; }
 						if (kb.matches(data, "tui.editor.cursorRight")) { scrollBy(viewHeight || 1); tui.requestRender(); return; }
+						if (data === "c" || data === "C") {
+							if (copyToClipboard(answer.trim())) {
+								copied = true;
+								tui.requestRender();
+								if (copiedTimer) clearTimeout(copiedTimer);
+								copiedTimer = setTimeout(() => {
+									copied = false;
+									copiedTimer = null;
+									tui.requestRender();
+								}, 1200);
+							} else {
+								ctx.ui.notify("Could not copy to clipboard", "warning");
+							}
+							return;
+						}
 					}
 
 					return { render, invalidate: () => {}, handleInput };
