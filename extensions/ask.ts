@@ -12,8 +12,8 @@
 
 import { complete, Type, type Tool, type UserMessage, type AssistantMessage, type ToolResultMessage } from "@mariozechner/pi-ai";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { BorderedLoader, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
-import { Key, Markdown, matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import { BorderedLoader, getMarkdownTheme, keyHint } from "@mariozechner/pi-coding-agent";
+import { Markdown, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 
 const ASK_MODEL = "opencode/claude-haiku-4-5";
 const ASK_MAX_ITERATIONS = 5;
@@ -201,7 +201,7 @@ export default function (pi: ExtensionAPI) {
 			// ── 4. Show the answer in a dismissible overlay ───────────────────
 			// Enter inserts the answer into the editor; Escape dismisses.
 			await ctx.ui.custom<void>(
-				(tui, theme, _kb, done) => {
+				(tui, theme, kb, done) => {
 					const md = new Markdown(answer.trim(), 1, 0, getMarkdownTheme());
 					let scrollOffset = 0;
 					let viewHeight = 0;
@@ -223,8 +223,8 @@ export default function (pi: ExtensionAPI) {
 					}
 
 					function buildActionLine(width: number, total: number, view: number, offset: number): string {
-						const back = theme.fg("dim", "esc back");
-						const insertHint = theme.fg("dim", "enter to insert");
+						const back = keyHint("tui.select.cancel", "back");
+						const insertHint = keyHint("tui.select.confirm", "insert");
 						const nav = theme.fg("dim", "↑/↓: move. ←/→: page.");
 						let line = [back, insertHint, nav].join(theme.fg("muted", " • "));
 						if (total > view) {
@@ -286,12 +286,12 @@ export default function (pi: ExtensionAPI) {
 					}
 
 					function handleInput(data: string) {
-						if (matchesKey(data, Key.enter)) { ctx.ui.setEditorText(answer.trim()); done(); return; }
-						if (matchesKey(data, Key.escape)) { done(); return; }
-						if (matchesKey(data, Key.up)) { scrollBy(-1); tui.requestRender(); return; }
-						if (matchesKey(data, Key.down)) { scrollBy(1); tui.requestRender(); return; }
-						if (matchesKey(data, Key.left)) { scrollBy(-viewHeight || -1); tui.requestRender(); return; }
-						if (matchesKey(data, Key.right)) { scrollBy(viewHeight || 1); tui.requestRender(); return; }
+						if (kb.matches(data, "tui.select.confirm")) { ctx.ui.setEditorText(answer.trim()); done(); return; }
+						if (kb.matches(data, "tui.select.cancel")) { done(); return; }
+						if (kb.matches(data, "tui.select.up")) { scrollBy(-1); tui.requestRender(); return; }
+						if (kb.matches(data, "tui.select.down")) { scrollBy(1); tui.requestRender(); return; }
+						if (kb.matches(data, "tui.editor.cursorLeft")) { scrollBy(-viewHeight || -1); tui.requestRender(); return; }
+						if (kb.matches(data, "tui.editor.cursorRight")) { scrollBy(viewHeight || 1); tui.requestRender(); return; }
 					}
 
 					return { render, invalidate: () => {}, handleInput };

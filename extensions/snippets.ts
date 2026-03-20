@@ -9,7 +9,8 @@
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { Key, matchesKey, visibleWidth } from "@mariozechner/pi-tui";
+import { keyHint } from "@mariozechner/pi-coding-agent";
+import { visibleWidth } from "@mariozechner/pi-tui";
 import { spawnSync } from "node:child_process";
 import { platform } from "node:os";
 
@@ -181,7 +182,7 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			const result = await ctx.ui.custom<{ action: "explain"; block: CodeBlock } | null>((tui, theme, _kb, done) => {
+			const result = await ctx.ui.custom<{ action: "explain"; block: CodeBlock } | null>((tui, theme, kb, done) => {
 				let cursor = 0;
 				let scrollOffset = 0;
 				let previewScrollOffset = 0;
@@ -269,10 +270,23 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 
 						// Footer
 						lines.push("");
-						lines.push(" " + theme.fg("dim", "\u2191\u2193 navigate \u2022 enter to copy \u2022 e explain \u2022 esc to cancel"));
+						lines.push(
+							" " +
+								keyHint("tui.select.confirm", "copy") +
+								theme.fg("dim", " • ") +
+								theme.fg("muted", "e explain") +
+								theme.fg("dim", " • ") +
+								keyHint("tui.select.cancel", "cancel") +
+								theme.fg("dim", " • ") +
+								theme.fg("dim", "↑/↓: move."),
+						);
 						const totalCodeLines = currentBlock ? currentBlock.code.split("\n").length : 0;
 						if (totalCodeLines > PREVIEW_LINES - 3) {
-							lines.push(" " + theme.fg("dim", `\u2190\u2192 scroll preview (${previewScrollOffset + 1}-${Math.min(previewScrollOffset + PREVIEW_LINES - 3, totalCodeLines)}/${totalCodeLines})`));
+							lines.push(
+								" " +
+									theme.fg("dim", "←/→: page.") +
+									theme.fg("dim", ` (${previewScrollOffset + 1}-${Math.min(previewScrollOffset + PREVIEW_LINES - 3, totalCodeLines)}/${totalCodeLines})`),
+							);
 						}
 						lines.push(border);
 
@@ -282,32 +296,32 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 					handleInput(data: string) {
 						const currentBlock = codeBlocks[cursor];
 
-						if (matchesKey(data, Key.up)) {
+						if (kb.matches(data, "tui.select.up")) {
 							cursor = Math.max(0, cursor - 1);
 							previewScrollOffset = 0;
 							if (cursor < scrollOffset) {
 								scrollOffset = cursor;
 							}
 							tui.requestRender();
-						} else if (matchesKey(data, Key.down)) {
+						} else if (kb.matches(data, "tui.select.down")) {
 							cursor = Math.min(codeBlocks.length - 1, cursor + 1);
 							previewScrollOffset = 0;
 							if (cursor >= scrollOffset + VISIBLE_ITEMS) {
 								scrollOffset = cursor - VISIBLE_ITEMS + 1;
 							}
 							tui.requestRender();
-						} else if (matchesKey(data, Key.left)) {
+						} else if (kb.matches(data, "tui.editor.cursorLeft")) {
 							// Scroll preview up
 							previewScrollOffset = Math.max(0, previewScrollOffset - 3);
 							tui.requestRender();
-						} else if (matchesKey(data, Key.right)) {
+						} else if (kb.matches(data, "tui.editor.cursorRight")) {
 							// Scroll preview down
 							if (currentBlock) {
 								const maxScroll = Math.max(0, currentBlock.code.split("\n").length - (PREVIEW_LINES - 3));
 								previewScrollOffset = Math.min(maxScroll, previewScrollOffset + 3);
 								tui.requestRender();
 							}
-						} else if (matchesKey(data, Key.enter)) {
+						} else if (kb.matches(data, "tui.select.confirm")) {
 							if (currentBlock) {
 								void copyToClipboard(currentBlock.code, ctx).then((copied) => {
 									if (!copied) {
@@ -328,7 +342,7 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 								clearCopiedTimer();
 								done({ action: "explain", block: currentBlock });
 							}
-						} else if (matchesKey(data, Key.escape)) {
+						} else if (kb.matches(data, "tui.select.cancel")) {
 							clearCopiedTimer();
 							done(null);
 						}
