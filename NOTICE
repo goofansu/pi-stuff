@@ -5,6 +5,7 @@ License, Version 2.0.
 The following files originate from that repository:
 
   extensions/answer.ts
+  extensions/btw.ts
   extensions/context.ts
   extensions/control.ts
   extensions/files.ts

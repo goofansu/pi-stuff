@@ -9,7 +9,6 @@ All extension files are in the [`extensions`](extensions) directory, including b
 Here are the extensions I wrote:
 
 - [`ask.ts`](extensions/ask.ts) - Ask a quick context-free question using Claude Haiku 4.5 with no system prompt and no session history. Uses web search via Brave API if `BRAVE_SEARCH_API_KEY` is set.
-- [`btw.ts`](extensions/btw.ts) - Ask a question with full session context using the current model. No tools — answers from what's already in context. Press `ctrl+s` to save the answer as a Markdown note in `.pi/btw/`.
 - [`ghostty.ts`](extensions/ghostty.ts) - Ghostty terminal title and progress bar integration. Shows a dynamic window title with project, session, and model info, animates a braille spinner, and pulses Ghostty's native progress bar while the agent is working.
 - [`librarian.ts`](extensions/librarian.ts) - Searches code across GitHub repositories in a subagent using Claude Haiku 4.5.
 - [`oracle.ts`](extensions/oracle.ts) - Second opinion reasoning subagent using GPT 5.4.
