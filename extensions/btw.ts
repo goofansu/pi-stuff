@@ -91,7 +91,7 @@ export default function (pi: ExtensionAPI) {
 			// Use a minimal system prompt — the full agent prompt is tool-oriented
 			// and causes the model to attempt tool use (which isn't available here),
 			// resulting in truncated responses like "Let me check the full flow:".
-			const systemPrompt = "Answer the user's question directly and completely in this single response. No tools are available — do not attempt to use them. Do not say what you are going to check or look at; just provide the answer immediately.";
+			const systemPrompt = "You are a side-channel assistant with access to the full session context. Answer the question directly and completely in a single response; no tools are available — do not attempt to use them, and do not say what you are going to check or look at.";
 
 			// ── 3. Ask the LLM — no tools, no session writes ─────────────────
 			const answer = await ctx.ui.custom<string | null | false>((tui, theme, _kb, done) => {
