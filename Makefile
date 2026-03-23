@@ -1,7 +1,8 @@
 install: keybindings
 	pi install .
-	pi install ../pi-remote-control
 	pi install https://github.com/davebcn87/pi-autoresearch
+	pi install ../pi-remote-control
+	pi install ../pi-work
 
 keybindings:
 	cp keybindings.json ~/.pi/agent/keybindings.json
