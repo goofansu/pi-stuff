@@ -14,6 +14,7 @@ The following files originate from that repository:
   extensions/prompt-editor.ts
   extensions/review.ts
   extensions/session-breakdown.ts
+  extensions/split-fork.ts
   extensions/todos.ts
   skills/tmux/SKILL.md (modified)
 

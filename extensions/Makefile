@@ -10,3 +10,4 @@ install:
 	curl -O https://raw.githubusercontent.com/mitsuhiko/agent-stuff/refs/heads/main/pi-extensions/control.ts
 	curl -O https://raw.githubusercontent.com/mitsuhiko/agent-stuff/refs/heads/main/pi-extensions/todos.ts
 	curl -O https://raw.githubusercontent.com/mitsuhiko/agent-stuff/refs/heads/main/pi-extensions/btw.ts
+	curl -O https://raw.githubusercontent.com/mitsuhiko/agent-stuff/refs/heads/main/pi-extensions/split-fork.ts
