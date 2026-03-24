@@ -1,11 +1,12 @@
-install: keybindings
+install: files
 	pi install .
 	pi install https://github.com/davebcn87/pi-autoresearch
 	pi install ../pi-remote-control
 	pi install ../pi-work
 
-keybindings:
+files:
 	cp keybindings.json ~/.pi/agent/keybindings.json
+	cp context/AGENTS.md ~/.pi/agent/AGENTS.md
 
 define skills-add
 	npx skills add $(1) $(foreach s,$(2),-s $(s)) -g -a codex -a claude-code -y
