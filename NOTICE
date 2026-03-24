@@ -15,6 +15,7 @@ The following files originate from that repository:
   extensions/review.ts
   extensions/session-breakdown.ts
   extensions/todos.ts
+  skills/tmux/SKILL.md (modified)
 
 A copy of the Apache License 2.0 is available at:
 https://www.apache.org/licenses/LICENSE-2.0
