@@ -6,7 +6,7 @@ This system is managed with Nix. Do not install software automatically using Hom
 
 If a required tool is missing, tell the user what is needed and let them install it themselves.
 
-## Git
+## Commands
 
 Do not use interactive TTY commands.
 
