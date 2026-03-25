@@ -8,7 +8,7 @@ If a required tool is missing, tell the user what is needed and let them install
 
 ## Git
 
-Do not use interactive rebase (`git rebase -i`).
+Do not use interactive TTY commands.
 
 ## Writing
 
