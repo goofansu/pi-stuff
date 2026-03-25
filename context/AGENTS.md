@@ -6,6 +6,10 @@ This system is managed with Nix. Do not install software automatically using Hom
 
 If a required tool is missing, tell the user what is needed and let them install it themselves.
 
+## Git
+
+Do not use interactive rebase (`git rebase -i`).
+
 ## Writing
 
 Use sentence case for headings.
