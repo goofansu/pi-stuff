@@ -428,15 +428,23 @@ const SubagentParams = Type.Object({
 });
 
 export default function (pi: ExtensionAPI) {
+	const { agents: userAgents } = discoverAgents(process.cwd(), "user");
+	const agentListSuffix =
+		userAgents.length > 0
+			? " Available agents: " + userAgents.map((a) => `${a.name} (${a.description})`).join(", ") + "."
+			: "";
+
 	pi.registerTool({
 		name: "subagent",
 		label: "Subagent",
-		description: [
-			"Delegate tasks to specialized subagents with isolated context.",
-			"Modes: single (agent + task), parallel (tasks array), chain (sequential with {previous} placeholder).",
-			'Default agent scope is "user" (from ~/.pi/agent/agents).',
-			'To enable project-local agents in .pi/agents, set agentScope: "both" (or "project").',
-		].join(" "),
+		description:
+			[
+				"Delegate tasks to specialized subagents with isolated context.",
+				"Modes: single (agent + task), parallel (tasks array), chain (sequential with {previous} placeholder).",
+				'Default agent scope is "user" (from ~/.pi/agent/agents).',
+				'To enable project-local agents in .pi/agents, set agentScope: "both" (or "project").',
+			].join(" ") +
+			agentListSuffix,
 		parameters: SubagentParams,
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
