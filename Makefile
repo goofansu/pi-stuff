@@ -1,8 +1,7 @@
 install: files
 	pi install .
-	pi install https://github.com/davebcn87/pi-autoresearch
 	pi install ../pi-remote-control
-	pi install ../pi-work
+	pi install https://github.com/davebcn87/pi-autoresearch
 
 files:
 	cp keybindings.json ~/.pi/agent/keybindings.json
