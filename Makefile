@@ -5,7 +5,7 @@ install: files
 
 files:
 	cp keybindings.json ~/.pi/agent/keybindings.json
-	cp context/AGENTS.md ~/.pi/agent/AGENTS.md
+	cp AGENTS_USER.md ~/.pi/agent/AGENTS.md
 	cp -r agents ~/.pi/agent/agents
 
 define skills-add
