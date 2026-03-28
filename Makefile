@@ -18,6 +18,7 @@ vendor-skills:
 	$(call skills-add,brave/brave-search-skills,web-search)
 	$(call skills-add,badlogic/pi-skills,transcribe)
 	$(call skills-add,vercel-labs/skills,find-skills)
+	$(call skills-add,tobi/qmd,qmd)
 
 vendor-extensions:
 	make -C extensions install
