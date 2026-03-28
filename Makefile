@@ -17,6 +17,7 @@ vendor-skills:
 	$(call skills-add,mitsuhiko/agent-stuff,commit mermaid summarize)
 	$(call skills-add,brave/brave-search-skills,web-search)
 	$(call skills-add,badlogic/pi-skills,transcribe)
+	$(call skills-add,vercel-labs/skills,find-skills)
 
 vendor-extensions:
 	make -C extensions install
