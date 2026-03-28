@@ -20,4 +20,3 @@ All skill files are in the [`skills`](skills) directory:
 
 - [`gist`](skills/gist) - Download files from GitHub Gists using the `gh` CLI.
 - [`note`](skills/note) - For creating and managing Denote notes in Emacs via `emacsclient`.
-- [`tmux`](skills/tmux) - Remote control tmux sessions for interactive CLIs (python, gdb, etc.) by sending keystrokes and scraping pane output.
