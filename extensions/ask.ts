@@ -134,7 +134,9 @@ export default function (pi: ExtensionAPI) {
 				}
 
 				const doAsk = async () => {
-					const apiKey = await ctx.modelRegistry.getApiKey(askModel);
+					const auth = await ctx.modelRegistry.getApiKeyAndHeaders(askModel);
+					if (!auth.ok) throw new Error(auth.error);
+					const { apiKey, headers } = auth;
 					const messages: (UserMessage | AssistantMessage | ToolResultMessage)[] = [{
 						role: "user",
 						content: [{ type: "text", text: question }],
@@ -147,7 +149,7 @@ export default function (pi: ExtensionAPI) {
 						const response = await complete(
 							askModel,
 							{ messages, tools, systemPrompt: SYSTEM_PROMPT },
-							{ apiKey, signal: loader.signal },
+							{ apiKey, headers, signal: loader.signal },
 						);
 
 						if (response.stopReason === "aborted") return null;

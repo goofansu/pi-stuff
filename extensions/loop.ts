@@ -87,22 +87,22 @@ function getConditionText(mode: LoopMode, condition?: string): string {
 
 async function selectSummaryModel(
 	ctx: ExtensionContext,
-): Promise<{ model: Model<Api>; apiKey: string } | null> {
+): Promise<{ model: Model<Api>; apiKey?: string; headers?: Record<string, string> } | null> {
 	if (!ctx.model) return null;
 
 	if (ctx.model.provider === "anthropic") {
 		const haikuModel = ctx.modelRegistry.find("anthropic", HAIKU_MODEL_ID);
 		if (haikuModel) {
-			const apiKey = await ctx.modelRegistry.getApiKey(haikuModel);
-			if (apiKey) {
-				return { model: haikuModel, apiKey };
+			const haikuAuth = await ctx.modelRegistry.getApiKeyAndHeaders(haikuModel);
+			if (haikuAuth.ok && haikuAuth.apiKey) {
+				return { model: haikuModel, apiKey: haikuAuth.apiKey, headers: haikuAuth.headers };
 			}
 		}
 	}
 
-	const apiKey = await ctx.modelRegistry.getApiKey(ctx.model);
-	if (!apiKey) return null;
-	return { model: ctx.model, apiKey };
+	const modelAuth = await ctx.modelRegistry.getApiKeyAndHeaders(ctx.model);
+	if (!modelAuth.ok) return null;
+	return { model: ctx.model, apiKey: modelAuth.apiKey, headers: modelAuth.headers };
 }
 
 async function summarizeBreakoutCondition(
@@ -124,7 +124,7 @@ async function summarizeBreakoutCondition(
 	const response = await complete(
 		selection.model,
 		{ systemPrompt: SUMMARY_SYSTEM_PROMPT, messages: [userMessage] },
-		{ apiKey: selection.apiKey },
+		{ apiKey: selection.apiKey, headers: selection.headers },
 	);
 
 	if (response.stopReason === "aborted" || response.stopReason === "error") {
@@ -400,15 +400,15 @@ export default function loopExtension(pi: ExtensionAPI): void {
 
 	pi.on("session_before_compact", async (event, ctx) => {
 		if (!loopState.active || !loopState.mode || !ctx.model) return;
-		const apiKey = await ctx.modelRegistry.getApiKey(ctx.model);
-		if (!apiKey) return;
+		const compactAuth = await ctx.modelRegistry.getApiKeyAndHeaders(ctx.model);
+		if (!compactAuth.ok || !compactAuth.apiKey) return;
 
 		const instructionParts = [event.customInstructions, getCompactionInstructions(loopState.mode, loopState.condition)]
 			.filter(Boolean)
 			.join("\n\n");
 
 		try {
-			const compaction = await compact(event.preparation, ctx.model, apiKey, instructionParts, event.signal);
+			const compaction = await compact(event.preparation, ctx.model, compactAuth.apiKey, compactAuth.headers, instructionParts, event.signal);
 			return { compaction };
 		} catch (error) {
 			if (ctx.hasUI) {
