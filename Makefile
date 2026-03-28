@@ -6,6 +6,7 @@ install: files
 files:
 	cp keybindings.json ~/.pi/agent/keybindings.json
 	cp context/AGENTS.md ~/.pi/agent/AGENTS.md
+	cp -r agents ~/.pi/agent/agents
 
 define skills-add
 	npx skills add $(1) $(foreach s,$(2),-s $(s)) -g -a codex -a claude-code -y
