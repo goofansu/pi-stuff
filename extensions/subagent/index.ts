@@ -418,7 +418,7 @@ const AgentScopeSchema = StringEnum(["user", "project", "both"] as const, {
 const SubagentParams = Type.Object({
 	agent: Type.Optional(Type.String({ description: "Name of the agent to invoke (for single mode)" })),
 	task: Type.Optional(Type.String({ description: "Task to delegate (for single mode)" })),
-	tasks: Type.Optional(Type.Array(TaskItem, { description: "Array of {agent, task} for parallel execution" })),
+	tasks: Type.Optional(Type.Array(TaskItem, { description: "Array of {agent, task} for parallel execution", maxItems: MAX_PARALLEL_TASKS })),
 	chain: Type.Optional(Type.Array(ChainItem, { description: "Array of {agent, task} for sequential execution" })),
 	agentScope: Type.Optional(AgentScopeSchema),
 	confirmProjectAgents: Type.Optional(
