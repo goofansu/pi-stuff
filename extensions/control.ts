@@ -42,7 +42,13 @@
  *   Events are JSON objects with { type: "event", event, data?, subscriptionId? }
  */
 
-import type { ExtensionAPI, ExtensionContext, TurnEndEvent, MessageRenderer } from "@mariozechner/pi-coding-agent";
+import type {
+	ExtensionAPI,
+	ExtensionContext,
+	TurnEndEvent,
+	MessageRenderer,
+	ModelRegistry,
+} from "@mariozechner/pi-coding-agent";
 import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { complete, type Model, type Api, type UserMessage, type TextContent } from "@mariozechner/pi-ai";
 import { StringEnum } from "@mariozechner/pi-ai";
@@ -165,21 +171,18 @@ Be concise but comprehensive. Preserve exact file paths, function names, and err
 
 async function selectSummarizationModel(
 	currentModel: Model<Api> | undefined,
-	modelRegistry: {
-		find: (provider: string, modelId: string) => Model<Api> | undefined;
-		getApiKeyAndHeaders: (model: Model<Api>) => Promise<{ ok: true; apiKey?: string; headers?: Record<string, string> } | { ok: false; error: string }>;
-	},
+	modelRegistry: ModelRegistry,
 ): Promise<Model<Api> | undefined> {
 	const codexModel = modelRegistry.find("openai-codex", CODEX_MODEL_ID);
 	if (codexModel) {
 		const auth = await modelRegistry.getApiKeyAndHeaders(codexModel);
-		if (auth.ok && auth.apiKey) return codexModel;
+		if (auth.ok) return codexModel;
 	}
 
 	const haikuModel = modelRegistry.find("anthropic", HAIKU_MODEL_ID);
 	if (haikuModel) {
-		const auth2 = await modelRegistry.getApiKeyAndHeaders(haikuModel);
-		if (auth2.ok && auth2.apiKey) return haikuModel;
+		const auth = await modelRegistry.getApiKeyAndHeaders(haikuModel);
+		if (auth.ok) return haikuModel;
 	}
 
 	return currentModel;
@@ -658,8 +661,8 @@ async function handleCommand(
 		}
 
 		const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
-		if (!auth.ok || !auth.apiKey) {
-			respond(false, "get_summary", undefined, "No API key available for summarization model");
+		if (!auth.ok) {
+			respond(false, "get_summary", undefined, auth.error);
 			return;
 		}
 

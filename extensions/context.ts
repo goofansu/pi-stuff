@@ -124,8 +124,7 @@ function buildSkillIndex(pi: ExtensionAPI, cwd: string): SkillIndexEntry[] {
 		.getCommands()
 		.filter((c) => c.source === "skill")
 		.map((c) => {
-			const rawPath = c.sourceInfo?.path;
-			const p = rawPath ? normalizeReadPath(rawPath, cwd) : "";
+			const p = c.sourceInfo?.path ? normalizeReadPath(c.sourceInfo.path, cwd) : "";
 			return {
 				name: normalizeSkillName(c.name),
 				skillFilePath: p,

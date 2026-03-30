@@ -93,16 +93,16 @@ async function selectSummaryModel(
 	if (ctx.model.provider === "anthropic") {
 		const haikuModel = ctx.modelRegistry.find("anthropic", HAIKU_MODEL_ID);
 		if (haikuModel) {
-			const haikuAuth = await ctx.modelRegistry.getApiKeyAndHeaders(haikuModel);
-			if (haikuAuth.ok && haikuAuth.apiKey) {
-				return { model: haikuModel, apiKey: haikuAuth.apiKey, headers: haikuAuth.headers };
+			const auth = await ctx.modelRegistry.getApiKeyAndHeaders(haikuModel);
+			if (auth.ok) {
+				return { model: haikuModel, apiKey: auth.apiKey, headers: auth.headers };
 			}
 		}
 	}
 
-	const modelAuth = await ctx.modelRegistry.getApiKeyAndHeaders(ctx.model);
-	if (!modelAuth.ok) return null;
-	return { model: ctx.model, apiKey: modelAuth.apiKey, headers: modelAuth.headers };
+	const auth = await ctx.modelRegistry.getApiKeyAndHeaders(ctx.model);
+	if (!auth.ok) return null;
+	return { model: ctx.model, apiKey: auth.apiKey, headers: auth.headers };
 }
 
 async function summarizeBreakoutCondition(
@@ -400,15 +400,22 @@ export default function loopExtension(pi: ExtensionAPI): void {
 
 	pi.on("session_before_compact", async (event, ctx) => {
 		if (!loopState.active || !loopState.mode || !ctx.model) return;
-		const compactAuth = await ctx.modelRegistry.getApiKeyAndHeaders(ctx.model);
-		if (!compactAuth.ok || !compactAuth.apiKey) return;
+		const auth = await ctx.modelRegistry.getApiKeyAndHeaders(ctx.model);
+		if (!auth.ok) return;
 
 		const instructionParts = [event.customInstructions, getCompactionInstructions(loopState.mode, loopState.condition)]
 			.filter(Boolean)
 			.join("\n\n");
 
 		try {
-			const compaction = await compact(event.preparation, ctx.model, compactAuth.apiKey, compactAuth.headers, instructionParts, event.signal);
+			const compaction = await compact(
+				event.preparation,
+				ctx.model,
+				auth.apiKey ?? "",
+				auth.headers,
+				instructionParts,
+				event.signal,
+			);
 			return { compaction };
 		} catch (error) {
 			if (ctx.hasUI) {
