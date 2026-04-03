@@ -6,7 +6,6 @@ install: files
 files:
 	cp keybindings.json ~/.pi/agent/keybindings.json
 	cp AGENTS_USER.md ~/.pi/agent/AGENTS.md
-	rsync -r --delete agents/ ~/.pi/agent/agents/
 
 define skills-add
 	npx skills add $(1) $(foreach s,$(2),-s $(s)) -g -a codex -a claude-code -y
