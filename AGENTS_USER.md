@@ -1,9 +1,9 @@
 # AGENTS.md
 
-## Commands
+## Git
 
-- Do not use interactive TTY commands.
+- Amend the latest N git commits into a single commit: `git reset --soft HEAD~N && git commit -m <message>"`.
 
 ## Writing
 
-- Use sentence case for headings.
+- Headings/Titles: use sentence case capitalization.
