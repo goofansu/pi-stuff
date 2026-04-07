@@ -6,6 +6,7 @@
 - Extensions are TypeScript files that follow the pi coding agent extension API.
 - Each extension is self-contained — do not extract shared helpers or utilities into separate files. When creating a new extension, copy code from the most similar existing extension rather than abstracting shared logic.
 - When updating a specific upstream extension, use the corresponding `curl` command from `extensions/Makefile`.
+- Footer status color: use `ctx.ui.theme.fg("accent", text)`.
 
 ## Skills
 

@@ -13,6 +13,7 @@ Here are the extensions I wrote:
 - [`librarian.ts`](extensions/librarian.ts) - Searches code across GitHub repositories in a subagent using Claude Haiku 4.5.
 - [`oracle.ts`](extensions/oracle.ts) - Second opinion reasoning subagent using GPT 5.4.
 - [`snippets.ts`](extensions/snippets.ts) - Lists code blocks from the last assistant message for further action.
+- [`status_line.ts`](extensions/status_line.ts) - Displays information in the footer status line.
 
 ## Skills
 
