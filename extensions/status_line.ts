@@ -2,6 +2,7 @@
  * Status Line Extension
  *
  * Displays information in the footer status line:
+ * - owner/repo — repository as a clickable hyperlink (OSC 8)
  * - #ID — current branch's GitHub PR number as a clickable hyperlink (OSC 8)
  *
  * PR info is fetched once at session_start. The fetch is fire-and-forget so it
@@ -10,7 +11,8 @@
  * Color: accent — matches ~/code/pi-remote-control.
  *
  * Commands:
- * - /statusline:pr — show full PR details in the editor area
+ * - /statusline:pr   — show full PR details in the editor area
+ * - /statusline:repo — show repository info (title, description, language, remotes)
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
@@ -25,6 +27,11 @@ const STATUS_KEY = "pr-status";
 
 interface PrInfo {
 	number: number;
+	url: string;
+}
+
+interface RepoInfo {
+	nameWithOwner: string;
 	url: string;
 }
 
@@ -46,6 +53,20 @@ interface PrDetail {
 	latestReviews: { author: { login: string }; state: string }[];
 }
 
+/** Run `gh repo view` and return repo info, or null on failure. */
+async function fetchRepoInfo(cwd: string): Promise<RepoInfo | null> {
+	try {
+		const { stdout } = await execAsync("gh repo view --json nameWithOwner,url", { cwd });
+		const data = JSON.parse(stdout.trim());
+		if (typeof data.nameWithOwner === "string" && typeof data.url === "string") {
+			return { nameWithOwner: data.nameWithOwner, url: data.url };
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+
 /** Run `gh pr view` and return minimal PR info, or null if none found. */
 async function fetchPrInfo(cwd: string): Promise<PrInfo | null> {
 	try {
@@ -60,7 +81,46 @@ async function fetchPrInfo(cwd: string): Promise<PrInfo | null> {
 	}
 }
 
-/** Run `gh pr view` and return full PR details, or null if none found. */
+interface RepoDetail {
+	nameWithOwner: string;
+	description: string;
+	primaryLanguage: { name: string } | null;
+	url: string;
+}
+
+/** Run `gh repo view` and return full repo details, or null on failure. */
+async function fetchRepoDetail(cwd: string): Promise<RepoDetail | null> {
+	try {
+		const { stdout } = await execAsync(
+			"gh repo view --json nameWithOwner,description,primaryLanguage,url",
+			{ cwd },
+		);
+		return JSON.parse(stdout.trim()) as RepoDetail;
+	} catch {
+		return null;
+	}
+}
+
+/** Parse `git remote -v` into a deduplicated list of { name, url } entries. */
+async function fetchRemotes(cwd: string): Promise<{ name: string; url: string }[]> {
+	try {
+		const { stdout } = await execAsync("git remote -v", { cwd });
+		const seen = new Set<string>();
+		const remotes: { name: string; url: string }[] = [];
+		for (const line of stdout.trim().split("\n")) {
+			const m = line.match(/^(\S+)\s+(\S+)\s+\(fetch\)$/);
+			if (m && !seen.has(m[1])) {
+				seen.add(m[1]);
+				remotes.push({ name: m[1], url: m[2] });
+			}
+		}
+		return remotes;
+	} catch {
+		return [];
+	}
+}
+
+
 async function fetchPrDetail(cwd: string): Promise<PrDetail | null> {
 	const fields = [
 		"number", "title", "url", "state", "isDraft",
@@ -82,15 +142,16 @@ function hyperlink(url: string, text: string): string {
 	return `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`;
 }
 
-function updateStatus(ctx: ExtensionContext, pr: PrInfo | null): void {
+function updateStatus(ctx: ExtensionContext, repo: RepoInfo | null, pr: PrInfo | null): void {
 	if (!ctx.hasUI) return;
-	if (!pr) {
+	if (!repo && !pr) {
 		ctx.ui.setStatus(STATUS_KEY, undefined);
 		return;
 	}
-	const label = `#${pr.number}`;
-	const linked = hyperlink(pr.url, label);
-	ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("accent", linked));
+	const parts: string[] = [];
+	if (repo) parts.push(ctx.ui.theme.fg("accent", hyperlink(repo.url, repo.nameWithOwner)));
+	if (pr) parts.push(ctx.ui.theme.fg("accent", hyperlink(pr.url, `#${pr.number}`)));
+	ctx.ui.setStatus(STATUS_KEY, parts.join(" "));
 }
 
 /** Summarise the CI check rollup into a single symbol + label. */
@@ -142,7 +203,9 @@ function formatReviewerRows(
 export default function statusLine(pi: ExtensionAPI) {
 	pi.on("session_start", (_event, ctx) => {
 		// Fire-and-forget: don't block session startup waiting for `gh`
-		fetchPrInfo(ctx.cwd).then((pr) => updateStatus(ctx, pr));
+		Promise.all([fetchRepoInfo(ctx.cwd), fetchPrInfo(ctx.cwd)]).then(
+			([repo, pr]) => updateStatus(ctx, repo, pr),
+		);
 	});
 
 	// ── /statusline:pr command ────────────────────────────────────────────────
@@ -231,6 +294,94 @@ export default function statusLine(pi: ExtensionAPI) {
 
 				// Checks (related to reviews: CI status)
 				container.addChild(new Text(field("checks", formatChecks(pr.statusCheckRollup, theme)), 1, 0));
+
+				// Action bar
+				container.addChild(new Spacer(1));
+				container.addChild(new Text(
+					` ${keyHint("tui.select.confirm", "close")}` +
+						theme.fg("dim", "  ·  ") +
+						keyHint("tui.select.cancel", "cancel"),
+					1, 0,
+				));
+
+				container.addChild(new DynamicBorder((s) => theme.fg("accent", s)));
+
+				return {
+					render: (w) => container.render(w),
+					invalidate: () => container.invalidate(),
+					handleInput: (data) => {
+						if (kb.matches(data, "tui.select.confirm") || kb.matches(data, "tui.select.cancel")) done();
+					},
+				};
+			});
+		},
+	});
+
+	// ── /statusline:repo command ──────────────────────────────────────────
+
+	pi.registerCommand("statusline:repo", {
+		description: "Show repository info (title, description, language, remotes)",
+		handler: async (_args, ctx) => {
+			if (!ctx.hasUI) return;
+
+			const [repo, remotes] = await Promise.all([
+				fetchRepoDetail(ctx.cwd),
+				fetchRemotes(ctx.cwd),
+			]);
+
+			if (!repo) {
+				ctx.ui.notify("Could not fetch repository information.", "warning");
+				return;
+			}
+
+			const theme = ctx.ui.theme;
+			const LABEL_W = 9;
+			const pad = (s: string) => s.padEnd(LABEL_W);
+			const indent = " ".repeat(1 + LABEL_W);
+			const field = (label: string, value: string) =>
+				` ${theme.fg("dim", pad(label))}${value}`;
+
+			await ctx.ui.custom<void>((_tui, _theme, kb, done) => {
+				const container = new Container();
+				container.addChild(new DynamicBorder((s) => theme.fg("accent", s)));
+
+				// Title
+				container.addChild(new Text(
+					theme.bold(theme.fg("accent", ` ${repo.nameWithOwner}`)),
+					1, 0,
+				));
+				container.addChild(new Text(
+					field("url", theme.fg("dim", hyperlink(repo.url, repo.url))),
+					1, 0,
+				));
+
+				container.addChild(new Spacer(1));
+
+				// Description
+				container.addChild(new Text(
+					field("desc", repo.description || theme.fg("dim", "(no description)")),
+					1, 0,
+				));
+
+				// Language
+				container.addChild(new Text(
+					field("language", repo.primaryLanguage?.name ?? theme.fg("dim", "unknown")),
+					1, 0,
+				));
+
+				// Remotes
+				if (remotes.length > 0) {
+					container.addChild(new Text(
+						field("remotes", `${remotes[0].name}  ${theme.fg("dim", remotes[0].url)}`),
+						1, 0,
+					));
+					for (const remote of remotes.slice(1)) {
+						container.addChild(new Text(
+							`${indent}${remote.name}  ${theme.fg("dim", remote.url)}`,
+							1, 0,
+						));
+					}
+				}
 
 				// Action bar
 				container.addChild(new Spacer(1));
