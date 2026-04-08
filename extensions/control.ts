@@ -179,7 +179,7 @@ async function selectSummarizationModel(
 		if (auth.ok) return codexModel;
 	}
 
-	const haikuModel = modelRegistry.find("anthropic", HAIKU_MODEL_ID);
+	const haikuModel = modelRegistry.find("opencode", HAIKU_MODEL_ID);
 	if (haikuModel) {
 		const auth = await modelRegistry.getApiKeyAndHeaders(haikuModel);
 		if (auth.ok) return haikuModel;

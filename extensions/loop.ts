@@ -90,8 +90,8 @@ async function selectSummaryModel(
 ): Promise<{ model: Model<Api>; apiKey?: string; headers?: Record<string, string> } | null> {
 	if (!ctx.model) return null;
 
-	if (ctx.model.provider === "anthropic") {
-		const haikuModel = ctx.modelRegistry.find("anthropic", HAIKU_MODEL_ID);
+	if (ctx.model.provider === "opencode") {
+		const haikuModel = ctx.modelRegistry.find("opencode", HAIKU_MODEL_ID);
 		if (haikuModel) {
 			const auth = await ctx.modelRegistry.getApiKeyAndHeaders(haikuModel);
 			if (auth.ok) {

@@ -85,7 +85,7 @@ async function selectExtractionModel(
 		}
 	}
 
-	const haikuModel = modelRegistry.find("anthropic", HAIKU_MODEL_ID);
+	const haikuModel = modelRegistry.find("opencode", HAIKU_MODEL_ID);
 	if (!haikuModel) {
 		return currentModel;
 	}
