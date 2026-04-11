@@ -7,11 +7,15 @@ files:
 	cp keybindings.json ~/.pi/agent/keybindings.json
 	cp AGENTS_USER.md ~/.pi/agent/AGENTS.md
 
+local-skills:
+	cp -r skills/* ~/.codex/skills/
+	cp -r skills/* ~/.claude/skills/
+
 define skills-add
 	npx skills add $(1) $(foreach s,$(2),-s $(s)) -g -a codex -a claude-code -y
 endef
 
-vendor-skills:
+upstream-skills:
 	$(call skills-add,anthropics/skills,skill-creator frontend-design pdf)
 	$(call skills-add,mitsuhiko/agent-stuff,commit mermaid summarize)
 	$(call skills-add,brave/brave-search-skills,web-search)
@@ -20,5 +24,5 @@ vendor-skills:
 	$(call skills-add,vercel-labs/opensrc,opensrc)
 	$(call skills-add,tobi/qmd,qmd)
 
-vendor-extensions:
+upstream-extensions:
 	make -C extensions install
