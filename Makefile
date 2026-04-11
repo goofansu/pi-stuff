@@ -8,8 +8,11 @@ files:
 	cp AGENTS_USER.md ~/.pi/agent/AGENTS.md
 
 local-skills:
-	cp -r skills/* ~/.codex/skills/
-	cp -r skills/* ~/.claude/skills/
+	@for skill in $(CURDIR)/skills/*/; do \
+		name=$$(basename $$skill); \
+		ln -svfn $$skill ~/.claude/skills/$$name; \
+		ln -svfn $$skill ~/.codex/skills/$$name; \
+	done
 
 define skills-add
 	npx skills add $(1) $(foreach s,$(2),-s $(s)) -g -a codex -a claude-code -y
