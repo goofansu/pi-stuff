@@ -1,7 +1,7 @@
 install: files
 	pi install .
 	pi install ../pi-remote-control
-	pi install https://github.com/davebcn87/pi-autoresearch
+	# pi install https://github.com/davebcn87/pi-autoresearch - install in project scope
 
 files:
 	cp keybindings.json ~/.pi/agent/keybindings.json
