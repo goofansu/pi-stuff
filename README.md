@@ -18,6 +18,8 @@ Here are the extensions I wrote:
 
 All skill files are in the [`skills`](skills) directory:
 
+- [`cl-description`](skills/cl-description) - Write and review CL/PR descriptions following best practices.
+- [`code-review`](skills/code-review) - Review CLs and pull requests, write review comments, and evaluate code quality.
 - [`gist`](skills/gist) - Download files from GitHub Gists using the `gh` CLI.
 - [`git-worktree`](skills/git-worktree) - Create and manage git worktrees for local branches and pull requests.
 - [`note`](skills/note) - For creating and managing Denote notes in Emacs via `emacsclient`.
