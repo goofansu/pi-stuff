@@ -11,7 +11,7 @@ description: >
   or how to break up large changes.
 ---
 
-# CL Description Skill
+# CL description
 
 A skill for writing and reviewing CL (changelist) descriptions that follow Google Engineering best practices. Use this skill when writing PR descriptions, reviewing whether a CL is well-scoped, or deciding how to split large changes.
 

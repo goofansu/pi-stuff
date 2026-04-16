@@ -5,7 +5,7 @@ description: >
   save information as a note.
 ---
 
-# Note Skill
+# Note
 
 Create [Denote](https://protesilaos.com/emacs/denote) journal notes by sending commands to a running Emacs GUI server via `emacsclient -s gui`.
 

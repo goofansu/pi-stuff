@@ -12,7 +12,7 @@ description: >
   disagreements in review.
 ---
 
-# Code Review Skill
+# Code review
 
 A skill for performing and writing code reviews following Google Engineering
 best practices. This skill is for the **reviewer** role — evaluating someone

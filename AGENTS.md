@@ -10,6 +10,7 @@
 ## Skills
 
 - Work in the `skills/` directory when creating or modifying a pi skill.
+- Each SKILL.md must begin (after frontmatter) with a top-level heading using the skill's name in sentence case, e.g. `# Code review`.
 
 ## Documentation
 

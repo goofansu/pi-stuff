@@ -7,6 +7,8 @@ description: >
   my gist" — to ensure files are downloaded directly rather than written manually.
 ---
 
+# Gist
+
 ## Downloading gist files
 
 Always download gist files directly using the `gh` CLI — never read the content

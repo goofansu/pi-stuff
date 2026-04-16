@@ -1,10 +1,14 @@
 ---
-name: git-worktree
-description: Manage git worktrees for PRs, branches, listing, and cleanup.
+name: worktree
+description: >-
+  Manage git worktrees. Use when the user wants to check out a PR or branch as
+  a worktree, list existing worktrees, or remove/prune one. Triggers include
+  "create a worktree", "check out this PR", "add a worktree", "list worktrees",
+  "remove worktree", or any request to work on a branch in a separate directory.
 disable-model-invocation: true
 ---
 
-# Git worktree skill
+# Worktree
 
 A worktree lets you check out a branch into a separate directory so you can
 work on it without disturbing your main checkout. This skill covers three
