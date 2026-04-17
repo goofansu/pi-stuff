@@ -1,64 +1,85 @@
 ---
 name: cl-description
 description: >
-  Use this skill whenever a user wants to write, review, or improve a CL
-  (changelist) description for a pull request or code review. Triggers include:
-  write a PR description, write a CL description, help me describe this change,
-  review my pull request description, how should I title this PR, what should I
-  put in the PR body, is my CL too large, should I split this PR, or any time
-  the user is preparing to submit code for review. Also use when the user asks
-  about best practices for pull request descriptions, commit messages for CLs,
-  or how to break up large changes.
+  Use this skill whenever the user needs help writing, rewriting, reviewing, or
+  scoping a CL/PR for code review. Trigger on requests like: write the PR
+  description, help me describe this change, review this PR body, improve this
+  changelist description, what should the title/summary be, what should I put
+  in the PR body, is this CL too large, should I split this change, how should
+  I break this into smaller PRs, or any time the user is preparing a code
+  change for review and needs reviewer-facing wording or scope guidance. Also
+  use it for best practices around CL descriptions, PR descriptions, and
+  splitting large changes into reviewable pieces.
 ---
 
 # CL description
 
 A skill for writing and reviewing CL (changelist) descriptions that follow Google Engineering best practices. Use this skill when writing PR descriptions, reviewing whether a CL is well-scoped, or deciding how to split large changes.
 
-## Sitemap
+## References
 
 | Reference file | When to read it |
 |---|---|
-| `references/cl-descriptions.md` | Writing or reviewing a CL description — first line, body, examples, tags |
-| `references/small-cls.md` | Evaluating CL size, splitting strategies, when large CLs are OK |
+| `references/cl-descriptions.md` | Writing, rewriting, or reviewing a CL/PR description |
+| `references/small-cls.md` | Deciding whether a CL is too large or how to split it |
 
-**Always read at least one reference file before producing output.**
+**Always read the relevant reference file before producing output.** Read both when the user needs both description help and scope/splitting advice.
 
----
+## Workflow
 
-## Quick Workflow
+### 1. Identify the task type
+First decide which of these the user needs:
+- **Write or rewrite a description**
+- **Review an existing description**
+- **Judge CL size or recommend a split**
+- **Both description help and size/splitting advice**
 
-### 1. Understand the change
-Ask (or infer from context):
-- What does this CL do? (the *what*)
-- Why is it being done? (the *why*)
-- Is there a bug number, design doc, or benchmark result to reference?
-- How large is it? (lines changed, files touched)
+### 2. Read the right reference(s)
+- Description work → read `references/cl-descriptions.md`
+- Size or splitting work → read `references/small-cls.md`
+- Combined request → read both
 
-### 2. Decide which reference(s) to read
-- Writing/reviewing a description → read `references/cl-descriptions.md`
-- Evaluating scope or splitting → read `references/small-cls.md`
-- Both → read both (they are concise)
+### 3. Gather the missing context
+Ask for missing details, or infer them from the conversation, diff, or files:
+- What changed?
+- Why was it changed?
+- Is there supporting context to mention, such as a bug, design doc, benchmark, or rollout detail?
+- How large is the CL: roughly how many files or lines changed, and does it mix refactors, tests, and feature work?
 
-### 3. Produce output
+Only ask follow-up questions that are needed to produce a useful answer.
 
-**For a CL description**, produce:
+### 4. Produce the right kind of output
+
+#### If the user wants a CL description
+Return a polished draft in this shape:
+
+```text
+<Short imperative first line>
+
+<Body with problem context, why this approach, and any important caveats or links>
 ```
-<Imperative first-line summary>
 
-<Body: problem context, why this approach, any shortcomings, links>
-```
+If information is missing, either:
+- write the best draft you can and clearly mark placeholders or assumptions, or
+- ask a brief follow-up question if the missing detail materially affects the result
 
-**For a size review**, state:
-- Whether the CL is appropriately sized
-- If not, which splitting strategy to use (stacking, by files, horizontal, vertical)
+#### If the user wants a description review
+Give a concise review that covers:
+- what is already working
+- what is unclear or missing
+- a revised version, if helpful
 
----
+#### If the user wants a size or splitting review
+State:
+- whether the CL seems appropriately scoped
+- the main reason if it is too large or mixed-purpose
+- the best split strategy to use next, such as stacking, splitting by files, horizontal splitting, or vertical splitting
 
-## Key Principles (summary — details in reference files)
+When recommending a split, suggest concrete boundaries rather than generic advice.
 
-- First line: short imperative sentence, stands alone in history
-- Body: *why*, not just *what*; context a reviewer needs
-- One self-contained change per CL
-- Include related tests in the same CL
-- Refactors go in separate CLs from feature/bug changes
+## Output guidelines
+
+- Be specific and practical
+- Optimize for reviewer comprehension and future readers, not just immediate approval
+- Prefer a ready-to-use draft when the user asks for writing help
+- Prefer direct recommendations when the user asks whether to split a CL
