@@ -18,7 +18,6 @@ Here are the extensions I wrote:
 
 All skill files are in the [`skills`](skills) directory:
 
-- [`cl-description`](skills/cl-description) - Write and review CL/PR descriptions following best practices.
 - [`github`](skills/github) - Interact with GitHub via the `gh` CLI: download Gist files and create pull request review comments.
 - [`note`](skills/note) - For creating and managing Denote notes in Emacs via `emacsclient`.
 - [`summarize`](skills/summarize) - Fetch a URL or convert a local file (PDF/DOCX/HTML/etc.) into Markdown using `uvx markitdown`, optionally summarizing the result.
