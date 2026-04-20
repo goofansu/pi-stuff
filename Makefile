@@ -1,7 +1,6 @@
 install: files
 	pi install .
 	pi install ../pi-remote-control
-	pi install https://github.com/davebcn87/pi-autoresearch
 
 files:
 	cp keybindings.json ~/.pi/agent/keybindings.json
@@ -23,10 +22,7 @@ upstream-skills:
 	$(call skills-add,badlogic/pi-skills,transcribe)
 	$(call skills-add,brave/brave-search-skills,web-search)
 	$(call skills-add,mitsuhiko/agent-stuff,commit mermaid)
-	$(call skills-add,obra/superpowers,brainstorming)
 	$(call skills-add,tobi/qmd,qmd)
-	$(call skills-add,vercel-labs/opensrc,opensrc)
-	$(call skills-add,vercel-labs/skills,find-skills)
 
 upstream-extensions:
 	make -C extensions install
