@@ -1,6 +1,7 @@
 install: files
 	pi install .
 	pi install ../pi-remote-control
+	pi install ../pi-subagent
 
 files:
 	cp keybindings.json ~/.pi/agent/keybindings.json
