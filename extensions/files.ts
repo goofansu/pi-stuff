@@ -634,7 +634,7 @@ const showActionSelector = async (
 	options: { canQuickLook: boolean; canEdit: boolean; canDiff: boolean },
 ): Promise<"reveal" | "quicklook" | "open" | "edit" | "addToPrompt" | "diff" | null> => {
 	const actions: SelectItem[] = [
-		...(options.canDiff ? [{ value: "diff", label: "Diff in VS Code" }] : []),
+		...(options.canDiff ? [{ value: "diff", label: "Diff in Zed" }] : []),
 		{ value: "reveal", label: "Reveal in Finder" },
 		{ value: "open", label: "Open" },
 		{ value: "addToPrompt", label: "Add to prompt" },
@@ -823,7 +823,7 @@ const openDiff = async (pi: ExtensionAPI, ctx: ExtensionContext, target: FileEnt
 		writeFileSync(workingPath, "", "utf8");
 	}
 
-	const openResult = await pi.exec("code", ["--diff", tmpFile, workingPath], { cwd: gitRoot });
+	const openResult = await pi.exec("zed", ["--diff", tmpFile, workingPath], { cwd: gitRoot });
 	if (openResult.code !== 0) {
 		const errorMessage = openResult.stderr?.trim() || `Failed to open diff for ${target.displayPath}`;
 		ctx.ui.notify(errorMessage, "error");
