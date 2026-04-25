@@ -209,7 +209,14 @@ async function braveLlmContext(
   const sources = extractSources(data);
   return {
     text: truncateText(formatSearchResult(data, sources)),
-    details: { query, count, max_tokens: maxTokens, threshold, goggles, sources },
+    details: {
+      query,
+      count,
+      max_tokens: maxTokens,
+      threshold,
+      goggles,
+      sources,
+    },
   };
 }
 
@@ -218,8 +225,7 @@ export default function webSearchExtension(pi: ExtensionAPI) {
     name: "web-search",
     label: "Web Search",
     description:
-      "Search the web using Brave LLM Context and return extracted page content, snippets, structured data, and sources for grounded answers. " +
-      "Use when the user asks for current information, recent events, external facts, product/docs lookups, or anything that benefits from web grounding.",
+      "Search the web with Brave LLM Context. Use when the user asks for current information, recent events, external facts, product/docs lookups, or web-grounded research.",
     promptSnippet:
       "Search the web with Brave LLM Context and return extracted content plus sources",
     promptGuidelines: [
@@ -233,25 +239,26 @@ export default function webSearchExtension(pi: ExtensionAPI) {
       }),
       count: Type.Optional(
         Type.Number({
-          description: "Search results to consider, 1-50. Default: 20.",
+          description:
+            "Search results to consider, 1-50. Default: 20. Use 5 for simple factual lookups, 20 for standard queries, and 50 for complex research.",
         }),
       ),
       max_tokens: Type.Optional(
         Type.Number({
           description:
-            "Approximate maximum context tokens, 1024-32768. Default: 8192.",
+            "Approximate maximum context tokens, 1024-32768. Default: 8192. Use 2048 for simple factual lookups, 8192 for standard queries, and 16384 for complex research.",
         }),
       ),
       threshold: Type.Optional(
         StringEnum(["strict", "balanced", "lenient"] as const, {
           description:
-            "Relevance threshold for included content. Default: balanced.",
+            "Relevance threshold for included content. Default: balanced. Use strict when precision matters more than recall; use lenient when broader coverage is needed.",
         }),
       ),
       goggles: Type.Optional(
         Type.String({
           description:
-            "Optional Brave Goggles URL or inline rules for custom ranking/filtering.",
+            "Optional Brave Goggles URL or inline rules for custom ranking/filtering. Use to restrict, boost, downrank, or discard sources when the user asks for specific/authoritative sources. Inline syntax: $boost=N / $downrank=N (1–10), $discard, $site=example.com. Combine with commas: $site=example.com,boost=3. Separate rules with %0A.",
         }),
       ),
     }),
