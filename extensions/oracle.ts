@@ -1,7 +1,7 @@
 /**
- * Oracle Extension — Second opinion subagent using a powerful reasoning model
+ * Oracle Extension — Second opinion subagent using GPT 5.5
  *
- * Spawns an isolated `pi` process with a strong reasoning model
+ * Spawns an isolated `pi` process with GPT 5.5
  * for complex analysis and debugging tasks. The oracle runs in its own
  * context window with access to bash, read, grep, find, and ls tools, so it can independently
  * investigate code while reasoning about the problem.
@@ -11,8 +11,8 @@
  * help, or the user can explicitly request it.
  *
  * Usage:
- *   /oracle <question>  - Ask the oracle directly
- *   /oracle              - Opens editor for a detailed question
+ *   /oracle <query>  - Ask the oracle directly
+ *   /oracle          - Opens editor for a detailed query
  *
  * The agent can also invoke the oracle tool during conversation when it
  * encounters complex reasoning tasks.
@@ -204,7 +204,7 @@ function getFinalOutput(messages: any[]): string {
   return "";
 }
 
-const ORACLE_MODEL = "openai-codex/gpt-5.4";
+const ORACLE_MODEL = "openai-codex/gpt-5.5";
 
 async function runOracle(
   task: string,
@@ -378,15 +378,11 @@ export default function oracleExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "oracle",
     label: "Oracle",
-    description: [
-      "Get a second opinion from a powerful reasoning subagent on complex problems.",
-      "The Oracle runs in its own context with access to bash, read, grep, find, and ls tools,",
-      "so it can independently investigate code while reasoning about the problem.",
-      "Use for difficult debugging, root-cause analysis, algorithm analysis,",
-      "refactoring decisions, or any task requiring deep reasoning.",
-      "The oracle is slower and more expensive, so use it selectively when the problem",
-      "genuinely benefits from deeper analysis.",
-    ].join(" "),
+    description:
+      "Get a second opinion from an isolated reasoning subagent on complex problems. " +
+      "Use when the task benefits from independent investigation and deeper analysis: " +
+      "difficult debugging, root-cause analysis, subtle correctness issues, edge cases, " +
+      "algorithm analysis, architecture trade-offs, or refactoring decisions.",
     parameters: Type.Object({
       query: Type.String({
         description:
@@ -600,7 +596,7 @@ export default function oracleExtension(pi: ExtensionAPI) {
 
       if (!query) {
         if (!ctx.hasUI) {
-          ctx.ui.notify("Usage: /oracle <question>", "error");
+          ctx.ui.notify("Usage: /oracle <query>", "error");
           return;
         }
 

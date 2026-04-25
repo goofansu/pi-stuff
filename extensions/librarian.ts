@@ -1,5 +1,5 @@
 /**
- * Librarian Extension — Cross-repository code research subagent
+ * Librarian Extension — Cross-repository code research subagent using GPT 5.4 Mini
  *
  * Spawns an isolated `pi` process to search and read code across GitHub repositories.
  * Can access all public code on GitHub as well as your private repositories.
@@ -257,7 +257,7 @@ function getFinalOutput(messages: any[]): string {
 	return "";
 }
 
-const LIBRARIAN_MODEL = "opencode/claude-haiku-4-5";
+const LIBRARIAN_MODEL = "openai-codex/gpt-5.4-mini";
 
 async function runLibrarian(
 	task: string,
@@ -407,13 +407,11 @@ export default function librarianExtension(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "librarian",
 		label: "Librarian",
-		description: [
-			"Search and read code across GitHub repositories using an isolated subagent.",
-			"The Librarian can search all public code on GitHub and your private repos.",
-			"Use ONLY for code-related research: implementations, APIs, architecture, and dependency internals.",
-			"Do NOT use for pricing, licensing, legal/compliance, or general non-code web research.",
-			"Only searches default branches. Provides detailed, in-depth explanations.",
-		].join(" "),
+		description:
+			"Search and read code across GitHub repositories using an isolated research subagent. " +
+			"Use only for code-related research: implementations, APIs, architecture, dependency internals, " +
+			"or tracing functions, types, and usages across repositories. " +
+			"Do not use for pricing, licensing, legal/compliance, or general non-code web research.",
 		parameters: Type.Object({
 			query: Type.String({ description: "The research question or investigation task for the Librarian" }),
 		}),
