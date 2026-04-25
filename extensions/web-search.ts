@@ -362,14 +362,11 @@ export default function webSearchExtension(pi: ExtensionAPI) {
 
       if (!request) {
         if (!ctx.hasUI) {
-          ctx.ui.notify(
-            "Usage: /web-search <query or research request>",
-            "error",
-          );
+          ctx.ui.notify("Usage: /web-search <query>", "error");
           return;
         }
 
-        const input = await ctx.ui.editor("What should web-search look up?");
+        const input = await ctx.ui.editor("What do you want to search?");
         if (!input?.trim()) {
           ctx.ui.notify("web-search cancelled", "info");
           return;

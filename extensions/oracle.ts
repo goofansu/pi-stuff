@@ -600,13 +600,10 @@ export default function oracleExtension(pi: ExtensionAPI) {
           return;
         }
 
-        const input = await ctx.ui.editor(
-          "What should the Oracle analyze?",
-          "e.g. Is there a subtle bug in this function? Check src/auth.ts",
-        );
+        const input = await ctx.ui.editor("What do you want to analyze?");
 
         if (!input?.trim()) {
-          ctx.ui.notify("Oracle cancelled", "info");
+          ctx.ui.notify("oracle cancelled", "info");
           return;
         }
         query = input.trim();
