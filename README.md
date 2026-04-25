@@ -13,6 +13,7 @@ Here are the extensions I wrote:
 - [`librarian.ts`](extensions/librarian.ts) - Searches code across GitHub repositories in a subagent using GPT 5.4 Mini.
 - [`oracle.ts`](extensions/oracle.ts) - Second opinion reasoning subagent using GPT 5.5.
 - [`snippets.ts`](extensions/snippets.ts) - Lists code blocks from the last assistant message for further action.
+- [`web-search.ts`](extensions/web-search.ts) - Searches the web using Brave LLM Context and returns extracted content, snippets, structured data, and sources for grounded answers. Use for current information, recent events, external facts, product/docs lookups, or other web-grounded research.
 
 ## Skills
 
