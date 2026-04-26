@@ -33,7 +33,6 @@ import {
   truncateToWidth,
   visibleWidth,
 } from "@mariozechner/pi-tui";
-import { sliceByColumn } from "@mariozechner/pi-tui/dist/utils.js";
 
 type ModelKey = string; // `${provider}/${model}`
 type CwdKey = string; // normalized cwd path
@@ -233,6 +232,105 @@ function ansiBg(rgb: RGB, text: string): string {
 
 function ansiFg(rgb: RGB, text: string): string {
   return `\x1b[38;2;${rgb.r};${rgb.g};${rgb.b}m${text}\x1b[0m`;
+}
+
+const graphemeSegmenter = new Intl.Segmenter(undefined, {
+  granularity: "grapheme",
+});
+
+function extractAnsiCode(
+  text: string,
+  offset: number,
+): { code: string; length: number } | null {
+  if (text[offset] !== "\x1b") return null;
+  const next = text[offset + 1];
+
+  if (next === "[") {
+    let end = offset + 2;
+    while (end < text.length && !/[A-Za-z]/.test(text[end])) end++;
+    if (end < text.length) {
+      return {
+        code: text.slice(offset, end + 1),
+        length: end + 1 - offset,
+      };
+    }
+  }
+
+  if (next === "]") {
+    let end = offset + 2;
+    while (end < text.length) {
+      if (text[end] === "\x07") {
+        return {
+          code: text.slice(offset, end + 1),
+          length: end + 1 - offset,
+        };
+      }
+      if (text[end] === "\x1b" && text[end + 1] === "\\") {
+        return {
+          code: text.slice(offset, end + 2),
+          length: end + 2 - offset,
+        };
+      }
+      end++;
+    }
+  }
+
+  return null;
+}
+
+function sliceByColumn(
+  line: string,
+  startCol: number,
+  length: number,
+  strict = false,
+): string {
+  if (length <= 0) return "";
+
+  const endCol = startCol + length;
+  let result = "";
+  let currentCol = 0;
+  let offset = 0;
+  let pendingAnsi = "";
+
+  while (offset < line.length) {
+    const ansi = extractAnsiCode(line, offset);
+    if (ansi) {
+      if (currentCol >= startCol && currentCol < endCol) {
+        result += ansi.code;
+      } else if (currentCol < startCol) {
+        pendingAnsi += ansi.code;
+      }
+      offset += ansi.length;
+      continue;
+    }
+
+    let textEnd = offset;
+    while (textEnd < line.length && !extractAnsiCode(line, textEnd)) textEnd++;
+
+    for (const { segment } of graphemeSegmenter.segment(
+      line.slice(offset, textEnd),
+    )) {
+      const width = visibleWidth(segment);
+      const inRange = currentCol >= startCol && currentCol < endCol;
+      const fits = !strict || currentCol + width <= endCol;
+
+      if (inRange && fits) {
+        if (pendingAnsi) {
+          result += pendingAnsi;
+          pendingAnsi = "";
+        }
+        result += segment;
+      }
+
+      currentCol += width;
+      if (currentCol >= endCol) break;
+    }
+
+    offset = textEnd;
+    if (currentCol >= endCol) break;
+  }
+
+  return result;
 }
 
 function dim(text: string): string {
