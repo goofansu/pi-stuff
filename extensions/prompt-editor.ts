@@ -2,11 +2,10 @@ import type { Dirent } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import type { ThinkingLevel } from "@mariozechner/pi-agent-core";
 import type {
   ExtensionAPI,
   ExtensionContext,
-  ModelSelectEvent,
-  ThinkingLevel,
 } from "@mariozechner/pi-coding-agent";
 import {
   CustomEditor,
@@ -1432,7 +1431,7 @@ export default function (pi: ExtensionAPI) {
       if (tokens[0] === "store") {
         await ensureRuntime(pi, ctx);
 
-        let target = tokens[1];
+        let target: string | undefined = tokens[1];
         if (!target) {
           if (!ctx.hasUI) return;
           const names = orderedModeNames(runtime.data.modes);
@@ -1496,27 +1495,7 @@ export default function (pi: ExtensionAPI) {
     applyEditor(pi, ctx);
   });
 
-  pi.on("session_switch", async (_event, ctx) => {
-    lastObservedModel = {
-      provider: ctx.model?.provider,
-      modelId: ctx.model?.id,
-    };
-    await ensureRuntime(pi, ctx);
-    customOverlay = null;
-
-    const inferred = inferModeFromSelection(ctx, pi, runtime.data);
-    if (inferred) {
-      runtime.currentMode = inferred;
-      runtime.lastRealMode = inferred;
-    } else {
-      runtime.currentMode = CUSTOM_MODE_NAME;
-      customOverlay = getCurrentSelectionSpec(pi, ctx);
-    }
-
-    applyEditor(pi, ctx);
-  });
-
-  pi.on("model_select", async (event: ModelSelectEvent, ctx) => {
+  pi.on("model_select", async (event, ctx) => {
     // Always track the last observed model for overlay/store correctness.
     lastObservedModel = {
       provider: event.model.provider,
