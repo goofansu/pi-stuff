@@ -8,6 +8,7 @@
  *   /snippets - List and interact with code snippets from last assistant message
  */
 
+import type { TextContent } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { keyHint } from "@mariozechner/pi-coding-agent";
 import { visibleWidth } from "@mariozechner/pi-tui";
@@ -95,7 +96,7 @@ function getLastAssistantMessage(ctx: ExtensionContext): string | null {
 
 		if (Array.isArray(content)) {
 			const textParts = content
-				.filter((block): block is { text: string } => !!block && typeof block === "object" && typeof (block as any).text === "string")
+				.filter((block): block is TextContent => block.type === "text" && typeof block.text === "string")
 				.map((block) => block.text);
 			if (textParts.length > 0) {
 				return textParts.join("\n");
