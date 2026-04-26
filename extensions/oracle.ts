@@ -26,6 +26,7 @@ import { Type } from "@mariozechner/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionContext,
+  ThemeColor,
 } from "@mariozechner/pi-coding-agent";
 import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
@@ -133,7 +134,7 @@ function formatUsageStats(usage: UsageStats, model?: string): string {
 function formatToolCallThemed(
   name: string,
   args: Record<string, unknown>,
-  fg: (color: string, text: string) => string,
+  fg: (color: ThemeColor, text: string) => string,
 ): string {
   const shortenPath = (p: string) => {
     const home = os.homedir();
