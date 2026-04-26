@@ -29,11 +29,11 @@ import {
   type Component,
   Key,
   matchesKey,
-  sliceByColumn,
   type TUI,
   truncateToWidth,
   visibleWidth,
 } from "@mariozechner/pi-tui";
+import { sliceByColumn } from "@mariozechner/pi-tui/dist/utils.js";
 
 type ModelKey = string; // `${provider}/${model}`
 type CwdKey = string; // normalized cwd path
