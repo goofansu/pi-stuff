@@ -1,7 +1,18 @@
 {
+  "type": "module",
+  "scripts": {
+    "lint": "biome check --write .",
+    "typecheck": "tsc --noEmit"
+  },
   "peerDependencies": {
     "@mariozechner/pi-ai": "*",
     "@mariozechner/pi-coding-agent": "*",
-    "@mariozechner/pi-tui": "*"
+    "@mariozechner/pi-tui": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.13",
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3"
   }
 }
