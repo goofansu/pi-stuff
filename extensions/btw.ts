@@ -1,13 +1,12 @@
+import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type {
   ThinkingLevel as AiThinkingLevel,
   AssistantMessage,
-  Message,
 } from "@mariozechner/pi-ai";
 import {
   type AgentSession,
   type AgentSessionEvent,
   buildSessionContext,
-  codingTools,
   createAgentSession,
   createExtensionRuntime,
   type ExtensionAPI,
@@ -164,8 +163,8 @@ function getLastAssistantMessage(
 function buildSeedMessages(
   ctx: ExtensionContext,
   thread: BtwDetails[],
-): Message[] {
-  const seed: Message[] = [];
+): AgentMessage[] {
+  const seed: AgentMessage[] = [];
 
   try {
     const contextMessages = buildSessionContext(
@@ -280,7 +279,7 @@ class BtwOverlay extends Container implements Focusable {
   }
 
   handleInput(data: string): void {
-    if (this.keybindings.matches(data, "selectCancel")) {
+    if (this.keybindings.matches(data, "tui.select.cancel")) {
       this.onDismissCallback();
       return;
     }
@@ -661,7 +660,7 @@ export default function (pi: ExtensionAPI) {
       model: ctx.model,
       modelRegistry: ctx.modelRegistry as AgentSession["modelRegistry"],
       thinkingLevel: pi.getThinkingLevel() as SessionThinkingLevel,
-      tools: codingTools,
+      tools: ["read", "bash", "edit", "write"],
       resourceLoader: createBtwResourceLoader(ctx),
     });
 
@@ -1090,10 +1089,6 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async (_event, ctx) => {
-    await restoreThread(ctx);
-  });
-
-  pi.on("session_switch", async (_event, ctx) => {
     await restoreThread(ctx);
   });
 
