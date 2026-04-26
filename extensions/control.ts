@@ -511,13 +511,11 @@ function getMessagesSinceLastPrompt(ctx: ExtensionContext): ExtractedMessage[] {
     if (entry.type === "message") {
       const msg = entry.message;
       if ("role" in msg && (msg.role === "user" || msg.role === "assistant")) {
-        const textParts = msg.content
-          .filter((c): c is { type: "text"; text: string } => c.type === "text")
-          .map((c) => c.text);
-        if (textParts.length > 0) {
+        const content = extractTextContent(msg.content);
+        if (content) {
           messages.push({
             role: msg.role,
-            content: textParts.join("\n"),
+            content,
             timestamp: msg.timestamp,
           });
         }
@@ -875,11 +873,12 @@ async function handleCommand(
     return;
   }
 
+  const unsupportedType = (command as { type?: string }).type ?? "unknown";
   respond(
     false,
-    command.type,
+    unsupportedType,
     undefined,
-    `Unsupported command: ${command.type}`,
+    `Unsupported command: ${unsupportedType}`,
   );
 }
 
@@ -994,12 +993,13 @@ async function sendRpcCommand(
           // Handle response
           if (msg.type === "response") {
             if (msg.command === command.type) {
-              response = msg;
+              const rpcResponse = msg as RpcResponse;
+              response = rpcResponse;
               // If not waiting for event, we're done
               if (!waitForEvent) {
                 cleanup();
                 socket.end();
-                resolve({ response });
+                resolve({ response: rpcResponse });
                 return;
               }
             }
@@ -1195,14 +1195,6 @@ export default function (pi: ExtensionAPI) {
       cliSendHandled = true;
       await maybeHandleStartupControlSend(pi, ctx);
     }
-  });
-
-  pi.on("session_switch", async (_event, ctx) => {
-    await refreshServer(ctx);
-  });
-
-  pi.on("session_fork", async (_event, ctx) => {
-    await refreshServer(ctx);
   });
 
   pi.on("session_shutdown", async () => {
@@ -1637,14 +1629,16 @@ Messages automatically include sender session info for replies. When you want a 
 
     renderResult(result, { expanded }, theme) {
       const details = result.details as Record<string, unknown> | undefined;
-      const isError = result.isError === true;
 
       // Error case
-      if (isError || details?.error) {
+      if (details?.error) {
+        const firstContent = result.content[0];
         const errorMsg =
-          (details?.error as string) || result.content[0]?.type === "text"
-            ? (result.content[0] as { type: "text"; text: string }).text
-            : "Unknown error";
+          typeof details.error === "string"
+            ? details.error
+            : firstContent?.type === "text"
+              ? firstContent.text
+              : "Unknown error";
         return new Text(
           theme.fg("error", "✗ ") + theme.fg("error", errorMsg),
           0,
