@@ -19,9 +19,8 @@ define skills-add
 endef
 
 upstream-skills:
-	$(call skills-add,anthropics/skills,skill-creator frontend-design)
+	$(call skills-add,anthropics/skills,skill-creator)
 	$(call skills-add,badlogic/pi-skills,transcribe)
-	$(call skills-add,brave/brave-search-skills,web-search)
 	$(call skills-add,mitsuhiko/agent-stuff,commit mermaid)
 	$(call skills-add,tobi/qmd,qmd)
 
