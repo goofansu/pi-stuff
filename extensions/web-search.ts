@@ -10,13 +10,13 @@
  * Requires BRAVE_SEARCH_API_KEY from https://api.search.brave.com.
  */
 
+import { StringEnum, Type } from "@mariozechner/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
 import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
-import { StringEnum, Type } from "@mariozechner/pi-ai";
 
 const BRAVE_LLM_CONTEXT_ENDPOINT =
   "https://api.search.brave.com/res/v1/llm/context";
