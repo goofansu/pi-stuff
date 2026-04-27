@@ -10,13 +10,13 @@
  * Requires BRAVE_SEARCH_API_KEY from https://api.search.brave.com.
  */
 
+import { StringEnum, Type } from "@mariozechner/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
 import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
-import { StringEnum, Type } from "@mariozechner/pi-ai";
 
 const BRAVE_LLM_CONTEXT_ENDPOINT =
   "https://api.search.brave.com/res/v1/llm/context";
@@ -368,13 +368,15 @@ export default function webSearchExtension(pi: ExtensionAPI) {
 
         const input = await ctx.ui.editor("What do you want to search?");
         if (!input?.trim()) {
-          ctx.ui.notify("web-search cancelled", "info");
+          ctx.ui.notify("Cancelled", "info");
           return;
         }
         request = input.trim();
       }
 
-      pi.sendUserMessage(`Use the web-search tool to research: ${request}`);
+      pi.sendUserMessage(`Use the web-search tool to research: ${request}`, {
+        deliverAs: "followUp",
+      });
     },
   });
 }

@@ -22,13 +22,14 @@ import { spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { Type } from "@mariozechner/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionContext,
+  ThemeColor,
 } from "@mariozechner/pi-coding-agent";
 import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
-import { Type } from "@mariozechner/pi-ai";
 
 // ── Agent definition ─────────────────────────────────────────────────────────
 
@@ -133,7 +134,7 @@ function formatUsageStats(usage: UsageStats, model?: string): string {
 function formatToolCallThemed(
   name: string,
   args: Record<string, unknown>,
-  fg: (color: string, text: string) => string,
+  fg: (color: ThemeColor, text: string) => string,
 ): string {
   const shortenPath = (p: string) => {
     const home = os.homedir();
@@ -603,7 +604,7 @@ export default function oracleExtension(pi: ExtensionAPI) {
         const input = await ctx.ui.editor("What do you want to analyze?");
 
         if (!input?.trim()) {
-          ctx.ui.notify("oracle cancelled", "info");
+          ctx.ui.notify("Cancelled", "info");
           return;
         }
         query = input.trim();
@@ -614,7 +615,9 @@ export default function oracleExtension(pi: ExtensionAPI) {
         "info",
       );
 
-      pi.sendUserMessage(`Use the oracle tool to analyze: ${query}`);
+      pi.sendUserMessage(`Use the oracle tool to analyze: ${query}`, {
+        deliverAs: "followUp",
+      });
     },
   });
 }

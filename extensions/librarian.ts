@@ -19,13 +19,14 @@ import { spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { Type } from "@mariozechner/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionContext,
+  ThemeColor,
 } from "@mariozechner/pi-coding-agent";
 import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
-import { Type } from "@mariozechner/pi-ai";
 
 // ── Agent definition (inline — no .md file needed) ──────────────────────────
 
@@ -183,7 +184,7 @@ function formatUsageStats(usage: UsageStats, model?: string): string {
 function formatToolCallThemed(
   name: string,
   args: Record<string, unknown>,
-  fg: (color: string, text: string) => string,
+  fg: (color: ThemeColor, text: string) => string,
 ): string {
   const shortenPath = (p: string) => {
     const home = os.homedir();
@@ -681,7 +682,7 @@ export default function librarianExtension(pi: ExtensionAPI) {
         const input = await ctx.ui.editor("What do you want to research?");
 
         if (!input?.trim()) {
-          ctx.ui.notify("librarian cancelled", "info");
+          ctx.ui.notify("Cancelled", "info");
           return;
         }
         query = input.trim();
@@ -692,7 +693,9 @@ export default function librarianExtension(pi: ExtensionAPI) {
         "info",
       );
 
-      pi.sendUserMessage(`Use the librarian tool to research: ${query}`);
+      pi.sendUserMessage(`Use the librarian tool to research: ${query}`, {
+        deliverAs: "followUp",
+      });
     },
   });
 }
