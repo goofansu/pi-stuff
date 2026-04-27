@@ -18,7 +18,6 @@ Here are the extensions I wrote:
 
 All skill files are in the [`skills`](skills) directory:
 
-- [`github`](skills/github) - Interact with GitHub via the `gh` CLI: download Gist files and create pull request review comments.
 - [`note`](skills/note) - For creating and managing Denote notes in Emacs via `emacsclient`.
 - [`summarize`](skills/summarize) - Fetch a URL or convert a local file (PDF/DOCX/HTML/etc.) into Markdown using `uvx markitdown`, optionally summarizing the result.
 - [`worktree`](skills/worktree) - Manage git worktrees: check out PRs or branches in a separate directory, list, and remove worktrees.
