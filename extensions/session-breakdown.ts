@@ -226,111 +226,8 @@ function weightedMix(colors: Array<{ color: RGB; weight: number }>): RGB {
   };
 }
 
-function ansiBg(rgb: RGB, text: string): string {
-  return `\x1b[48;2;${rgb.r};${rgb.g};${rgb.b}m${text}\x1b[0m`;
-}
-
 function ansiFg(rgb: RGB, text: string): string {
   return `\x1b[38;2;${rgb.r};${rgb.g};${rgb.b}m${text}\x1b[0m`;
-}
-
-const graphemeSegmenter = new Intl.Segmenter(undefined, {
-  granularity: "grapheme",
-});
-
-function extractAnsiCode(
-  text: string,
-  offset: number,
-): { code: string; length: number } | null {
-  if (text[offset] !== "\x1b") return null;
-  const next = text[offset + 1];
-
-  if (next === "[") {
-    let end = offset + 2;
-    while (end < text.length && !/[A-Za-z]/.test(text[end])) end++;
-    if (end < text.length) {
-      return {
-        code: text.slice(offset, end + 1),
-        length: end + 1 - offset,
-      };
-    }
-  }
-
-  if (next === "]") {
-    let end = offset + 2;
-    while (end < text.length) {
-      if (text[end] === "\x07") {
-        return {
-          code: text.slice(offset, end + 1),
-          length: end + 1 - offset,
-        };
-      }
-      if (text[end] === "\x1b" && text[end + 1] === "\\") {
-        return {
-          code: text.slice(offset, end + 2),
-          length: end + 2 - offset,
-        };
-      }
-      end++;
-    }
-  }
-
-  return null;
-}
-
-function sliceByColumn(
-  line: string,
-  startCol: number,
-  length: number,
-  strict = false,
-): string {
-  if (length <= 0) return "";
-
-  const endCol = startCol + length;
-  let result = "";
-  let currentCol = 0;
-  let offset = 0;
-  let pendingAnsi = "";
-
-  while (offset < line.length) {
-    const ansi = extractAnsiCode(line, offset);
-    if (ansi) {
-      if (currentCol >= startCol && currentCol < endCol) {
-        result += ansi.code;
-      } else if (currentCol < startCol) {
-        pendingAnsi += ansi.code;
-      }
-      offset += ansi.length;
-      continue;
-    }
-
-    let textEnd = offset;
-    while (textEnd < line.length && !extractAnsiCode(line, textEnd)) textEnd++;
-
-    for (const { segment } of graphemeSegmenter.segment(
-      line.slice(offset, textEnd),
-    )) {
-      const width = visibleWidth(segment);
-      const inRange = currentCol >= startCol && currentCol < endCol;
-      const fits = !strict || currentCol + width <= endCol;
-
-      if (inRange && fits) {
-        if (pendingAnsi) {
-          result += pendingAnsi;
-          pendingAnsi = "";
-        }
-        result += segment;
-      }
-
-      currentCol += width;
-      if (currentCol >= endCol) break;
-    }
-
-    offset = textEnd;
-    if (currentCol >= endCol) break;
-  }
-
-  return result;
 }
 
 function dim(text: string): string {
@@ -1141,59 +1038,6 @@ function displayModelName(modelKey: string): string {
   return idx === -1 ? modelKey : modelKey.slice(idx + 1);
 }
 
-function renderLegendItems(
-  modelColors: Map<ModelKey, RGB>,
-  orderedModels: ModelKey[],
-  otherColor: RGB,
-): string[] {
-  const items: string[] = [];
-  for (const mk of orderedModels) {
-    const c = modelColors.get(mk);
-    if (!c) continue;
-    items.push(`${ansiFg(c, "█")} ${displayModelName(mk)}`);
-  }
-  items.push(`${ansiFg(otherColor, "█")} other`);
-  return items;
-}
-
-function fitRight(text: string, width: number): string {
-  if (width <= 0) return "";
-  let w = visibleWidth(text);
-  let t = text;
-  if (w > width) {
-    t = sliceByColumn(t, w - width, width, true);
-    w = visibleWidth(t);
-  }
-  return " ".repeat(Math.max(0, width - w)) + t;
-}
-
-function renderLegendBlock(
-  leftLabel: string,
-  items: string[],
-  width: number,
-): string[] {
-  if (width <= 0) return [];
-  if (items.length === 0) return [truncateToWidth(leftLabel, width)];
-
-  const lines: string[] = [];
-  // First line: label on left, first item right-aligned into remaining space.
-  const leftW = visibleWidth(leftLabel);
-  if (leftW >= width) {
-    lines.push(truncateToWidth(leftLabel, width));
-    // Put all items on their own lines right-aligned.
-    for (const it of items) lines.push(fitRight(it, width));
-    return lines;
-  }
-
-  const remaining = Math.max(0, width - leftW);
-  lines.push(leftLabel + fitRight(items[0], remaining));
-
-  for (let i = 1; i < items.length; i++) {
-    lines.push(fitRight(items[i], width));
-  }
-  return lines;
-}
-
 function renderModelTable(
   range: RangeAgg,
   mode: MeasurementMode,
@@ -1436,22 +1280,6 @@ function renderTodTable(range: RangeAgg, mode: MeasurementMode): string[] {
   }
 
   return lines;
-}
-
-function renderLeftRight(left: string, right: string, width: number): string {
-  const leftW = visibleWidth(left);
-  if (width <= 0) return "";
-  if (leftW >= width) return truncateToWidth(left, width);
-
-  const remaining = width - leftW;
-  let rightText = right;
-  const rightW = visibleWidth(rightText);
-  if (rightW > remaining) {
-    // Keep the *rightmost* part visible.
-    rightText = sliceByColumn(rightText, rightW - remaining, remaining, true);
-  }
-  const pad = Math.max(0, remaining - visibleWidth(rightText));
-  return left + " ".repeat(pad) + rightText;
 }
 
 function rangeSummary(
