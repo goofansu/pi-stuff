@@ -23,6 +23,7 @@ upstream-skills:
 	$(call skills-add,badlogic/pi-skills,transcribe)
 	$(call skills-add,mitsuhiko/agent-stuff,commit mermaid)
 	$(call skills-add,tobi/qmd,qmd)
+	$(call skills-add,obra/superpowers,brainstorming)
 
 upstream-extensions:
 	make -C extensions install
