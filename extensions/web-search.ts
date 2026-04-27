@@ -368,7 +368,7 @@ export default function webSearchExtension(pi: ExtensionAPI) {
 
         const input = await ctx.ui.editor("What do you want to search?");
         if (!input?.trim()) {
-          ctx.ui.notify("web-search cancelled", "info");
+          ctx.ui.notify("Cancelled", "info");
           return;
         }
         request = input.trim();

@@ -604,7 +604,7 @@ export default function oracleExtension(pi: ExtensionAPI) {
         const input = await ctx.ui.editor("What do you want to analyze?");
 
         if (!input?.trim()) {
-          ctx.ui.notify("oracle cancelled", "info");
+          ctx.ui.notify("Cancelled", "info");
           return;
         }
         query = input.trim();

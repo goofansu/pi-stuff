@@ -682,7 +682,7 @@ export default function librarianExtension(pi: ExtensionAPI) {
         const input = await ctx.ui.editor("What do you want to research?");
 
         if (!input?.trim()) {
-          ctx.ui.notify("librarian cancelled", "info");
+          ctx.ui.notify("Cancelled", "info");
           return;
         }
         query = input.trim();
