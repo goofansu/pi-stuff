@@ -2,6 +2,7 @@
   "type": "module",
   "scripts": {
     "lint": "biome check --write .",
+    "prepare": "husky",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
@@ -13,6 +14,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.13",
     "@types/node": "^25.6.0",
+    "husky": "^9.1.7",
     "typescript": "^6.0.3"
   }
 }
