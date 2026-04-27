@@ -615,7 +615,9 @@ export default function oracleExtension(pi: ExtensionAPI) {
         "info",
       );
 
-      pi.sendUserMessage(`Use the oracle tool to analyze: ${query}`);
+      pi.sendUserMessage(`Use the oracle tool to analyze: ${query}`, {
+        deliverAs: "followUp",
+      });
     },
   });
 }

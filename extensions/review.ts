@@ -1666,8 +1666,8 @@ export default function reviewExtension(pi: ExtensionAPI) {
     const modeHint = useFreshSession ? " (fresh session)" : "";
     ctx.ui.notify(`Starting review: ${hint}${modeHint}`, "info");
 
-    // Send as a user message that triggers a turn
-    pi.sendUserMessage(fullPrompt);
+    // Send as a user message that triggers a turn, or queues if the agent is busy.
+    pi.sendUserMessage(fullPrompt, { deliverAs: "followUp" });
     return true;
   }
 

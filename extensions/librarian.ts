@@ -693,7 +693,9 @@ export default function librarianExtension(pi: ExtensionAPI) {
         "info",
       );
 
-      pi.sendUserMessage(`Use the librarian tool to research: ${query}`);
+      pi.sendUserMessage(`Use the librarian tool to research: ${query}`, {
+        deliverAs: "followUp",
+      });
     },
   });
 }

@@ -913,11 +913,7 @@ export default function (pi: ExtensionAPI) {
     try {
       const summary = await summarizeThread(ctx, thread);
       const message = `Summary of my BTW side conversation:\n\n${summary}`;
-      if (ctx.isIdle()) {
-        pi.sendUserMessage(message);
-      } else {
-        pi.sendUserMessage(message, { deliverAs: "followUp" });
-      }
+      pi.sendUserMessage(message, { deliverAs: "followUp" });
 
       await resetThread(ctx);
       notify(ctx, "Injected BTW summary into main chat.", "info");

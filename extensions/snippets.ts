@@ -416,7 +416,9 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 
       if (result.action === "explain") {
         const snippetFormatted = `\`\`\`${result.block.language}\n${result.block.code}\n\`\`\``;
-        pi.sendUserMessage(`Explain this snippet:\n\n${snippetFormatted}`);
+        pi.sendUserMessage(`Explain this snippet:\n\n${snippetFormatted}`, {
+          deliverAs: "followUp",
+        });
       }
     },
   });

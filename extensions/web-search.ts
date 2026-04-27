@@ -374,7 +374,9 @@ export default function webSearchExtension(pi: ExtensionAPI) {
         request = input.trim();
       }
 
-      pi.sendUserMessage(`Use the web-search tool to research: ${request}`);
+      pi.sendUserMessage(`Use the web-search tool to research: ${request}`, {
+        deliverAs: "followUp",
+      });
     },
   });
 }
