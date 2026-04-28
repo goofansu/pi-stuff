@@ -596,7 +596,7 @@ export default function (pi: ExtensionAPI) {
   }
 
   async function resetThread(
-    ctx: ExtensionContext | ExtensionCommandContext,
+    _ctx: ExtensionContext | ExtensionCommandContext,
     persist = true,
   ): Promise<void> {
     thread = [];

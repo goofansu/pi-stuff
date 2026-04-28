@@ -225,31 +225,6 @@ function formatToolCallThemed(
   }
 }
 
-function formatToolCallPlain(
-  name: string,
-  args: Record<string, unknown>,
-): string {
-  const shortenPath = (p: string) => {
-    const home = os.homedir();
-    return p.startsWith(home) ? `~${p.slice(home.length)}` : p;
-  };
-
-  switch (name) {
-    case "bash": {
-      const command = (args.command as string) || "...";
-      return command.length > 80
-        ? `$ ${command.slice(0, 80)}...`
-        : `$ ${command}`;
-    }
-    case "read":
-      return `read ${shortenPath((args.file_path || args.path || "...") as string)}`;
-    case "grep":
-      return `grep /${args.pattern || "..."}/ in ${shortenPath((args.path || ".") as string)}`;
-    default:
-      return name;
-  }
-}
-
 // ── Temp file helpers ───────────────────────────────────────────────────────
 
 function writePromptToTempFile(
