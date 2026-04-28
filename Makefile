@@ -5,8 +5,10 @@ install: files
 	pi install https://github.com/davebcn87/pi-autoresearch
 
 files:
+	mkdir -p ~/.pi/agent/agents
 	cp keybindings.json ~/.pi/agent/keybindings.json
 	cp AGENTS_USER.md ~/.pi/agent/AGENTS.md
+	cp agents/*.md ~/.pi/agent/agents/
 
 local-skills:
 	@for skill in $(CURDIR)/skills/*/; do \
