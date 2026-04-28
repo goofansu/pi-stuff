@@ -15,7 +15,7 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
-import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
+import { getMarkdownTheme, keyHint } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 
 const BRAVE_LLM_CONTEXT_ENDPOINT =
@@ -339,7 +339,7 @@ export default function webSearchExtension(pi: ExtensionAPI) {
           .map((source) => `→ ${source.hostname ?? source.title ?? source.url}`)
           .join("\n");
         return new Text(
-          `${title} ${theme.fg("dim", `${details.sources.length} source(s)`)}${sourcePreview ? `\n${theme.fg("muted", sourcePreview)}` : ""}\n${theme.fg("muted", "(Ctrl+O to expand)")}`,
+          `${title} ${theme.fg("dim", `${details.sources.length} source(s)`)}${sourcePreview ? `\n${theme.fg("muted", sourcePreview)}` : ""}\n${theme.fg("muted", `(${keyHint("app.tools.expand", "to expand")})`)}`,
           0,
           0,
         );

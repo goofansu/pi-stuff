@@ -61,7 +61,7 @@ import type {
   ModelRegistry,
   TurnEndEvent,
 } from "@mariozechner/pi-coding-agent";
-import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
+import { getMarkdownTheme, keyHint } from "@mariozechner/pi-coding-agent";
 import { Box, Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 import { Type } from "typebox";
 
@@ -1689,7 +1689,7 @@ Messages automatically include sender session info for replies. When you want a 
           message.content.split("\n").length > 5 ||
           message.content.length > 200
         ) {
-          text += "\n" + theme.fg("dim", "(Ctrl+O to expand)");
+          text += `\n${theme.fg("dim", `(${keyHint("app.tools.expand", "to expand")})`)}\n`;
         }
         return new Text(text, 0, 0);
       }
@@ -1717,7 +1717,7 @@ Messages automatically include sender session info for replies. When you want a 
         if (model) text += theme.fg("dim", ` via ${model}`);
         text += "\n" + theme.fg("toolOutput", lines.join("\n"));
         if (summary.split("\n").length > 5 || summary.length > 200) {
-          text += "\n" + theme.fg("dim", "(Ctrl+O to expand)");
+          text += `\n${theme.fg("dim", `(${keyHint("app.tools.expand", "to expand")})`)}\n`;
         }
         return new Text(text, 0, 0);
       }

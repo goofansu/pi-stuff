@@ -28,7 +28,7 @@ import type {
   ExtensionContext,
   ThemeColor,
 } from "@mariozechner/pi-coding-agent";
-import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
+import { getMarkdownTheme, keyHint } from "@mariozechner/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
 
 // ── Agent definition ─────────────────────────────────────────────────────────
@@ -582,7 +582,7 @@ export default function oracleExtension(pi: ExtensionAPI) {
       const usageStr = formatUsageStats(details.usage, details.model);
       if (usageStr) text += `\n${theme.fg("dim", usageStr)}`;
       if (!isPartial && details.output)
-        text += `\n${theme.fg("muted", "(Ctrl+O to expand)")}`;
+        text += `\n${theme.fg("dim", `(${keyHint("app.tools.expand", "to expand")})`)}\n`;
 
       return new Text(text, 0, 0);
     },
