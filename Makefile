@@ -16,15 +16,14 @@ local-skills:
 	done
 
 define skills-add
-	npx skills add $(1) $(foreach s,$(2),-s $(s)) -g -a codex -a claude-code -y
+	npx skills add $(1) $(if $(2),$(foreach s,$(2),-s $(s)),-s '*') -g -a codex -a claude-code -y
 endef
 
 upstream-skills:
-	$(call skills-add,anthropics/skills,skill-creator)
 	$(call skills-add,badlogic/pi-skills,transcribe)
 	$(call skills-add,mitsuhiko/agent-stuff,commit mermaid)
+	$(call skills-add,obra/superpowers)
 	$(call skills-add,tobi/qmd,qmd)
-	$(call skills-add,obra/superpowers,brainstorming)
 
 upstream-extensions:
 	make -C extensions install
