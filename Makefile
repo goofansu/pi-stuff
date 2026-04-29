@@ -3,6 +3,7 @@ install: files
 	pi install ../pi-remote-control
 	pi install ../pi-subagent
 	pi install https://github.com/davebcn87/pi-autoresearch
+	pi install https://github.com/mitsuhiko/pi-draw
 
 files:
 	mkdir -p ~/.pi/agent/agents
