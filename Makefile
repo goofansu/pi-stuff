@@ -7,9 +7,11 @@ install: files
 
 files:
 	mkdir -p ~/.pi/agent/agents
-	cp keybindings.json ~/.pi/agent/keybindings.json
-	cp AGENTS_USER.md ~/.pi/agent/AGENTS.md
-	cp agents/*.md ~/.pi/agent/agents/
+	@ln -svf $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
+	@ln -svf $(CURDIR)/AGENTS_USER.md ~/.pi/agent/AGENTS.md
+	@for f in $(CURDIR)/agents/*.md; do \
+		ln -svf $$f ~/.pi/agent/agents/$$(basename $$f); \
+	done
 
 local-skills:
 	@for skill in $(CURDIR)/skills/*/; do \
