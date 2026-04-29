@@ -2,6 +2,7 @@
   "type": "module",
   "scripts": {
     "lint": "biome check --write .",
+    "lint:check": "biome check .",
     "prepare": "husky",
     "typecheck": "tsc --noEmit"
   },
