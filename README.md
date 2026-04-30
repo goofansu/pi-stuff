@@ -18,6 +18,7 @@ Here are the extensions I wrote:
 
 All skill files are in the [`skills`](skills) directory:
 
+- [`call-graph-diff`](skills/call-graph-diff) - Analyze a git diff and produce a call graph diff visualization as an HTML widget.
 - [`git-create-worktree`](skills/git-create-worktree) - Create git worktrees for PRs, existing branches, or new local branches as sibling directories.
 - [`note`](skills/note) - For creating and managing Denote notes in Emacs via `emacsclient`.
 - [`summarize`](skills/summarize) - Fetch a URL or convert a local file (PDF/DOCX/HTML/etc.) into Markdown using `uvx markitdown`, optionally summarizing the result.
