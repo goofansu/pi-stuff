@@ -4,7 +4,8 @@
     "lint": "biome check --write .",
     "lint:check": "biome check .",
     "prepare": "husky",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test 'tests/**/*.test.ts'"
   },
   "peerDependencies": {
     "@mariozechner/pi-ai": "*",
