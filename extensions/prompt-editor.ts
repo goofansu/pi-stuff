@@ -3,9 +3,13 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { ThinkingLevel } from "@mariozechner/pi-agent-core";
+import type { Api, Model } from "@mariozechner/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionContext,
+  SessionEntry,
+  Theme,
+  ThemeColor,
 } from "@mariozechner/pi-coding-agent";
 import {
   CustomEditor,
@@ -35,6 +39,18 @@ type ModesFile = {
   currentMode: ModeName;
   modes: Record<ModeName, ModeSpec>;
 };
+
+type UnknownRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): UnknownRecord | undefined {
+  return value && typeof value === "object"
+    ? (value as UnknownRecord)
+    : undefined;
+}
+
+function getErrorCode(error: unknown): unknown {
+  return asRecord(error)?.code;
+}
 
 // Only "default" is a forced/built-in mode. Others are just initial suggestions and can be renamed/deleted.
 const DEFAULT_MODE_ORDER = ["default"] as const;
@@ -107,10 +123,10 @@ async function withFileLock<T>(
       try {
         // Best-effort metadata for debugging stale locks.
         await handle.writeFile(
-          JSON.stringify({
+          `${JSON.stringify({
             pid: process.pid,
             createdAt: new Date().toISOString(),
-          }) + "\n",
+          })}\n`,
           "utf8",
         );
       } catch {
@@ -123,8 +139,8 @@ async function withFileLock<T>(
         await handle.close().catch(() => {});
         await fs.unlink(lockPath).catch(() => {});
       }
-    } catch (err: any) {
-      if (err?.code !== "EEXIST") throw err;
+    } catch (err: unknown) {
+      if (getErrorCode(err) !== "EEXIST") throw err;
 
       // If the lock looks stale (crash), break it.
       try {
@@ -164,9 +180,10 @@ async function atomicWriteUtf8(
   try {
     // POSIX: atomic replace.
     await fs.rename(tmpPath, filePath);
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Windows: rename can't overwrite.
-    if (err?.code === "EEXIST" || err?.code === "EPERM") {
+    const code = getErrorCode(err);
+    if (code === "EEXIST" || code === "EPERM") {
       await fs.unlink(filePath).catch(() => {});
       await fs.rename(tmpPath, filePath);
     } else {
@@ -193,6 +210,27 @@ type ModesPatch = {
   currentMode?: ModeName;
   modes?: Record<ModeName, ModeSpecPatch | null>;
 };
+
+function setModeSpecPatchField(
+  patch: ModeSpecPatch,
+  field: keyof ModeSpec,
+  value: string | null,
+): void {
+  switch (field) {
+    case "provider":
+      patch.provider = value;
+      break;
+    case "modelId":
+      patch.modelId = value;
+      break;
+    case "thinkingLevel":
+      patch.thinkingLevel = value as ThinkingLevel | null;
+      break;
+    case "color":
+      patch.color = value;
+      break;
+  }
+}
 
 function computeModesPatch(
   base: ModesFile,
@@ -235,7 +273,7 @@ function computeModesPatch(
       const av = a[f];
       const bv = b[f];
       if (av !== bv) {
-        (diff as any)[f] = bv === undefined ? null : bv;
+        setModeSpecPatchField(diff, f, bv === undefined ? null : bv);
       }
     }
     if (Object.keys(diff).length > 0) {
@@ -342,7 +380,7 @@ function ensureDefaultModeEntries(
 
   // "custom" is an overlay mode; never treat it as a valid persisted current mode.
   if (file.currentMode === CUSTOM_MODE_NAME) {
-    file.currentMode = "" as any;
+    file.currentMode = "";
   }
 
   if (
@@ -386,7 +424,7 @@ async function loadModesFile(
 }
 
 async function saveModesFile(filePath: string, data: ModesFile): Promise<void> {
-  await atomicWriteUtf8(filePath, JSON.stringify(data, null, 2) + "\n");
+  await atomicWriteUtf8(filePath, `${JSON.stringify(data, null, 2)}\n`);
 }
 
 function orderedModeNames(modes: Record<string, ModeSpec>): string[] {
@@ -397,7 +435,7 @@ function orderedModeNames(modes: Record<string, ModeSpec>): string[] {
 }
 
 function getModeBorderColor(
-  theme: any,
+  theme: Theme,
   pi: ExtensionAPI,
   mode: string,
 ): (text: string) => string {
@@ -407,8 +445,9 @@ function getModeBorderColor(
   if (spec?.color) {
     try {
       // Validate early so we don't crash during render.
-      theme.getFgAnsi(spec.color as any);
-      return (text: string) => theme.fg(spec.color as any, text);
+      const color = spec.color as ThemeColor;
+      theme.getFgAnsi(color);
+      return (text: string) => theme.fg(color, text);
     } catch {
       // fall through to thinking-based colors
     }
@@ -1028,7 +1067,7 @@ async function pickModelForModeUI(
       ? ctx.modelRegistry.find(spec.provider, spec.modelId)
       : ctx.model;
 
-  const scopedModels: Array<{ model: any; thinkingLevel: string }> = [];
+  const scopedModels: Array<{ model: Model<Api>; thinkingLevel?: string }> = [];
 
   return ctx.ui.custom<{ provider: string; modelId: string } | undefined>(
     (tui, _theme, _keybindings, done) => {
@@ -1036,8 +1075,8 @@ async function pickModelForModeUI(
         tui,
         currentModel,
         settingsManager,
-        ctx.modelRegistry as any,
-        scopedModels as any,
+        ctx.modelRegistry,
+        scopedModels,
         (model) => done({ provider: model.provider, modelId: model.id }),
         () => done(undefined),
       );
@@ -1081,8 +1120,8 @@ async function cycleMode(
       ? runtime.lastRealMode
       : runtime.currentMode;
   const idx = Math.max(0, names.indexOf(baseMode));
-  const next =
-    names[(idx + direction + names.length) % names.length] ?? names[0]!;
+  const next = names[(idx + direction + names.length) % names.length];
+  if (!next) return;
   await applyMode(pi, ctx, next);
 }
 
@@ -1185,22 +1224,25 @@ class PromptEditor extends CustomEditor {
   }
 }
 
-function extractText(content: Array<{ type: string; text?: string }>): string {
+function extractText(content: unknown): string {
+  if (!Array.isArray(content)) return "";
   return content
-    .filter((item) => item.type === "text" && typeof item.text === "string")
-    .map((item) => item.text ?? "")
+    .filter((item): item is { type: string; text: string } => {
+      const record = asRecord(item);
+      return record?.type === "text" && typeof record.text === "string";
+    })
+    .map((item) => item.text)
     .join("")
     .trim();
 }
 
-function collectUserPromptsFromEntries(entries: Array<any>): PromptEntry[] {
+function collectUserPromptsFromEntries(entries: SessionEntry[]): PromptEntry[] {
   const prompts: PromptEntry[] = [];
 
   for (const entry of entries) {
     if (entry?.type !== "message") continue;
-    const message = entry?.message;
-    if (!message || message.role !== "user" || !Array.isArray(message.content))
-      continue;
+    const message = entry.message;
+    if (message.role !== "user") continue;
     const text = extractText(message.content);
     if (!text) continue;
     const timestamp = Number(
@@ -1293,24 +1335,20 @@ async function loadPromptHistoryForCwd(
     if (!tail) continue;
     const lines = tail.split("\n").filter(Boolean);
     for (const line of lines) {
-      let entry: any;
+      let entry: unknown;
       try {
         entry = JSON.parse(line);
       } catch {
         continue;
       }
-      if (entry?.type !== "message") continue;
-      const message = entry?.message;
-      if (
-        !message ||
-        message.role !== "user" ||
-        !Array.isArray(message.content)
-      )
-        continue;
+      const entryRecord = asRecord(entry);
+      if (entryRecord?.type !== "message") continue;
+      const message = asRecord(entryRecord.message);
+      if (message?.role !== "user") continue;
       const text = extractText(message.content);
       if (!text) continue;
       const timestamp = Number(
-        message.timestamp ?? entry.timestamp ?? Date.now(),
+        message.timestamp ?? entryRecord.timestamp ?? Date.now(),
       );
       prompts.push({ text, timestamp });
       if (prompts.length >= MAX_RECENT_PROMPTS) break;
@@ -1456,7 +1494,9 @@ export default function (pi: ExtensionAPI) {
       }
 
       // /mode <name>
-      await applyMode(pi, ctx, tokens[0]!);
+      const modeName = tokens[0];
+      if (!modeName) return;
+      await applyMode(pi, ctx, modeName);
     },
   });
 

@@ -16,6 +16,7 @@ import type {
   ExtensionAPI,
   ExtensionCommandContext,
   ExtensionContext,
+  Theme,
   ToolResultEvent,
 } from "@mariozechner/pi-coding-agent";
 import { DynamicBorder } from "@mariozechner/pi-coding-agent";
@@ -25,7 +26,6 @@ import {
   Key,
   matchesKey,
   Text,
-  type TUI,
 } from "@mariozechner/pi-tui";
 
 function formatUsd(cost: number): string {
@@ -168,26 +168,41 @@ type SkillLoadedEntryData = {
   path: string;
 };
 
+type UnknownRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): UnknownRecord | undefined {
+  return value && typeof value === "object"
+    ? (value as UnknownRecord)
+    : undefined;
+}
+
+function hasSkillLoadedEntryData(
+  value: unknown,
+): value is SkillLoadedEntryData {
+  const data = asRecord(value);
+  return typeof data?.name === "string" && typeof data.path === "string";
+}
+
 function getLoadedSkillsFromSession(ctx: ExtensionContext): Set<string> {
   const out = new Set<string>();
   for (const e of ctx.sessionManager.getEntries()) {
-    if ((e as any)?.type !== "custom") continue;
-    if ((e as any)?.customType !== SKILL_LOADED_ENTRY) continue;
-    const data = (e as any)?.data as SkillLoadedEntryData | undefined;
-    if (data?.name) out.add(data.name);
+    if (e.type !== "custom") continue;
+    if (e.customType !== SKILL_LOADED_ENTRY) continue;
+    if (hasSkillLoadedEntryData(e.data)) out.add(e.data.name);
   }
   return out;
 }
 
-function extractCostTotal(usage: any): number {
-  if (!usage) return 0;
-  const c = usage?.cost;
+function extractCostTotal(usage: unknown): number {
+  const usageRecord = asRecord(usage);
+  if (!usageRecord) return 0;
+  const c = usageRecord.cost;
   if (typeof c === "number") return Number.isFinite(c) ? c : 0;
   if (typeof c === "string") {
     const n = Number(c);
     return Number.isFinite(n) ? n : 0;
   }
-  const t = c?.total;
+  const t = asRecord(c)?.total;
   if (typeof t === "number") return Number.isFinite(t) ? t : 0;
   if (typeof t === "string") {
     const n = Number(t);
@@ -211,10 +226,10 @@ function sumSessionUsage(ctx: ExtensionCommandContext): {
   let totalCost = 0;
 
   for (const entry of ctx.sessionManager.getEntries()) {
-    if ((entry as any)?.type !== "message") continue;
-    const msg = (entry as any)?.message;
-    if (!msg || msg.role !== "assistant") continue;
-    const usage = msg.usage;
+    if (entry.type !== "message") continue;
+    const msg = entry.message;
+    if (msg.role !== "assistant") continue;
+    const usage = asRecord(msg.usage);
     if (!usage) continue;
     input += Number(usage.inputTokens ?? 0) || 0;
     output += Number(usage.outputTokens ?? 0) || 0;
@@ -237,12 +252,12 @@ function shortenPath(p: string, cwd: string): string {
   const rp = path.resolve(p);
   const rc = path.resolve(cwd);
   if (rp === rc) return ".";
-  if (rp.startsWith(rc + path.sep)) return "./" + rp.slice(rc.length + 1);
+  if (rp.startsWith(rc + path.sep)) return `./${rp.slice(rc.length + 1)}`;
   return rp;
 }
 
 function renderUsageBar(
-  theme: any,
+  theme: Theme,
   parts: { system: number; tools: number; convo: number; remaining: number },
   total: number,
   width: number,
@@ -302,16 +317,14 @@ type ContextViewData = {
 };
 
 class ContextView implements Component {
-  private tui: TUI;
-  private theme: any;
+  private theme: Theme;
   private onDone: () => void;
   private data: ContextViewData;
   private container: Container;
   private body: Text;
   private cachedWidth?: number;
 
-  constructor(tui: TUI, theme: any, data: ContextViewData, onDone: () => void) {
-    this.tui = tui;
+  constructor(theme: Theme, data: ContextViewData, onDone: () => void) {
     this.theme = theme;
     this.data = data;
     this.onDone = onDone;
@@ -472,7 +485,7 @@ class ContextView implements Component {
   }
 }
 
-export default function contextExtension(pi: ExtensionAPI) {
+export default function (pi: ExtensionAPI) {
   // Track which skills were actually pulled in via read tool calls.
   let lastSessionId: string | null = null;
   let cachedLoadedSkills = new Set<string>();
@@ -506,10 +519,10 @@ export default function contextExtension(pi: ExtensionAPI) {
 
   pi.on("tool_result", (event: ToolResultEvent, ctx: ExtensionContext) => {
     // Only count successful reads.
-    if ((event as any).toolName !== "read") return;
-    if ((event as any).isError) return;
+    if (event.toolName !== "read") return;
+    if (event.isError) return;
 
-    const input = (event as any).input as { path?: unknown } | undefined;
+    const input = event.input as { path?: unknown } | undefined;
     const p = typeof input?.path === "string" ? input.path : "";
     if (!p) return;
 
@@ -654,8 +667,8 @@ export default function contextExtension(pi: ExtensionAPI) {
         },
       };
 
-      await ctx.ui.custom<void>((tui, theme, _kb, done) => {
-        return new ContextView(tui, theme, viewData, done);
+      await ctx.ui.custom<void>((_tui, theme, _kb, done) => {
+        return new ContextView(theme, viewData, done);
       });
     },
   });

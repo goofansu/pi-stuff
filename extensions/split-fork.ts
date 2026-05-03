@@ -60,11 +60,10 @@ async function createForkedSession(
     parentSession: sessionFile,
   };
 
-  const lines =
-    [
-      JSON.stringify(newHeader),
-      ...branchEntries.map((entry) => JSON.stringify(entry)),
-    ].join("\n") + "\n";
+  const lines = `${[
+    JSON.stringify(newHeader),
+    ...branchEntries.map((entry) => JSON.stringify(entry)),
+  ].join("\n")}\n`;
 
   await fs.mkdir(sessionDir, { recursive: true });
   await fs.writeFile(newSessionFile, lines, "utf8");
@@ -76,8 +75,8 @@ export default function (pi: ExtensionAPI): void {
   pi.registerCommand("split-fork", {
     description:
       "Fork this session into a new pi process in a tmux pane to the right.",
-    handler: async (args, ctx) => {
-      if (!process.env["TMUX"]) {
+    handler: async (_args, ctx) => {
+      if (!process.env.TMUX) {
         ctx.ui.notify(
           "/split-fork requires an active tmux session.",
           "warning",

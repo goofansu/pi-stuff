@@ -619,8 +619,8 @@ async function getRecentCommits(
 ): Promise<Array<{ sha: string; title: string }>> {
   const { stdout, code } = await pi.exec("git", [
     "log",
-    `--oneline`,
-    `-n`,
+    "--oneline",
+    "-n",
     `${limit}`,
   ]);
   if (code !== 0) return [];
@@ -669,7 +669,7 @@ function parsePrReference(ref: string): number | null {
 
   // Try as a number first
   const num = parseInt(trimmed, 10);
-  if (!isNaN(num) && num > 0) {
+  if (!Number.isNaN(num) && num > 0) {
     return num;
   }
 
@@ -847,7 +847,7 @@ function getUserFacingHint(target: ReviewTarget): string {
     case "pullRequest": {
       const shortTitle =
         target.title.length > 30
-          ? target.title.slice(0, 27) + "..."
+          ? `${target.title.slice(0, 27)}...`
           : target.title;
       return `PR #${target.prNumber}: ${shortTitle}`;
     }
@@ -971,7 +971,7 @@ type ReviewPresetValue =
   | typeof TOGGLE_LOOP_FIXING_VALUE
   | typeof TOGGLE_CUSTOM_INSTRUCTIONS_VALUE;
 
-export default function reviewExtension(pi: ExtensionAPI) {
+export default function (pi: ExtensionAPI) {
   function persistReviewSettings() {
     pi.appendEntry(REVIEW_SETTINGS_TYPE, {
       loopFixingEnabled: reviewLoopFixingEnabled,

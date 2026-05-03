@@ -36,6 +36,25 @@ interface SearchSource {
   age?: unknown;
 }
 
+interface BraveGroundingItem {
+  url?: string;
+  title?: string;
+  name?: string;
+  snippets?: unknown[];
+}
+
+interface BraveApiResponse {
+  grounding?: {
+    generic?: BraveGroundingItem[];
+    map?: BraveGroundingItem[];
+    poi?: BraveGroundingItem;
+  };
+  sources?: Record<
+    string,
+    { title?: string; hostname?: string; age?: unknown }
+  >;
+}
+
 interface SearchDetails {
   query: string;
   count: number;
@@ -66,7 +85,7 @@ function clampInt(
   return Math.max(min, Math.min(max, n));
 }
 
-function extractSources(data: any): SearchSource[] {
+function extractSources(data: BraveApiResponse): SearchSource[] {
   const sources: SearchSource[] = [];
   const seen = new Set<string>();
 
@@ -119,7 +138,10 @@ function formatSnippetList(snippets: unknown): string {
     .join("\n");
 }
 
-function formatSearchResult(data: any, sources: SearchSource[]): string {
+function formatSearchResult(
+  data: BraveApiResponse,
+  sources: SearchSource[],
+): string {
   const parts: string[] = [];
   const generic = data?.grounding?.generic ?? [];
 
@@ -205,7 +227,7 @@ async function braveLlmContext(
     );
   }
 
-  const data = (await response.json()) as any;
+  const data = (await response.json()) as BraveApiResponse;
   const sources = extractSources(data);
   return {
     text: truncateText(formatSearchResult(data, sources)),
@@ -220,7 +242,7 @@ async function braveLlmContext(
   };
 }
 
-export default function webSearchExtension(pi: ExtensionAPI) {
+export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "web-search",
     label: "Web Search",
@@ -287,7 +309,7 @@ export default function webSearchExtension(pi: ExtensionAPI) {
         | SearchDetails
         | { error?: string }
         | undefined;
-      const isError = Boolean((details as any)?.error);
+      const isError = Boolean(details && "error" in details && details.error);
       const icon = isPartial
         ? theme.fg("warning", "⏳")
         : isError

@@ -40,6 +40,14 @@ type DowKey = string; // "Mon", "Tue", etc.
 type TodKey = string; // "after-midnight", "morning", "afternoon", "evening", "night"
 type BreakdownView = "model" | "cwd" | "dow" | "tod";
 
+type UnknownRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): UnknownRecord | undefined {
+  return value && typeof value === "object"
+    ? (value as UnknownRecord)
+    : undefined;
+}
+
 const DOW_NAMES: DowKey[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const TOD_BUCKETS: { key: TodKey; label: string; from: number; to: number }[] =
@@ -171,7 +179,8 @@ interface BreakdownProgressState {
 function setBorderedLoaderMessage(loader: BorderedLoader, message: string) {
   // BorderedLoader wraps a (Cancellable)Loader which supports setMessage(),
   // but it doesn't expose it publicly. Access the inner loader for progress updates.
-  const inner = (loader as any)["loader"]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const inner = (loader as unknown as { loader?: { setMessage?: unknown } })
+    .loader;
   if (inner && typeof inner.setMessage === "function") {
     inner.setMessage(message);
   }
@@ -265,7 +274,7 @@ function abbreviatePath(p: string, maxWidth = 40): string {
   const home = os.homedir();
   let display = p;
   if (display.startsWith(home)) {
-    display = "~" + display.slice(home.length);
+    display = `~${display.slice(home.length)}`;
   }
   if (visibleWidth(display) <= maxWidth) return display;
 
@@ -277,7 +286,7 @@ function abbreviatePath(p: string, maxWidth = 40): string {
   // Try keeping last N parts, increasing until it fits
   for (let keep = parts.length - 1; keep >= 1; keep--) {
     const tail = parts.slice(parts.length - keep);
-    const candidate = prefix + "/…/" + tail.join("/");
+    const candidate = `${prefix}/…/${tail.join("/")}`;
     if (visibleWidth(candidate) <= maxWidth || keep === 1) return candidate;
   }
   return display;
@@ -347,33 +356,35 @@ function parseSessionStartFromFilename(name: string): Date | null {
   return Number.isFinite(d.getTime()) ? d : null;
 }
 
-function extractProviderModelAndUsage(obj: any): {
-  provider?: any;
-  model?: any;
-  modelId?: any;
-  usage?: any;
+function extractProviderModelAndUsage(obj: unknown): {
+  provider?: unknown;
+  model?: unknown;
+  modelId?: unknown;
+  usage?: unknown;
 } {
   // Session format varies across versions.
   // - Newer: { provider, model, usage } on the message wrapper
   // - Older: { message: { provider, model, usage } }
-  const msg = obj?.message;
+  const record = asRecord(obj);
+  const msg = asRecord(record?.message);
   return {
-    provider: obj?.provider ?? msg?.provider,
-    model: obj?.model ?? msg?.model,
-    modelId: obj?.modelId ?? msg?.modelId,
-    usage: obj?.usage ?? msg?.usage,
+    provider: record?.provider ?? msg?.provider,
+    model: record?.model ?? msg?.model,
+    modelId: record?.modelId ?? msg?.modelId,
+    usage: record?.usage ?? msg?.usage,
   };
 }
 
-function extractCostTotal(usage: any): number {
-  if (!usage) return 0;
-  const c = usage?.cost;
+function extractCostTotal(usage: unknown): number {
+  const usageRecord = asRecord(usage);
+  if (!usageRecord) return 0;
+  const c = usageRecord.cost;
   if (typeof c === "number") return Number.isFinite(c) ? c : 0;
   if (typeof c === "string") {
     const n = Number(c);
     return Number.isFinite(n) ? n : 0;
   }
-  const t = c?.total;
+  const t = asRecord(c)?.total;
   if (typeof t === "number") return Number.isFinite(t) ? t : 0;
   if (typeof t === "string") {
     const n = Number(t);
@@ -382,7 +393,7 @@ function extractCostTotal(usage: any): number {
   return 0;
 }
 
-function extractTokensTotal(usage: any): number {
+function extractTokensTotal(usage: unknown): number {
   // Usage format varies across providers and pi versions.
   // We try a few common shapes:
   // - { totalTokens }
@@ -394,7 +405,7 @@ function extractTokensTotal(usage: any): number {
   // - { tokens: number | { total } }
   if (!usage) return 0;
 
-  const readNum = (v: any): number => {
+  const readNum = (v: unknown): number => {
     if (typeof v === "number") return Number.isFinite(v) ? v : 0;
     if (typeof v === "string") {
       const n = Number(v);
@@ -406,31 +417,31 @@ function extractTokensTotal(usage: any): number {
   let total = 0;
   // direct totals
   total =
-    readNum(usage?.totalTokens) ||
-    readNum(usage?.total_tokens) ||
-    readNum(usage?.tokens) ||
-    readNum(usage?.tokenCount) ||
-    readNum(usage?.token_count);
+    readNum(asRecord(usage)?.totalTokens) ||
+    readNum(asRecord(usage)?.total_tokens) ||
+    readNum(asRecord(usage)?.tokens) ||
+    readNum(asRecord(usage)?.tokenCount) ||
+    readNum(asRecord(usage)?.token_count);
   if (total > 0) return total;
 
   // nested tokens object
   total =
-    readNum(usage?.tokens?.total) ||
-    readNum(usage?.tokens?.totalTokens) ||
-    readNum(usage?.tokens?.total_tokens);
+    readNum(asRecord(asRecord(usage)?.tokens)?.total) ||
+    readNum(asRecord(asRecord(usage)?.tokens)?.totalTokens) ||
+    readNum(asRecord(asRecord(usage)?.tokens)?.total_tokens);
   if (total > 0) return total;
 
   // sum of parts
   const a =
-    readNum(usage?.promptTokens) ||
-    readNum(usage?.prompt_tokens) ||
-    readNum(usage?.inputTokens) ||
-    readNum(usage?.input_tokens);
+    readNum(asRecord(usage)?.promptTokens) ||
+    readNum(asRecord(usage)?.prompt_tokens) ||
+    readNum(asRecord(usage)?.inputTokens) ||
+    readNum(asRecord(usage)?.input_tokens);
   const b =
-    readNum(usage?.completionTokens) ||
-    readNum(usage?.completion_tokens) ||
-    readNum(usage?.outputTokens) ||
-    readNum(usage?.output_tokens);
+    readNum(asRecord(usage)?.completionTokens) ||
+    readNum(asRecord(usage)?.completion_tokens) ||
+    readNum(asRecord(usage)?.outputTokens) ||
+    readNum(asRecord(usage)?.output_tokens);
   const sum = a + b;
   return sum > 0 ? sum : 0;
 }
@@ -445,7 +456,8 @@ async function walkSessionFiles(
   const stack: string[] = [root];
   while (stack.length) {
     if (signal?.aborted) break;
-    const dir = stack.pop()!;
+    const dir = stack.pop();
+    if (!dir) continue;
     let entries: Dirent[] = [];
     try {
       entries = await fs.readdir(dir, { withFileTypes: true });
@@ -516,26 +528,27 @@ async function parseSessionFile(
         return null;
       }
       if (!line) continue;
-      let obj: any;
+      let obj: unknown;
       try {
         obj = JSON.parse(line);
       } catch {
         continue;
       }
+      const objRecord = asRecord(obj);
 
-      if (obj?.type === "session") {
-        if (!startedAt && typeof obj?.timestamp === "string") {
-          const d = new Date(obj.timestamp);
+      if (objRecord?.type === "session") {
+        if (!startedAt && typeof objRecord.timestamp === "string") {
+          const d = new Date(objRecord.timestamp);
           if (Number.isFinite(d.getTime())) startedAt = d;
         }
-        if (typeof obj?.cwd === "string" && obj.cwd.trim()) {
-          cwd = obj.cwd.trim();
+        if (typeof objRecord.cwd === "string" && objRecord.cwd.trim()) {
+          cwd = objRecord.cwd.trim();
         }
         continue;
       }
 
-      if (obj?.type === "model_change") {
-        const mk = modelKeyFromParts(obj.provider, obj.modelId);
+      if (objRecord?.type === "model_change") {
+        const mk = modelKeyFromParts(objRecord.provider, objRecord.modelId);
         if (mk) {
           currentModel = mk;
           modelsUsed.add(mk);
@@ -543,7 +556,7 @@ async function parseSessionFile(
         continue;
       }
 
-      if (obj?.type !== "message") continue;
+      if (objRecord?.type !== "message") continue;
 
       const { provider, model, modelId, usage } =
         extractProviderModelAndUsage(obj);
@@ -993,7 +1006,7 @@ function renderGraphLines(
   const lines: string[] = [];
   for (let row = 0; row < 7; row++) {
     const label = labelByRow.get(row);
-    let line = label ? padRight(label, 3) + " " : "    ";
+    let line = label ? `${padRight(label, 3)} ` : "    ";
 
     for (let w = 0; w < weeks; w++) {
       const cellDate = addDaysLocal(gridStart, w * 7 + row);
@@ -1291,7 +1304,7 @@ function rangeSummary(
   const costPart =
     range.totalCost > 0
       ? `${formatUsd(range.totalCost)} · avg ${formatUsd(avg)}/session`
-      : `$0.0000`;
+      : "$0.0000";
 
   if (mode === "tokens") {
     return `Last ${days} days: ${formatCount(range.sessions)} sessions · ${formatCount(range.totalTokens)} tokens · ${costPart}`;
@@ -1309,7 +1322,8 @@ async function computeBreakdown(
   const now = new Date();
   const ranges = new Map<number, RangeAgg>();
   for (const d of RANGE_DAYS) ranges.set(d, buildRangeAgg(d, now));
-  const range90 = ranges.get(90)!;
+  const range90 = ranges.get(90);
+  if (!range90) throw new Error("Missing 90 day range");
   const start90 = range90.days[0].date;
 
   onProgress?.({
@@ -1335,7 +1349,8 @@ async function computeBreakdown(
     foundFiles: totalFiles,
     totalFiles,
     parsedFiles: 0,
-    currentFile: totalFiles > 0 ? path.basename(candidates[0]!) : undefined,
+    currentFile:
+      totalFiles > 0 ? path.basename(candidates[0] ?? "") : undefined,
   });
 
   let parsedFiles = 0;
@@ -1354,7 +1369,8 @@ async function computeBreakdown(
 
     const sessionDay = localMidnight(session.startedAt);
     for (const d of RANGE_DAYS) {
-      const range = ranges.get(d)!;
+      const range = ranges.get(d);
+      if (!range) continue;
       const start = range.days[0].date;
       const end = range.days[range.days.length - 1].date;
       if (sessionDay < start || sessionDay > end) continue;
@@ -1364,8 +1380,10 @@ async function computeBreakdown(
 
   onProgress?.({ phase: "finalize", currentFile: undefined });
 
-  const palette = choosePaletteFromLast30Days(ranges.get(30)!, 4);
-  const cwdPalette = chooseCwdPaletteFromLast30Days(ranges.get(30)!, 4);
+  const range30 = ranges.get(30);
+  if (!range30) throw new Error("Missing 30 day range");
+  const palette = choosePaletteFromLast30Days(range30, 4);
+  const cwdPalette = chooseCwdPaletteFromLast30Days(range30, 4);
   const dowPalette = buildDowPalette();
   const todPalette = buildTodPalette();
   return {
@@ -1475,8 +1493,9 @@ class BreakdownComponent implements Component {
   render(width: number): string[] {
     if (this.cachedWidth === width && this.cachedLines) return this.cachedLines;
 
-    const selectedDays = RANGE_DAYS[this.rangeIndex];
-    const range = this.data.ranges.get(selectedDays)!;
+    const selectedDays = RANGE_DAYS[this.rangeIndex] ?? 30;
+    const range = this.data.ranges.get(selectedDays);
+    if (!range) return ["Session breakdown unavailable"];
     const metric = graphMetricForRange(range, this.measurement);
 
     const tab = (days: number, idx: number): string => {
@@ -1664,7 +1683,7 @@ class BreakdownComponent implements Component {
   }
 }
 
-export default function sessionBreakdownExtension(pi: ExtensionAPI) {
+export default function (pi: ExtensionAPI) {
   pi.registerCommand("session-breakdown", {
     description:
       "Interactive breakdown of last 7/30/90 days of ~/.pi session usage (sessions/messages/tokens + cost by model)",
@@ -1672,7 +1691,8 @@ export default function sessionBreakdownExtension(pi: ExtensionAPI) {
       if (!ctx.hasUI) {
         // Non-interactive fallback: just notify.
         const data = await computeBreakdown(undefined);
-        const range = data.ranges.get(30)!;
+        const range = data.ranges.get(30);
+        if (!range) return;
         pi.sendMessage(
           {
             customType: "session-breakdown",

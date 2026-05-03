@@ -340,10 +340,10 @@ class QnAComponent implements Component {
     };
 
     // Title
-    lines.push(padToWidth(this.dim("╭" + horizontalLine(boxWidth - 2) + "╮")));
+    lines.push(padToWidth(this.dim(`╭${horizontalLine(boxWidth - 2)}╮`)));
     const title = `${this.bold(this.cyan("Questions"))} ${this.dim(`(${this.currentIndex + 1}/${this.questions.length})`)}`;
     lines.push(padToWidth(boxLine(title)));
-    lines.push(padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")));
+    lines.push(padToWidth(this.dim(`├${horizontalLine(boxWidth - 2)}┤`)));
 
     // Progress indicator
     const progressParts: string[] = [];
@@ -392,7 +392,7 @@ class QnAComponent implements Component {
         lines.push(padToWidth(boxLine(answerPrefix + editorLines[i])));
       } else {
         // Subsequent lines get padding to align with the first line
-        lines.push(padToWidth(boxLine("   " + editorLines[i])));
+        lines.push(padToWidth(boxLine(`   ${editorLines[i]}`)));
       }
     }
 
@@ -400,21 +400,17 @@ class QnAComponent implements Component {
 
     // Confirmation dialog or footer with controls
     if (this.showingConfirmation) {
-      lines.push(
-        padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")),
-      );
+      lines.push(padToWidth(this.dim(`├${horizontalLine(boxWidth - 2)}┤`)));
       const confirmMsg = `${this.yellow("Submit all answers?")} ${this.dim("(Enter/y to confirm, Esc/n to cancel)")}`;
       lines.push(
         padToWidth(boxLine(truncateToWidth(confirmMsg, contentWidth))),
       );
     } else {
-      lines.push(
-        padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")),
-      );
+      lines.push(padToWidth(this.dim(`├${horizontalLine(boxWidth - 2)}┤`)));
       const controls = `${this.dim("Tab/Enter")} next · ${this.dim("Shift+Tab")} prev · ${this.dim("Shift+Enter")} newline · ${this.dim("Esc")} cancel`;
       lines.push(padToWidth(boxLine(truncateToWidth(controls, contentWidth))));
     }
-    lines.push(padToWidth(this.dim("╰" + horizontalLine(boxWidth - 2) + "╯")));
+    lines.push(padToWidth(this.dim(`╰${horizontalLine(boxWidth - 2)}╯`)));
 
     this.cachedWidth = width;
     this.cachedLines = lines;
@@ -468,6 +464,8 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
+    const assistantText = lastAssistantText;
+
     // Select the best model for extraction (prefer Codex mini, then haiku)
     const extractionModel = await selectExtractionModel(
       ctx.model,
@@ -492,7 +490,7 @@ export default function (pi: ExtensionAPI) {
           }
           const userMessage: UserMessage = {
             role: "user",
-            content: [{ type: "text", text: lastAssistantText! }],
+            content: [{ type: "text", text: assistantText }],
             timestamp: Date.now(),
           };
 
@@ -554,8 +552,7 @@ export default function (pi: ExtensionAPI) {
     pi.sendMessage(
       {
         customType: "answers",
-        content:
-          "I answered your questions in the following way:\n\n" + answersResult,
+        content: `I answered your questions in the following way:\n\n${answersResult}`,
         display: true,
       },
       { triggerTurn: true },

@@ -164,7 +164,8 @@ interface SocketState {
 const CODEX_MODEL_ID = "gpt-5.1-codex-mini";
 const HAIKU_MODEL_ID = "claude-haiku-4-5";
 
-const SUMMARIZATION_SYSTEM_PROMPT = `You are a conversation summarizer. Create concise, accurate summaries that preserve key information, decisions, and outcomes.`;
+const SUMMARIZATION_SYSTEM_PROMPT =
+  "You are a conversation summarizer. Create concise, accurate summaries that preserve key information, decisions, and outcomes.";
 
 const TURN_SUMMARY_PROMPT = `Summarize what happened in this conversation since the last user prompt. Focus on:
 - What was accomplished
@@ -917,7 +918,17 @@ async function createServer(
           continue;
         }
 
-        handleCommand(pi, state, parsed.command!, socket);
+        if (!parsed.command) {
+          writeResponse(socket, {
+            type: "response",
+            command: "parse",
+            success: false,
+            error: "Failed to parse command: Missing command",
+          });
+          continue;
+        }
+
+        handleCommand(pi, state, parsed.command, socket);
       }
     });
   });
@@ -1590,7 +1601,7 @@ Messages automatically include sender session info for replies. When you want a 
       const action = args.action ?? "send";
       const sessionRef = args.sessionName ?? args.sessionId ?? "...";
       const shortSessionRef =
-        sessionRef.length > 12 ? sessionRef.slice(0, 8) + "..." : sessionRef;
+        sessionRef.length > 12 ? `${sessionRef.slice(0, 8)}...` : sessionRef;
 
       // Build the header line
       let header = theme.fg("toolTitle", theme.bold("→ session "));
@@ -1611,7 +1622,7 @@ Messages automatically include sender session info for replies. When you want a 
       // For send action, show the message
       if (action === "send" && args.message) {
         const msg = args.message;
-        const preview = msg.length > 80 ? msg.slice(0, 80) + "..." : msg;
+        const preview = msg.length > 80 ? `${msg.slice(0, 80)}...` : msg;
         // Handle multi-line messages
         const firstLine = preview.split("\n")[0];
         const hasMore = preview.includes("\n") || msg.length > 80;
@@ -1678,13 +1689,13 @@ Messages automatically include sender session info for replies. When you want a 
         // Collapsed view - show preview
         const preview =
           message.content.length > 200
-            ? message.content.slice(0, 200) + "..."
+            ? `${message.content.slice(0, 200)}...`
             : message.content;
         const lines = preview.split("\n").slice(0, 5);
         let text = icon + theme.fg("muted", " Message received");
         if (hasTurnIndex)
           text += theme.fg("dim", ` (turn #${details.turnIndex})`);
-        text += "\n" + theme.fg("toolOutput", lines.join("\n"));
+        text += `\n${theme.fg("toolOutput", lines.join("\n"))}`;
         if (
           message.content.split("\n").length > 5 ||
           message.content.length > 200
@@ -1711,11 +1722,11 @@ Messages automatically include sender session info for replies. When you want a 
         }
 
         const preview =
-          summary.length > 200 ? summary.slice(0, 200) + "..." : summary;
+          summary.length > 200 ? `${summary.slice(0, 200)}...` : summary;
         const lines = preview.split("\n").slice(0, 5);
         let text = icon + theme.fg("muted", " Summary");
         if (model) text += theme.fg("dim", ` via ${model}`);
-        text += "\n" + theme.fg("toolOutput", lines.join("\n"));
+        text += `\n${theme.fg("toolOutput", lines.join("\n"))}`;
         if (summary.split("\n").length > 5 || summary.length > 200) {
           text += `\n${theme.fg("dim", `(${keyHint("app.tools.expand", "to expand")})`)}\n`;
         }
@@ -1729,7 +1740,7 @@ Messages automatically include sender session info for replies. When you want a 
         const msg = alreadyAtRoot
           ? "Session already at root"
           : "Session cleared";
-        return new Text(icon + " " + theme.fg("muted", msg), 0, 0);
+        return new Text(`${icon} ${theme.fg("muted", msg)}`, 0, 0);
       }
 
       // send result (no wait or message_processed)
@@ -1866,10 +1877,16 @@ function parseStartupControlSendOptions(pi: ExtensionAPI): {
   const includeSenderInfo =
     pi.getFlag(CONTROL_SEND_INCLUDE_SENDER_FLAG) === true;
 
+  if (!target || !message) {
+    return {
+      error: `Missing --${CONTROL_TARGET_FLAG} or --${CONTROL_SEND_MESSAGE_FLAG}`,
+    };
+  }
+
   return {
     options: {
-      target: target!,
-      message: message!,
+      target,
+      message,
       mode,
       waitUntil,
       includeSenderInfo,

@@ -200,7 +200,7 @@ async function loadState(ctx: ExtensionContext): Promise<LoopStateData> {
   return { active: false };
 }
 
-export default function loopExtension(pi: ExtensionAPI): void {
+export default function (pi: ExtensionAPI): void {
   let loopState: LoopStateData = { active: false };
 
   function persistState(state: LoopStateData): void {
@@ -424,7 +424,8 @@ export default function loopExtension(pi: ExtensionAPI): void {
       ctx.ui.notify("Loop active", "info");
       triggerLoopPrompt(ctx);
 
-      const mode = nextState.mode!;
+      const mode = nextState.mode;
+      if (!mode) return;
       const condition = nextState.condition;
       void (async () => {
         const summary = await summarizeBreakoutCondition(ctx, mode, condition);

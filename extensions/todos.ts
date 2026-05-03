@@ -31,7 +31,7 @@
  */
 
 import crypto from "node:crypto";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { StringEnum } from "@mariozechner/pi-ai";
@@ -838,7 +838,7 @@ class TodoDetailOverlayComponent {
 
 function getTodosDir(cwd: string): string {
   const overridePath = process.env[TODO_PATH_ENV];
-  if (overridePath && overridePath.trim()) {
+  if (overridePath?.trim()) {
     return path.resolve(cwd, overridePath.trim());
   }
   return path.resolve(cwd, TODO_DIR_NAME);
@@ -846,7 +846,7 @@ function getTodosDir(cwd: string): string {
 
 function getTodosDirLabel(cwd: string): string {
   const overridePath = process.env[TODO_PATH_ENV];
-  if (overridePath && overridePath.trim()) {
+  if (overridePath?.trim()) {
     return path.resolve(cwd, overridePath.trim());
   }
   return TODO_DIR_NAME;
@@ -1122,10 +1122,16 @@ async function acquireLock(
           // ignore
         }
       };
-    } catch (error: any) {
-      if (error?.code !== "EEXIST") {
+    } catch (error: unknown) {
+      const errorCode =
+        error && typeof error === "object" && "code" in error
+          ? error.code
+          : undefined;
+      if (errorCode !== "EEXIST") {
+        const errorMessage =
+          error instanceof Error ? error.message : "unknown error";
         return {
-          error: `Failed to acquire lock: ${error?.message ?? "unknown error"}`,
+          error: `Failed to acquire lock: ${errorMessage}`,
         };
       }
       const stats = await fs.stat(lockPath).catch(() => null);
@@ -1198,39 +1204,6 @@ async function listTodos(todosDir: string): Promise<TodoFrontMatter[]> {
       });
     } catch {
       // ignore unreadable todo
-    }
-  }
-
-  return sortTodos(todos);
-}
-
-function listTodosSync(todosDir: string): TodoFrontMatter[] {
-  let entries: string[] = [];
-  try {
-    entries = readdirSync(todosDir);
-  } catch {
-    return [];
-  }
-
-  const todos: TodoFrontMatter[] = [];
-  for (const entry of entries) {
-    if (!entry.endsWith(".md")) continue;
-    const id = entry.slice(0, -3);
-    const filePath = path.join(todosDir, entry);
-    try {
-      const content = readFileSync(filePath, "utf8");
-      const { frontMatter } = splitFrontMatter(content);
-      const parsed = parseFrontMatter(frontMatter, id);
-      todos.push({
-        id,
-        title: parsed.title,
-        tags: parsed.tags ?? [],
-        status: parsed.status,
-        created_at: parsed.created_at,
-        assigned_to_session: parsed.assigned_to_session,
-      });
-    } catch {
-      // ignore
     }
   }
 
@@ -1606,7 +1579,7 @@ async function deleteTodo(
   return result;
 }
 
-export default function todosExtension(pi: ExtensionAPI) {
+export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     const todosDir = getTodosDir(ctx.cwd);
     await ensureTodosDir(todosDir);
@@ -1813,7 +1786,7 @@ export default function todosExtension(pi: ExtensionAPI) {
               const existing = await ensureTodoExists(filePath, normalizedId);
               if (!existing)
                 return { error: `Todo ${displayId} not found` } as const;
-              if (!params.body || !params.body.trim()) {
+              if (!params.body?.trim()) {
                 return existing;
               }
               const updated = await appendTodoBody(
@@ -1941,10 +1914,10 @@ export default function todosExtension(pi: ExtensionAPI) {
       let text =
         theme.fg("toolTitle", theme.bold("todo ")) + theme.fg("muted", action);
       if (normalizedId) {
-        text += " " + theme.fg("accent", formatTodoId(normalizedId));
+        text += ` ${theme.fg("accent", formatTodoId(normalizedId))}`;
       }
       if (title) {
-        text += " " + theme.fg("dim", `"${title}"`);
+        text += ` ${theme.fg("dim", `"${title}"`)}`;
       }
       return new Text(text, 0, 0);
     },

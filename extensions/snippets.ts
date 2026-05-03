@@ -42,53 +42,6 @@ function extractCodeBlocks(text: string): CodeBlock[] {
 }
 
 /**
- * Generate a short description for a code block
- */
-function describeCodeBlock(block: CodeBlock): string {
-  const lines = block.code.split("\n");
-  const firstLine = lines[0].trim();
-
-  // Truncate if too long
-  const maxLength = 60;
-  let description =
-    firstLine.length > maxLength
-      ? firstLine.substring(0, maxLength) + "..."
-      : firstLine;
-
-  // If first line is empty or just a comment/bracket, try to find a meaningful line
-  if (
-    !description ||
-    description.match(/^[{}[\]()]*$/) ||
-    description.startsWith("//") ||
-    description.startsWith("#") ||
-    description.startsWith("/*") ||
-    description.startsWith("*")
-  ) {
-    for (const line of lines.slice(1)) {
-      // Skip first line since we already checked it
-      const trimmed = line.trim();
-      // Skip comments and empty lines
-      if (
-        trimmed &&
-        !trimmed.startsWith("//") &&
-        !trimmed.startsWith("#") &&
-        !trimmed.startsWith("/*") &&
-        !trimmed.startsWith("*") &&
-        !trimmed.match(/^[{}[\]()]*$/)
-      ) {
-        description =
-          trimmed.length > maxLength
-            ? trimmed.substring(0, maxLength) + "..."
-            : trimmed;
-        break;
-      }
-    }
-  }
-
-  return description || `(${block.language} code)`;
-}
-
-/**
  * Get the last assistant message from the session
  */
 function getLastAssistantMessage(ctx: ExtensionContext): string | null {
@@ -166,7 +119,7 @@ async function copyToClipboard(
 
     // Fallback: clipboard not available for this OS
     ctx.ui.notify(`Clipboard not supported on ${os}`, "warning");
-  } catch (error) {
+  } catch {
     ctx.ui.notify("Could not copy to clipboard", "warning");
   }
 
@@ -179,7 +132,7 @@ function padToWidth(str: string, targetWidth: number): string {
   return str + " ".repeat(targetWidth - currentWidth);
 }
 
-export default function snippetsExtension(pi: ExtensionAPI) {
+export default function (pi: ExtensionAPI) {
   pi.registerCommand("snippets", {
     description: "List code snippets from last assistant message",
     handler: async (_args, ctx: ExtensionContext) => {
@@ -243,7 +196,7 @@ export default function snippetsExtension(pi: ExtensionAPI) {
             const language = currentBlock?.language || "text";
             const languageBadgeText = `[${language}]`;
             const languageBadge = theme.fg("accent", languageBadgeText);
-            const rightHeader = " " + languageBadge;
+            const rightHeader = ` ${languageBadge}`;
             lines.push(
               padToWidth(titleLeft, LIST_WIDTH) +
                 theme.fg("borderMuted", "\u2502") +
@@ -268,9 +221,9 @@ export default function snippetsExtension(pi: ExtensionAPI) {
                 const line = codeLines[i];
                 const truncated =
                   line.length > previewWidth - 4
-                    ? line.substring(0, previewWidth - 7) + "..."
+                    ? `${line.substring(0, previewWidth - 7)}...`
                     : line;
-                previewCodeLines.push("  " + truncated);
+                previewCodeLines.push(`  ${truncated}`);
               }
             }
 
@@ -295,7 +248,7 @@ export default function snippetsExtension(pi: ExtensionAPI) {
 
                 // Truncate if too long for list width
                 if (visibleWidth(listLine) > LIST_WIDTH - 1) {
-                  listLine = listLine.substring(0, LIST_WIDTH - 4) + "...";
+                  listLine = `${listLine.substring(0, LIST_WIDTH - 4)}...`;
                 }
 
                 if (isCopied) {
