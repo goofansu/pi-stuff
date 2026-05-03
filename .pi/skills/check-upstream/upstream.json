@@ -1,0 +1,67 @@
+{
+  "answer.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/answer.ts",
+    "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948"
+  },
+  "btw.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/btw.ts",
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+  },
+  "control.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/control.ts",
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+  },
+  "files.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/files.ts",
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+  },
+  "loop.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/loop.ts",
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+  },
+  "notify.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/notify.ts",
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+  },
+  "prompt-editor.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/prompt-editor.ts",
+    "reviewed": "620e40df1a8baf1fddf98c2936bdccef8d0f589a"
+  },
+  "review.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/review.ts",
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+  },
+  "session-breakdown.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/session-breakdown.ts",
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+  },
+  "split-fork.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/split-fork.ts",
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+  },
+  "todos.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/todos.ts",
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+  },
+  "context.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/context.ts",
+    "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948"
+  },
+  "ghostty.ts": {
+    "repo": "HazAT/pi-config",
+    "path": "extensions/ghostty.ts",
+    "reviewed": "875f96b4cfbe8a660c19e8799280d71e04094488"
+  }
+}
