@@ -91,7 +91,7 @@ async function selectExtractionModel(
   currentModel: Model<Api>,
   modelRegistry: ModelRegistry,
 ): Promise<Model<Api>> {
-  const codexModel = modelRegistry.find("openai-codex", CODEX_MODEL_ID);
+  const codexModel = modelRegistry.find("opencode", CODEX_MODEL_ID);
   if (codexModel) {
     const auth = await modelRegistry.getApiKeyAndHeaders(codexModel);
     if (auth.ok) {
