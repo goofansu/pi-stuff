@@ -34,7 +34,11 @@ import type {
   ExtensionCommandContext,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
-import { BorderedLoader, DynamicBorder } from "@mariozechner/pi-coding-agent";
+import {
+  BorderedLoader,
+  DynamicBorder,
+  keyHint,
+} from "@mariozechner/pi-coding-agent";
 import {
   Container,
   fuzzyFilter,
@@ -1097,7 +1101,9 @@ export default function (pi: ExtensionAPI) {
           container.addChild(selectList);
           container.addChild(
             new Text(
-              theme.fg("dim", "Press enter to confirm or esc to go back"),
+              keyHint("tui.select.confirm", "confirm") +
+                theme.fg("dim", " or ") +
+                keyHint("tui.select.cancel", "go back"),
             ),
           );
           container.addChild(
@@ -1249,7 +1255,10 @@ export default function (pi: ExtensionAPI) {
         container.addChild(listContainer);
         container.addChild(
           new Text(
-            theme.fg("dim", "Type to filter • enter to select • esc to cancel"),
+            theme.fg("dim", "Type to filter • ") +
+              keyHint("tui.select.confirm", "select") +
+              theme.fg("dim", " • ") +
+              keyHint("tui.select.cancel", "cancel"),
           ),
         );
         container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
@@ -1369,7 +1378,10 @@ export default function (pi: ExtensionAPI) {
         container.addChild(listContainer);
         container.addChild(
           new Text(
-            theme.fg("dim", "Type to filter • enter to select • esc to cancel"),
+            theme.fg("dim", "Type to filter • ") +
+              keyHint("tui.select.confirm", "select") +
+              theme.fg("dim", " • ") +
+              keyHint("tui.select.cancel", "cancel"),
           ),
         );
         container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));

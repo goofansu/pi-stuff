@@ -16,7 +16,7 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
-import { compact, DynamicBorder } from "@mariozechner/pi-coding-agent";
+import { compact, DynamicBorder, keyHint } from "@mariozechner/pi-coding-agent";
 import {
   Container,
   type SelectItem,
@@ -290,7 +290,11 @@ export default function (pi: ExtensionAPI): void {
 
         container.addChild(selectList);
         container.addChild(
-          new Text(theme.fg("dim", "Press enter to confirm or esc to cancel")),
+          new Text(
+            keyHint("tui.select.confirm", "confirm") +
+              theme.fg("dim", " or ") +
+              keyHint("tui.select.cancel", "cancel"),
+          ),
         );
         container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
 

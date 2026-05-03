@@ -19,12 +19,11 @@ import type {
   Theme,
   ToolResultEvent,
 } from "@mariozechner/pi-coding-agent";
-import { DynamicBorder } from "@mariozechner/pi-coding-agent";
+import { DynamicBorder, keyHint } from "@mariozechner/pi-coding-agent";
 import {
   type Component,
   Container,
-  Key,
-  matchesKey,
+  type KeybindingsManager,
   Text,
 } from "@mariozechner/pi-tui";
 
@@ -320,13 +319,20 @@ class ContextView implements Component {
   private theme: Theme;
   private onDone: () => void;
   private data: ContextViewData;
+  private keybindings: KeybindingsManager;
   private container: Container;
   private body: Text;
   private cachedWidth?: number;
 
-  constructor(theme: Theme, data: ContextViewData, onDone: () => void) {
+  constructor(
+    theme: Theme,
+    data: ContextViewData,
+    keybindings: KeybindingsManager,
+    onDone: () => void,
+  ) {
     this.theme = theme;
     this.data = data;
+    this.keybindings = keybindings;
     this.onDone = onDone;
 
     this.container = new Container();
@@ -334,7 +340,11 @@ class ContextView implements Component {
     this.container.addChild(
       new Text(
         theme.fg("accent", theme.bold("Context")) +
-          theme.fg("dim", "  (Esc/q/Enter to close)"),
+          theme.fg("dim", "  (") +
+          keyHint("tui.select.cancel", "close") +
+          theme.fg("dim", " / ") +
+          keyHint("tui.select.confirm", "close") +
+          theme.fg("dim", ")"),
         1,
         0,
       ),
@@ -464,10 +474,8 @@ class ContextView implements Component {
 
   handleInput(data: string): void {
     if (
-      matchesKey(data, Key.escape) ||
-      matchesKey(data, Key.ctrl("c")) ||
-      data.toLowerCase() === "q" ||
-      data === "\r"
+      this.keybindings.matches(data, "tui.select.cancel") ||
+      this.keybindings.matches(data, "tui.select.confirm")
     ) {
       this.onDone();
       return;
@@ -667,8 +675,8 @@ export default function (pi: ExtensionAPI) {
         },
       };
 
-      await ctx.ui.custom<void>((_tui, theme, _kb, done) => {
-        return new ContextView(theme, viewData, done);
+      await ctx.ui.custom<void>((_tui, theme, keybindings, done) => {
+        return new ContextView(theme, viewData, keybindings, done);
       });
     },
   });

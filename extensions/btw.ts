@@ -13,6 +13,7 @@ import {
   type ExtensionCommandContext,
   type ExtensionContext,
   getMarkdownTheme,
+  keyHint,
   type ResourceLoader,
   SessionManager,
 } from "@mariozechner/pi-coding-agent";
@@ -344,7 +345,9 @@ class BtwOverlay extends Container implements Focusable {
         innerWidth,
       ),
       this.frameLine(
-        this.theme.fg("dim", "Separate side conversation. Esc closes."),
+        this.theme.fg("dim", "Separate side conversation. ") +
+          keyHint("tui.select.cancel", "closes") +
+          this.theme.fg("dim", "."),
         innerWidth,
       ),
       this.theme.fg("borderMuted", `├${"─".repeat(innerWidth)}┤`),
@@ -364,7 +367,9 @@ class BtwOverlay extends Container implements Focusable {
     );
     lines.push(
       this.frameLine(
-        this.theme.fg("dim", "Enter submit · Esc close"),
+        keyHint("tui.input.submit", "submit") +
+          this.theme.fg("dim", " · ") +
+          keyHint("tui.select.cancel", "close"),
         innerWidth,
       ),
     );

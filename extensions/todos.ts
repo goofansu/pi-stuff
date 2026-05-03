@@ -380,10 +380,10 @@ class TodoSelectorComponent extends Container implements Focusable {
 
   private updateHints(): void {
     this.hintText.setText(
-      this.theme.fg(
-        "dim",
-        "Type to search • ↑↓ select • Enter actions • Ctrl+Shift+W work • Ctrl+Shift+R refine • Esc close",
-      ),
+      this.theme.fg("dim", "Type to search • ↑↓ select • ") +
+        keyHint("tui.select.confirm", "actions") +
+        this.theme.fg("dim", " • Ctrl+Shift+W work • Ctrl+Shift+R refine • ") +
+        keyHint("tui.select.cancel", "close"),
     );
   }
 
@@ -575,7 +575,13 @@ class TodoActionMenuComponent extends Container {
     this.selectList.onCancel = () => this.onCancelCallback();
 
     this.addChild(this.selectList);
-    this.addChild(new Text(theme.fg("dim", "Enter to confirm • Esc back")));
+    this.addChild(
+      new Text(
+        keyHint("tui.select.confirm", "confirm") +
+          theme.fg("dim", " • ") +
+          keyHint("tui.select.cancel", "back"),
+      ),
+    );
     this.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
   }
 
@@ -620,7 +626,13 @@ class TodoDeleteConfirmComponent extends Container {
     this.selectList.onCancel = () => this.onConfirm(false);
 
     this.addChild(this.selectList);
-    this.addChild(new Text(theme.fg("dim", "Enter to confirm • Esc back")));
+    this.addChild(
+      new Text(
+        keyHint("tui.select.confirm", "confirm") +
+          theme.fg("dim", " • ") +
+          keyHint("tui.select.cancel", "back"),
+      ),
+    );
     this.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
   }
 
@@ -803,10 +815,8 @@ class TodoDetailOverlayComponent {
   }
 
   private buildActionLine(width: number): string {
-    const work =
-      this.theme.fg("accent", "enter") +
-      this.theme.fg("muted", " work on todo");
-    const back = this.theme.fg("dim", "esc back");
+    const work = keyHint("tui.select.confirm", "work on todo");
+    const back = keyHint("tui.select.cancel", "back");
     const nav = this.theme.fg("dim", "↑/↓: move. ←/→: page.");
     const pieces = [work, back, nav];
 

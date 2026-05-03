@@ -24,10 +24,11 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
-import { BorderedLoader } from "@mariozechner/pi-coding-agent";
+import { BorderedLoader, keyHint } from "@mariozechner/pi-coding-agent";
 import {
   type Component,
   Key,
+  type KeybindingsManager,
   matchesKey,
   type TUI,
   truncateToWidth,
@@ -1399,6 +1400,7 @@ async function computeBreakdown(
 class BreakdownComponent implements Component {
   private data: BreakdownData;
   private tui: TUI;
+  private keybindings: KeybindingsManager;
   private onDone: () => void;
   private rangeIndex = 1; // default 30d
   private measurement: MeasurementMode = "sessions";
@@ -1406,9 +1408,15 @@ class BreakdownComponent implements Component {
   private cachedWidth?: number;
   private cachedLines?: string[];
 
-  constructor(data: BreakdownData, tui: TUI, onDone: () => void) {
+  constructor(
+    data: BreakdownData,
+    tui: TUI,
+    keybindings: KeybindingsManager,
+    onDone: () => void,
+  ) {
     this.data = data;
     this.tui = tui;
+    this.keybindings = keybindings;
     this.onDone = onDone;
   }
 
@@ -1418,11 +1426,7 @@ class BreakdownComponent implements Component {
   }
 
   handleInput(data: string): void {
-    if (
-      matchesKey(data, Key.escape) ||
-      matchesKey(data, Key.ctrl("c")) ||
-      data.toLowerCase() === "q"
-    ) {
+    if (this.keybindings.matches(data, "tui.select.cancel")) {
       this.onDone();
       return;
     }
@@ -1603,7 +1607,8 @@ class BreakdownComponent implements Component {
     lines.push(truncateToWidth(header, width));
     lines.push(
       truncateToWidth(
-        dim("←/→ range · ↑/↓ view · tab metric · q to close"),
+        dim("←/→ range · ↑/↓ view · tab metric · ") +
+          keyHint("tui.select.cancel", "close"),
         width,
       ),
     );
@@ -1778,8 +1783,8 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
-      await ctx.ui.custom<void>((tui, _theme, _kb, done) => {
-        return new BreakdownComponent(data, tui, done);
+      await ctx.ui.custom<void>((tui, _theme, keybindings, done) => {
+        return new BreakdownComponent(data, tui, keybindings, done);
       });
     },
   });

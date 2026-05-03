@@ -21,12 +21,13 @@ import type {
   ExtensionContext,
   ModelRegistry,
 } from "@mariozechner/pi-coding-agent";
-import { BorderedLoader } from "@mariozechner/pi-coding-agent";
+import { BorderedLoader, keyHint } from "@mariozechner/pi-coding-agent";
 import {
   type Component,
   Editor,
   type EditorTheme,
   Key,
+  type KeybindingsManager,
   matchesKey,
   type TUI,
   truncateToWidth,
@@ -140,6 +141,7 @@ class QnAComponent implements Component {
   private currentIndex: number = 0;
   private editor: Editor;
   private tui: TUI;
+  private keybindings: KeybindingsManager;
   private onDone: (result: string | null) => void;
   private showingConfirmation: boolean = false;
 
@@ -158,11 +160,13 @@ class QnAComponent implements Component {
   constructor(
     questions: ExtractedQuestion[],
     tui: TUI,
+    keybindings: KeybindingsManager,
     onDone: (result: string | null) => void,
   ) {
     this.questions = questions;
     this.answers = questions.map(() => "");
     this.tui = tui;
+    this.keybindings = keybindings;
     this.onDone = onDone;
 
     // Create a minimal theme for the editor
@@ -230,15 +234,11 @@ class QnAComponent implements Component {
   handleInput(data: string): void {
     // Handle confirmation dialog
     if (this.showingConfirmation) {
-      if (matchesKey(data, Key.enter) || data.toLowerCase() === "y") {
+      if (this.keybindings.matches(data, "tui.input.submit")) {
         this.submit();
         return;
       }
-      if (
-        matchesKey(data, Key.escape) ||
-        matchesKey(data, Key.ctrl("c")) ||
-        data.toLowerCase() === "n"
-      ) {
+      if (this.keybindings.matches(data, "tui.select.cancel")) {
         this.showingConfirmation = false;
         this.invalidate();
         this.tui.requestRender();
@@ -248,13 +248,13 @@ class QnAComponent implements Component {
     }
 
     // Global navigation and commands
-    if (matchesKey(data, Key.escape) || matchesKey(data, Key.ctrl("c"))) {
+    if (this.keybindings.matches(data, "tui.select.cancel")) {
       this.cancel();
       return;
     }
 
     // Tab / Shift+Tab for navigation
-    if (matchesKey(data, Key.tab)) {
+    if (this.keybindings.matches(data, "tui.input.tab")) {
       if (this.currentIndex < this.questions.length - 1) {
         this.navigateTo(this.currentIndex + 1);
         this.tui.requestRender();
@@ -289,7 +289,10 @@ class QnAComponent implements Component {
     // Handle Enter ourselves (editor's submit is disabled)
     // Plain Enter moves to next question or shows confirmation on last question
     // Shift+Enter adds a newline (handled by editor)
-    if (matchesKey(data, Key.enter) && !matchesKey(data, Key.shift("enter"))) {
+    if (
+      this.keybindings.matches(data, "tui.input.submit") &&
+      !this.keybindings.matches(data, "tui.input.newLine")
+    ) {
       this.saveCurrentAnswer();
       if (this.currentIndex < this.questions.length - 1) {
         this.navigateTo(this.currentIndex + 1);
@@ -401,13 +404,13 @@ class QnAComponent implements Component {
     // Confirmation dialog or footer with controls
     if (this.showingConfirmation) {
       lines.push(padToWidth(this.dim(`├${horizontalLine(boxWidth - 2)}┤`)));
-      const confirmMsg = `${this.yellow("Submit all answers?")} ${this.dim("(Enter/y to confirm, Esc/n to cancel)")}`;
+      const confirmMsg = `${this.yellow("Submit all answers?")} ${this.dim("(")}${keyHint("tui.input.submit", "confirm")}${this.dim(", ")}${keyHint("tui.select.cancel", "cancel")}${this.dim(")")}`;
       lines.push(
         padToWidth(boxLine(truncateToWidth(confirmMsg, contentWidth))),
       );
     } else {
       lines.push(padToWidth(this.dim(`├${horizontalLine(boxWidth - 2)}┤`)));
-      const controls = `${this.dim("Tab/Enter")} next · ${this.dim("Shift+Tab")} prev · ${this.dim("Shift+Enter")} newline · ${this.dim("Esc")} cancel`;
+      const controls = `${keyHint("tui.input.tab", "next")}/${keyHint("tui.input.submit", "next")} ${this.dim("· Shift+Tab prev · ")}${keyHint("tui.input.newLine", "newline")}${this.dim(" · ")}${keyHint("tui.select.cancel", "cancel")}`;
       lines.push(padToWidth(boxLine(truncateToWidth(controls, contentWidth))));
     }
     lines.push(padToWidth(this.dim(`╰${horizontalLine(boxWidth - 2)}╯`)));
@@ -538,8 +541,13 @@ export default function (pi: ExtensionAPI) {
 
     // Show the Q&A component
     const answersResult = await ctx.ui.custom<string | null>(
-      (tui, _theme, _kb, done) => {
-        return new QnAComponent(extractionResult.questions, tui, done);
+      (tui, _theme, keybindings, done) => {
+        return new QnAComponent(
+          extractionResult.questions,
+          tui,
+          keybindings,
+          done,
+        );
       },
     );
 

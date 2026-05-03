@@ -24,7 +24,7 @@ import type {
   ExtensionContext,
   SessionEntry,
 } from "@mariozechner/pi-coding-agent";
-import { DynamicBorder } from "@mariozechner/pi-coding-agent";
+import { DynamicBorder, keyHint } from "@mariozechner/pi-coding-agent";
 import {
   Container,
   fuzzyFilter,
@@ -741,7 +741,11 @@ const showActionSelector = async (
 
     container.addChild(selectList);
     container.addChild(
-      new Text(theme.fg("dim", "Press enter to confirm or esc to cancel")),
+      new Text(
+        keyHint("tui.select.confirm", "confirm") +
+          theme.fg("dim", " or ") +
+          keyHint("tui.select.cancel", "cancel"),
+      ),
     );
     container.addChild(new DynamicBorder((str) => theme.fg("accent", str)));
 
@@ -1004,7 +1008,10 @@ const showFileSelector = async (
       container.addChild(listContainer);
       container.addChild(
         new Text(
-          theme.fg("dim", "Type to filter • enter to select • esc to cancel"),
+          theme.fg("dim", "Type to filter • ") +
+            keyHint("tui.select.confirm", "select") +
+            theme.fg("dim", " • ") +
+            keyHint("tui.select.cancel", "cancel"),
           0,
           0,
         ),
