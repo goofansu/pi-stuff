@@ -2,66 +2,73 @@
   "answer.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/answer.ts",
-    "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948"
+    "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948",
+    "remark": "functionally_same: config (model ID, provider), keybinding system (keyHint vs hardcoded), visual (editor theme, confirmation dialog style)"
   },
   "btw.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/btw.ts",
-    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b",
+    "remark": "functionally_same: backported isIdle() conditional delivery. codingTools and replaceMessages not available in current pi version — remaining diffs are API unavailability, config/keybinding/visual"
   },
   "control.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/control.ts",
-    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b",
+    "remark": "functionally_same: backported result.isError check. Rest is config (provider), keybinding, visual, code style"
   },
   "files.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/files.ts",
-    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b",
+    "remark": "functionally_same: intentional removals (3 keyboard shortcuts, quick-diff, findLatestFileReference), added defensive content guard, config (zed vs code), keybinding, visual"
   },
   "loop.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/loop.ts",
-    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b",
+    "remark": "functionally_same: config (provider check), keybinding, import path (typebox)"
   },
   "notify.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/notify.ts",
-    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b",
+    "remark": "functionally_same: purely cosmetic — tabs vs spaces indentation, line wrapping"
   },
   "prompt-editor.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/prompt-editor.ts",
-    "reviewed": "620e40df1a8baf1fddf98c2936bdccef8d0f589a"
+    "reviewed": "620e40df1a8baf1fddf98c2936bdccef8d0f589a",
+    "remark": "functionally_same: backported cycleMode fallback to first mode. Rest is code style (typed wrappers vs any casts)"
   },
   "review.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/review.ts",
-    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b",
+    "remark": "functionally_same: deliverAs:followUp is an intentional local addition (upstream sends plain), keybinding, visual, code style"
   },
   "session-breakdown.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/session-breakdown.ts",
-    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
-  },
-  "split-fork.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/split-fork.ts",
-    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b",
+    "remark": "functionally_same: keybinding system, visual polish (visibleWidth for correct ANSI width handling — bugfix over upstream .length), removed dead code"
   },
   "todos.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/todos.ts",
-    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b"
+    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b",
+    "remark": "functionally_same: upstream listTodosSync() is dead code (defined but never called) — local uses async listTodos() throughout. Rest is keybinding, import path, code style (stricter typing)"
   },
   "context.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/context.ts",
-    "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948"
+    "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948",
+    "remark": "functionally_same: keybinding system, visual, code style (type-safe helpers vs any casts, constructor signature)"
   },
   "ghostty.ts": {
     "repo": "HazAT/pi-config",
     "path": "extensions/ghostty.ts",
-    "reviewed": "875f96b4cfbe8a660c19e8799280d71e04094488"
+    "reviewed": "875f96b4cfbe8a660c19e8799280d71e04094488",
+    "remark": "functionally_same: purely cosmetic — import reordering, tabs vs spaces indentation"
   }
 }

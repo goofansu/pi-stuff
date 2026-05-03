@@ -39,9 +39,6 @@ filename, with `repo`, `path`, and `reviewed` (last reviewed commit SHA):
 }
 ```
 
-The `extensions/Makefile` is only for downloading fresh copies — it plays no
-role in tracking reviewed state.
-
 ## Workflow
 
 ### 1. Check
