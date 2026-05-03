@@ -1,5 +1,5 @@
 ---
-description: Use this when you need to understand the code changes.
+description: Analyzes a git diff and returns a JSON call graph showing changed functions and calls.
 tools: read,grep,find,ls,bash
 model: opencode/claude-haiku-4-5
 ---
