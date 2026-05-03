@@ -12,7 +12,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-UPSTREAM="$SCRIPT_DIR/../upstream.json"
+UPSTREAM="$SCRIPT_DIR/upstream.json"
 
 [[ -f "$UPSTREAM" ]] || { echo "error: $UPSTREAM not found" >&2; exit 1; }
 command -v gh &>/dev/null || { echo "error: gh CLI required (brew install gh)" >&2; exit 1; }
