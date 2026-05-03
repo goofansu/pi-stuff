@@ -382,7 +382,7 @@ class TodoSelectorComponent extends Container implements Focusable {
     this.hintText.setText(
       this.theme.fg("dim", "Type to search • ↑↓ select • ") +
         keyHint("tui.select.confirm", "actions") +
-        this.theme.fg("dim", " • Ctrl+Shift+W work • Ctrl+Shift+R refine • ") +
+        this.theme.fg("dim", " • ctrl+shift+w work • ctrl+shift+r refine • ") +
         keyHint("tui.select.cancel", "close"),
     );
   }
