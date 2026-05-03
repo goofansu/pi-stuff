@@ -70,5 +70,11 @@
     "path": "extensions/ghostty.ts",
     "reviewed": "875f96b4cfbe8a660c19e8799280d71e04094488",
     "remark": "functionally_same: purely cosmetic — import reordering, tabs vs spaces indentation"
+  },
+  "draw.ts": {
+    "repo": "mitsuhiko/pi-draw",
+    "path": "draw.ts",
+    "reviewed": "6e3d4b17fa881f5835fd6b45e7793783f685bf38",
+    "remark": "functionally_same: biome formatting (tabs to spaces, line wrapping), replaced non-null assertions with local const to satisfy noNonNullAssertion lint rule"
   }
 }
