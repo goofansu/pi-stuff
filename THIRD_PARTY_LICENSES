@@ -8,6 +8,7 @@ agent-stuff
 
 Source: https://github.com/mitsuhiko/agent-stuff
 Files:
+  - skills/pi-share/
   - skills/summarize/
   - extensions/answer.ts
   - extensions/btw.ts
