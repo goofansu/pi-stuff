@@ -13,42 +13,40 @@ Upstream sources and last-reviewed commit SHAs are stored in
 commits newer than the reviewed SHA per file, showing individual commit
 messages and links so you can identify bug fixes worth cherry-picking.
 
-## Quick reference
-
-```bash
-# Check for new upstream commits
-bash .pi/skills/check-upstream/check.sh
-
-# After applying fixes, mark as reviewed
-bash .pi/skills/check-upstream/check.sh mark answer.ts
-bash .pi/skills/check-upstream/check.sh mark            # all files
-```
-
 ## upstream.json
 
-Located at `.pi/skills/check-upstream/upstream.json` (next to the script).
-Each key is a local filename, with `repo`, `path`, and `reviewed` (last
-reviewed commit SHA):
+Located at `.pi/skills/check-upstream/upstream.json`.
+Each key is a local filename, with these fields:
+
+- `repo` — GitHub repo (`owner/repo`)
+- `path` — path to the file in that repo
+- `reviewed` — last-reviewed commit SHA
+- `remark` — *(optional but recommended)* a short note explaining why the local copy diverges from upstream, so future reviews have context
 
 ```json
 {
   "answer.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/answer.ts",
-    "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948"
+    "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948",
+    "remark": "functionally_same: config (model ID, provider), keybinding system, visual (editor theme)"
   }
 }
 ```
+
+After reviewing a batch of commits, update `remark` to summarise the remaining intentional differences (e.g. which diffs are config, keybinding, unavailable API, or local bug fixes). This prevents re-investigating the same diffs in a future check.
 
 ## Workflow
 
 ### 1. Check
 
+Run the script and summarize the results to the user:
+
 ```bash
 bash .pi/skills/check-upstream/check.sh
 ```
 
-Shows new upstream commits per file since the last reviewed SHA:
+Output shows new commits per file since the last reviewed SHA:
 
 ```
 ✓  answer.ts
@@ -62,19 +60,18 @@ Shows new upstream commits per file since the last reviewed SHA:
 
 ### 2. Review and apply
 
-For each commit that looks like a bug fix:
+For each commit the user wants to apply:
 
-1. Click the GitHub link to see the full diff
-2. Apply the relevant change to your local modified file
-3. The agent can help — ask it to review a specific commit and apply the fix
+1. Fetch the full diff: `gh api /repos/{owner}/{repo}/commits/{sha}`
+2. Identify the relevant hunks — skip pure formatting or import reordering
+3. Apply the bug fix to the local modified file
 
 ### 3. Mark as reviewed
 
-After applying the fixes you want, update the reviewed SHA so those commits
-stop appearing:
+After applying the fixes, advance the reviewed SHA so those commits stop appearing:
 
 ```bash
-# Mark a specific file (advances to latest upstream commit for that file)
+# Mark a specific file (advances to its latest upstream commit)
 bash .pi/skills/check-upstream/check.sh mark btw.ts
 
 # Mark all files at once
@@ -84,27 +81,16 @@ bash .pi/skills/check-upstream/check.sh mark
 bash .pi/skills/check-upstream/check.sh mark btw.ts abc1234
 ```
 
-## Agent instructions
-
-When the user asks to check upstream / check for updates:
-
-1. Run `bash .pi/skills/check-upstream/check.sh` and summarize the results
-2. If the user wants to apply a specific fix:
-   - Fetch the commit diff from GitHub (`gh api /repos/{owner}/{repo}/commits/{sha}`)
-   - Identify the relevant hunks (skip pure formatting/import reordering)
-   - Apply the bug fix to the local modified file
-3. After applying, run `bash .pi/skills/check-upstream/check.sh mark <file>` to update the reviewed SHA
-
 ## Adding a new extension to track
 
-Add an entry to `upstream.json`:
+Add an entry to `upstream.json`, setting `reviewed` to the commit you based
+your local copy on:
 
 ```json
 "new-ext.ts": {
   "repo": "owner/repo",
   "path": "path/to/file.ts",
-  "reviewed": "<commit-sha>"
+  "reviewed": "<commit-sha>",
+  "remark": "<brief note on intentional local differences, or omit if none yet>"
 }
 ```
-
-Set `reviewed` to the commit you based your local copy on.
