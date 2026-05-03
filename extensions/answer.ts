@@ -21,11 +21,15 @@ import type {
   ExtensionContext,
   ModelRegistry,
 } from "@mariozechner/pi-coding-agent";
-import { BorderedLoader, keyHint } from "@mariozechner/pi-coding-agent";
+import {
+  BorderedLoader,
+  getSelectListTheme,
+  keyHint,
+  type Theme,
+} from "@mariozechner/pi-coding-agent";
 import {
   type Component,
   Editor,
-  type EditorTheme,
   Key,
   type KeybindingsManager,
   matchesKey,
@@ -141,6 +145,7 @@ class QnAComponent implements Component {
   private currentIndex: number = 0;
   private editor: Editor;
   private tui: TUI;
+  private theme: Theme;
   private keybindings: KeybindingsManager;
   private onDone: (result: string | null) => void;
   private showingConfirmation: boolean = false;
@@ -149,39 +154,32 @@ class QnAComponent implements Component {
   private cachedWidth?: number;
   private cachedLines?: string[];
 
-  // Colors - using proper reset sequences
-  private dim = (s: string) => `\x1b[2m${s}\x1b[0m`;
-  private bold = (s: string) => `\x1b[1m${s}\x1b[0m`;
-  private cyan = (s: string) => `\x1b[36m${s}\x1b[0m`;
-  private green = (s: string) => `\x1b[32m${s}\x1b[0m`;
-  private yellow = (s: string) => `\x1b[33m${s}\x1b[0m`;
-  private gray = (s: string) => `\x1b[90m${s}\x1b[0m`;
+  // Theme-based color helpers
+  private dim = (s: string) => this.theme.fg("dim", s);
+  private bold = (s: string) => this.theme.bold(s);
+  private cyan = (s: string) => this.theme.fg("accent", s);
+  private green = (s: string) => this.theme.fg("success", s);
+  private yellow = (s: string) => this.theme.fg("warning", s);
+  private gray = (s: string) => this.theme.fg("muted", s);
 
   constructor(
     questions: ExtractedQuestion[],
     tui: TUI,
+    theme: Theme,
     keybindings: KeybindingsManager,
     onDone: (result: string | null) => void,
   ) {
     this.questions = questions;
     this.answers = questions.map(() => "");
     this.tui = tui;
+    this.theme = theme;
     this.keybindings = keybindings;
     this.onDone = onDone;
 
-    // Create a minimal theme for the editor
-    const editorTheme: EditorTheme = {
-      borderColor: this.dim,
-      selectList: {
-        selectedPrefix: this.cyan,
-        selectedText: this.bold,
-        description: this.gray,
-        scrollInfo: this.dim,
-        noMatch: this.yellow,
-      },
-    };
-
-    this.editor = new Editor(tui, editorTheme);
+    this.editor = new Editor(tui, {
+      borderColor: (s) => theme.fg("borderMuted", s),
+      selectList: getSelectListTheme(),
+    });
     // Disable the editor's built-in submit (which clears the editor)
     // We'll handle Enter ourselves to preserve the text
     this.editor.disableSubmit = true;
@@ -541,10 +539,11 @@ export default function (pi: ExtensionAPI) {
 
     // Show the Q&A component
     const answersResult = await ctx.ui.custom<string | null>(
-      (tui, _theme, keybindings, done) => {
+      (tui, theme, keybindings, done) => {
         return new QnAComponent(
           extractionResult.questions,
           tui,
+          theme,
           keybindings,
           done,
         );

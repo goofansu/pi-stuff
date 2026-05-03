@@ -617,7 +617,7 @@ const renderSessionMessage: MessageRenderer = (
   const box = new Box(1, 1, (t) => theme.bg("customMessageBg", t));
   const labelBase = theme.fg(
     "customMessageLabel",
-    `\x1b[1m[${message.customType}]\x1b[22m`,
+    theme.bold(`[${message.customType}]`),
   );
   const senderText = formatSenderInfo(senderInfo);
   const label = senderText
