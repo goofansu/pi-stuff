@@ -1120,8 +1120,8 @@ async function cycleMode(
       ? runtime.lastRealMode
       : runtime.currentMode;
   const idx = Math.max(0, names.indexOf(baseMode));
-  const next = names[(idx + direction + names.length) % names.length];
-  if (!next) return;
+  const next =
+    names[(idx + direction + names.length) % names.length] ?? names[0];
   await applyMode(pi, ctx, next);
 }
 

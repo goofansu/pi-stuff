@@ -1679,7 +1679,7 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.notify(`Starting review: ${hint}${modeHint}`, "info");
 
     // Send as a user message that triggers a turn, or queues if the agent is busy.
-    pi.sendUserMessage(fullPrompt, { deliverAs: "followUp" });
+    pi.sendUserMessage(fullPrompt);
     return true;
   }
 

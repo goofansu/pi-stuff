@@ -1640,12 +1640,13 @@ Messages automatically include sender session info for replies. When you want a 
 
     renderResult(result, { expanded }, theme) {
       const details = result.details as Record<string, unknown> | undefined;
+      const isError = result.isError === true;
 
       // Error case
-      if (details?.error) {
+      if (isError || details?.error) {
         const firstContent = result.content[0];
         const errorMsg =
-          typeof details.error === "string"
+          typeof details?.error === "string"
             ? details.error
             : firstContent?.type === "text"
               ? firstContent.text
