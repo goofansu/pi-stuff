@@ -3,7 +3,7 @@
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/answer.ts",
     "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948",
-    "remark": "functionally_same: config (model ID, provider), keybinding system (keyHint vs hardcoded), visual (editor theme, confirmation dialog style)"
+    "remark": "diverged: local adds markdown rendering for question text and context (Markdown component + getMarkdownTheme). Upstream renders questions as plain wrapped text. Also: config (model ID, provider), keybinding system (keyHint vs hardcoded), visual (editor theme, confirmation dialog style)"
   },
   "btw.ts": {
     "repo": "mitsuhiko/agent-stuff",

@@ -23,6 +23,7 @@ import type {
 } from "@mariozechner/pi-coding-agent";
 import {
   BorderedLoader,
+  getMarkdownTheme,
   getSelectListTheme,
   keyHint,
   type Theme,
@@ -32,11 +33,12 @@ import {
   Editor,
   Key,
   type KeybindingsManager,
+  Markdown,
+  type MarkdownTheme,
   matchesKey,
   type TUI,
   truncateToWidth,
   visibleWidth,
-  wrapTextWithAnsi,
 } from "@mariozechner/pi-tui";
 
 // Structured output format for question extraction
@@ -149,6 +151,7 @@ class QnAComponent implements Component {
   private keybindings: KeybindingsManager;
   private onDone: (result: string | null) => void;
   private showingConfirmation: boolean = false;
+  private mdTheme: MarkdownTheme;
 
   // Cache
   private cachedWidth?: number;
@@ -176,6 +179,7 @@ class QnAComponent implements Component {
     this.keybindings = keybindings;
     this.onDone = onDone;
 
+    this.mdTheme = getMarkdownTheme();
     this.editor = new Editor(tui, {
       borderColor: (s) => theme.fg("borderMuted", s),
       selectList: getSelectListTheme(),
@@ -364,18 +368,33 @@ class QnAComponent implements Component {
 
     // Current question
     const q = this.questions[this.currentIndex];
-    const questionText = `${this.bold("Q:")} ${q.question}`;
-    const wrappedQuestion = wrapTextWithAnsi(questionText, contentWidth);
-    for (const line of wrappedQuestion) {
-      lines.push(padToWidth(boxLine(line)));
+    const questionPrefix = `${this.bold("Q:")} `;
+    const mdQuestion = new Markdown(q.question, 0, 0, this.mdTheme);
+    const questionLines = mdQuestion.render(
+      contentWidth - visibleWidth(questionPrefix),
+    );
+    for (let i = 0; i < questionLines.length; i++) {
+      if (i === 0) {
+        lines.push(padToWidth(boxLine(questionPrefix + questionLines[i])));
+      } else {
+        lines.push(
+          padToWidth(
+            boxLine(
+              " ".repeat(visibleWidth(questionPrefix)) + questionLines[i],
+            ),
+          ),
+        );
+      }
     }
 
     // Context if present
     if (q.context) {
       lines.push(padToWidth(emptyBoxLine()));
-      const contextText = this.gray(`> ${q.context}`);
-      const wrappedContext = wrapTextWithAnsi(contextText, contentWidth - 2);
-      for (const line of wrappedContext) {
+      const mdContext = new Markdown(`> ${q.context}`, 0, 0, this.mdTheme, {
+        color: this.gray,
+      });
+      const contextLines = mdContext.render(contentWidth - 2);
+      for (const line of contextLines) {
         lines.push(padToWidth(boxLine(line)));
       }
     }
