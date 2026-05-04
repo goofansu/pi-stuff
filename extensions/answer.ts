@@ -319,7 +319,7 @@ class QnAComponent implements Component {
     }
 
     const lines: string[] = [];
-    const boxWidth = Math.min(width - 4, 120); // Allow wider box
+    const boxWidth = Math.min(width - 4, 120);
     const contentWidth = boxWidth - 4; // 2 chars padding on each side
 
     // Helper to create horizontal lines (dim the whole thing at once)
@@ -371,7 +371,7 @@ class QnAComponent implements Component {
     const questionPrefix = `${this.bold("Q:")} `;
     const mdQuestion = new Markdown(q.question, 0, 0, this.mdTheme);
     const questionLines = mdQuestion.render(
-      contentWidth - visibleWidth(questionPrefix),
+      contentWidth - visibleWidth(questionPrefix) - 2,
     );
     for (let i = 0; i < questionLines.length; i++) {
       if (i === 0) {
