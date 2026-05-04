@@ -26,6 +26,7 @@ import {
   getMarkdownTheme,
   getSelectListTheme,
   keyHint,
+  rawKeyHint,
   type Theme,
 } from "@mariozechner/pi-coding-agent";
 import {
@@ -427,7 +428,7 @@ class QnAComponent implements Component {
       );
     } else {
       lines.push(padToWidth(this.dim(`├${horizontalLine(boxWidth - 2)}┤`)));
-      const controls = `${keyHint("tui.input.tab", "next")}/${keyHint("tui.input.submit", "next")} ${this.dim("· shift+tab prev · ")}${keyHint("tui.input.newLine", "newline")}${this.dim(" · ")}${keyHint("tui.select.cancel", "cancel")}`;
+      const controls = `${rawKeyHint("tab/enter", "next")}${this.dim(" · ")}${rawKeyHint("shift+tab", "prev")}${this.dim(" · ")}${keyHint("tui.input.newLine", "newline")}${this.dim(" · ")}${keyHint("tui.select.cancel", "cancel")}`;
       lines.push(padToWidth(boxLine(truncateToWidth(controls, contentWidth))));
     }
     lines.push(padToWidth(this.dim(`╰${horizontalLine(boxWidth - 2)}╯`)));
