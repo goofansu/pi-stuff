@@ -24,4 +24,5 @@ skills:
 	$(call skills-add,anthropics/skills,skill-creator frontend-design)
 	$(call skills-add,badlogic/pi-skills,transcribe)
 	$(call skills-add,mitsuhiko/agent-stuff,commit)
+	$(call skills-add,max-sixty/worktrunk,worktrunk)
 	$(call skills-add,obra/superpowers)
