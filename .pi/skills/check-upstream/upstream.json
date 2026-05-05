@@ -29,12 +29,7 @@
     "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b",
     "remark": "functionally_same: config (provider check), keybinding, import path (typebox)"
   },
-  "notify.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/notify.ts",
-    "reviewed": "2b70e8d53647c1e0277bd54dbbb2519cb5bea92b",
-    "remark": "functionally_same: purely cosmetic — tabs vs spaces indentation, line wrapping"
-  },
+
   "prompt-editor.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/prompt-editor.ts",
@@ -65,12 +60,7 @@
     "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948",
     "remark": "functionally_same: keybinding system, visual, code style (type-safe helpers vs any casts, constructor signature)"
   },
-  "ghostty.ts": {
-    "repo": "HazAT/pi-config",
-    "path": "extensions/ghostty.ts",
-    "reviewed": "875f96b4cfbe8a660c19e8799280d71e04094488",
-    "remark": "functionally_same: purely cosmetic — import reordering, tabs vs spaces indentation"
-  },
+
   "draw.ts": {
     "repo": "mitsuhiko/pi-draw",
     "path": "draw.ts",
