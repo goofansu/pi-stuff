@@ -136,7 +136,7 @@ export default function (pi: ExtensionAPI): void {
     name: "github-search",
     label: "GitHub Search",
     description:
-      "Search and read GitHub code/repository data with allowlisted read-only gh commands. Use structured input: command plus args array. Mutating and unavailable gh commands are blocked.",
+      "Read-only GitHub access: search code across GitHub, look up repos, issues, PRs, and call GET endpoints on the GitHub API via `gh`. For any write operation (posting comments, creating issues/PRs, editing files, etc.) use the `gh` CLI through the bash tool instead.",
     promptSnippet:
       "Search GitHub code/repositories and read repository data with structured read-only gh commands",
     promptGuidelines: [
