@@ -1,9 +1,10 @@
 ---
-description: Prove the current changes actually work by diffing behavior between main and this branch
+description: Prove the current changes actually work by diffing behavior against the base branch
 ---
-Prove to me this works. Diff the behavior between main and the current branch:
+Prove to me this works. Diff the behavior between the current branch and its base:
 
-1. Identify what changed
-2. Exercise the affected code paths
-3. Show concrete before/after behavior
-4. Flag anything that doesn't work as expected
+1. Detect the base branch
+2. Identify what changed
+3. Exercise the affected code paths
+4. Show concrete before/after behavior
+5. Flag anything that doesn't work as expected
