@@ -5,4 +5,4 @@ argument-hint: "<task>"
 Delegate the given task to a new worktree in a separate tmux window: $@
 
 1. Derive a short kebab-case worktree name from the task
-2. Open a new named tmux window: `tmux new-window -n <worktree> 'wt switch -c <worktree> -b @ -x pi -- "<task>"; exec fish'`
+2. Open a new tmux window (the window name is auto-renamed): `tmux new-window 'wt switch -c <worktree> -b @ -x pi -- "<task>"; exec fish'`
