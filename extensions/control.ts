@@ -53,16 +53,16 @@ import {
   StringEnum,
   type TextContent,
   type UserMessage,
-} from "@mariozechner/pi-ai";
+} from "@earendil-works/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionContext,
   MessageRenderer,
   ModelRegistry,
   TurnEndEvent,
-} from "@mariozechner/pi-coding-agent";
-import { getMarkdownTheme, keyHint } from "@mariozechner/pi-coding-agent";
-import { Box, Container, Markdown, Spacer, Text } from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-coding-agent";
+import { getMarkdownTheme, keyHint } from "@earendil-works/pi-coding-agent";
+import { Box, Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 const CONTROL_FLAG = "session-control";
@@ -1638,9 +1638,9 @@ Messages automatically include sender session info for replies. When you want a 
       return new Text(header, 0, 0);
     },
 
-    renderResult(result, { expanded }, theme) {
+    renderResult(result, { expanded }, theme, context) {
       const details = result.details as Record<string, unknown> | undefined;
-      const isError = result.isError === true;
+      const isError = context.isError === true;
 
       // Error case
       if (isError || details?.error) {

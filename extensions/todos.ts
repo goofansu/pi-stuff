@@ -34,7 +34,7 @@ import crypto from "node:crypto";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { StringEnum } from "@mariozechner/pi-ai";
+import { StringEnum } from "@earendil-works/pi-ai";
 import {
   copyToClipboard,
   DynamicBorder,
@@ -43,7 +43,7 @@ import {
   getMarkdownTheme,
   keyHint,
   type Theme,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import {
   Container,
   type Focusable,
@@ -60,7 +60,7 @@ import {
   type TUI,
   truncateToWidth,
   visibleWidth,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 const TODO_DIR_NAME = ".pi/todos";

@@ -9,9 +9,9 @@
  *   SLACK_CHANNEL_ID — default channel to post to (C…)
  */
 
-import { Type } from "@mariozechner/pi-ai";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Container, Spacer, Text } from "@mariozechner/pi-tui";
+import { Type } from "@earendil-works/pi-ai";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Container, Spacer, Text } from "@earendil-works/pi-tui";
 
 const SLACK_API = "https://slack.com/api";
 

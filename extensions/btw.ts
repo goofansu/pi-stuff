@@ -1,8 +1,8 @@
-import type { AgentMessage } from "@mariozechner/pi-agent-core";
+import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type {
   ThinkingLevel as AiThinkingLevel,
   AssistantMessage,
-} from "@mariozechner/pi-ai";
+} from "@earendil-works/pi-ai";
 import {
   type AgentSession,
   type AgentSessionEvent,
@@ -16,7 +16,7 @@ import {
   keyHint,
   type ResourceLoader,
   SessionManager,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import {
   Container,
   type Focusable,
@@ -27,7 +27,7 @@ import {
   type TUI,
   truncateToWidth,
   visibleWidth,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 
 const BTW_ENTRY_TYPE = "btw-thread-entry";
 const BTW_RESET_TYPE = "btw-thread-reset";

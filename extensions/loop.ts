@@ -11,18 +11,22 @@ import {
   complete,
   type Model,
   type UserMessage,
-} from "@mariozechner/pi-ai";
+} from "@earendil-works/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
-import { compact, DynamicBorder, keyHint } from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
+import {
+  compact,
+  DynamicBorder,
+  keyHint,
+} from "@earendil-works/pi-coding-agent";
 import {
   Container,
   type SelectItem,
   SelectList,
   Text,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 type LoopMode = "tests" | "custom" | "self";

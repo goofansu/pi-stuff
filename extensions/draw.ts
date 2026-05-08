@@ -11,7 +11,7 @@ import { join } from "node:path";
 import type {
   ExtensionAPI,
   ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 
 const HOST = "127.0.0.1";
 const TMP_DIR = "/tmp";

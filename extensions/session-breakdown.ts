@@ -23,8 +23,8 @@ import readline from "node:readline";
 import type {
   ExtensionAPI,
   ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
-import { BorderedLoader, keyHint } from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
+import { BorderedLoader, keyHint } from "@earendil-works/pi-coding-agent";
 import {
   type Component,
   Key,
@@ -33,7 +33,7 @@ import {
   type TUI,
   truncateToWidth,
   visibleWidth,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 
 type ModelKey = string; // `${provider}/${model}`
 type CwdKey = string; // normalized cwd path

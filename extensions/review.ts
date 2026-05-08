@@ -33,12 +33,12 @@ import type {
   ExtensionAPI,
   ExtensionCommandContext,
   ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import {
   BorderedLoader,
   DynamicBorder,
   keyHint,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import {
   Container,
   fuzzyFilter,
@@ -47,7 +47,7 @@ import {
   SelectList,
   Spacer,
   Text,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 
 // State to track fresh session review (where we branched from).
 // Module-level state means only one review can be active at a time.
