@@ -1507,10 +1507,17 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  pi.registerShortcut("ctrl+space", {
-    description: "Cycle prompt mode",
+  pi.registerShortcut("ctrl+shift+.", {
+    description: "Cycle prompt mode forward",
     handler: async (ctx) => {
       await cycleMode(pi, ctx, 1);
+    },
+  });
+
+  pi.registerShortcut("ctrl+shift+,", {
+    description: "Cycle prompt mode backward",
+    handler: async (ctx) => {
+      await cycleMode(pi, ctx, -1);
     },
   });
 
