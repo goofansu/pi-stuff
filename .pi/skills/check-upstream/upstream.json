@@ -59,6 +59,12 @@
     "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948",
     "remark": "functionally_same: keybinding system, visual, code style (type-safe helpers vs any casts, constructor signature)"
   },
+  "goal.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/goal.ts",
+    "reviewed": "ab79f98104bcd3c6a7c5491e609f6d6700a7414d",
+    "remark": "functionally_same: biome formatting (tabs to spaces, line wrapping), replaced non-null assertions with return values from setGoalStatus/setGoal to satisfy noNonNullAssertion lint rule"
+  },
   "draw.ts": {
     "repo": "mitsuhiko/pi-draw",
     "path": "draw.ts",
