@@ -141,15 +141,16 @@ function expandHint(): string {
 
 export default function (pi: ExtensionAPI): void {
   pi.registerTool({
-    name: "github-search",
-    label: "GitHub Search",
+    name: "github-explore",
+    label: "GitHub Explore",
     description:
-      "Read-only GitHub access: search code across GitHub, look up repos, issues, PRs, and call GET endpoints on the GitHub API via `gh`. For any write operation (posting comments, creating issues/PRs, editing files, etc.) use the `gh` CLI through the bash tool instead.",
+      "Explore public GitHub repositories to gather ideas, examples, and inspiration. Search for code patterns, discover how other projects solve a problem, or browse public repos for reference.",
     promptSnippet:
-      "Search GitHub code/repositories and read repository data with structured read-only gh commands",
+      "Explore public GitHub repos and search code for ideas and examples",
     promptGuidelines: [
-      "Use github-search for GitHub code search, repository discovery, and read-only GitHub CLI/API lookups when local gh authentication is useful.",
-      "The github-search tool only accepts structured input: set command to an allowed search/read subcommand and put every remaining CLI token in args.",
+      "Use github-explore to research how other public projects implement a feature or pattern — e.g. `search code 'streaming parser language:ts'` to find examples.",
+      "The github-explore tool only accepts structured input: set command to an allowed search/read subcommand and put every remaining CLI token in args.",
+      "Do NOT use github-explore for the current project (CI, workflow runs, PRs, issues, commits) or write operations — use the bash tool with `gh` instead.",
     ],
     parameters: Type.Object({
       command: StringEnum(READ_ONLY_COMMANDS, {
@@ -207,7 +208,7 @@ export default function (pi: ExtensionAPI): void {
       const params = args as GhToolParams;
       const suffix = [params.command, ...(params.args ?? [])].join(" ");
       return new Text(
-        `${theme.fg("toolTitle", theme.bold("github-search "))}${theme.fg("dim", suffix)}`,
+        `${theme.fg("toolTitle", theme.bold("github-explore "))}${theme.fg("dim", suffix)}`,
         0,
         0,
       );
@@ -226,7 +227,7 @@ export default function (pi: ExtensionAPI): void {
       const isError =
         context.isError || (result as { isError?: boolean }).isError === true;
       const icon = isError ? theme.fg("error", "✗") : theme.fg("success", "✓");
-      const title = `${icon} ${theme.fg("toolTitle", theme.bold("github-search"))}`;
+      const title = `${icon} ${theme.fg("toolTitle", theme.bold("github-explore"))}`;
 
       if (details?.error) {
         return new Text(`${title}\n${theme.fg("error", details.error)}`, 0, 0);

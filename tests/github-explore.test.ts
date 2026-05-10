@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import githubSearchExtension, { validateGhInvocation } from "../extensions/github-search.ts";
+import githubSearchExtension, { validateGhInvocation } from "../extensions/github-explore.ts";
 
 function registerGithubSearchTool() {
   let tool: any;
@@ -9,7 +9,7 @@ function registerGithubSearchTool() {
       tool = registeredTool;
     },
   } as any);
-  assert.ok(tool, "github-search tool should be registered");
+  assert.ok(tool, "github-explore tool should be registered");
   return tool;
 }
 
@@ -91,7 +91,7 @@ describe("validateGhInvocation", () => {
   });
 });
 
-describe("github-search renderResult", () => {
+describe("github-explore renderResult", () => {
   it("renders a collapsed status with command summary and expand hint", () => {
     const tool = registerGithubSearchTool();
 
@@ -111,7 +111,7 @@ describe("github-search renderResult", () => {
       { isError: false },
     );
 
-    assert.match(rendered.text, /✓ github-search/);
+    assert.match(rendered.text, /✓ github-explore/);
     assert.match(rendered.text, /gh search code example --repo owner\/repo/);
     assert.doesNotMatch(rendered.text, /Done/);
     assert.doesNotMatch(rendered.text, /first line/);
@@ -140,7 +140,7 @@ describe("github-search renderResult", () => {
       { isError: true },
     );
 
-    assert.match(rendered.text, /✗ github-search/);
+    assert.match(rendered.text, /✗ github-explore/);
     assert.doesNotMatch(rendered.text, /Failed/);
     assert.match(rendered.text, /Command: gh api repos\/owner\/repo/);
     assert.match(rendered.text, /Exit code: 1/);
