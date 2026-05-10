@@ -226,7 +226,7 @@ function notify(
   }
 }
 
-class BtwOverlay extends Container implements Focusable {
+export class BtwOverlay extends Container implements Focusable {
   private readonly input: Input;
   private readonly tui: TUI;
   private readonly theme: ExtensionContext["ui"]["theme"];
@@ -313,12 +313,12 @@ class BtwOverlay extends Container implements Focusable {
   }
 
   override render(width: number): string[] {
-    const dialogWidth = Math.max(56, Math.min(width, Math.floor(width * 0.9)));
-    const innerWidth = Math.max(40, dialogWidth - 2);
-    const terminalRows = process.stdout.rows ?? 30;
+    const dialogWidth = Math.max(1, width);
+    const innerWidth = Math.max(1, dialogWidth - 2);
+    const terminalRows = this.tui.terminal.rows || process.stdout.rows || 30;
     const dialogHeight = Math.max(
       16,
-      Math.min(30, Math.floor(terminalRows * 0.75)),
+      Math.min(30, Math.floor(terminalRows * 0.78)),
     );
     const chromeHeight = 7;
     const transcriptHeight = Math.max(6, dialogHeight - chromeHeight);
