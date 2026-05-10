@@ -1,5 +1,5 @@
 import { StringEnum, Type } from "@earendil-works/pi-ai";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { type ExtensionAPI, keyHint } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 
 const READ_ONLY_COMMANDS = [
@@ -131,6 +131,14 @@ function formatOutput(stdout: string, stderr: string, code: number): string {
   return parts.join("\n\n");
 }
 
+function expandHint(): string {
+  try {
+    return keyHint("app.tools.expand", "to expand");
+  } catch {
+    return "Ctrl+O to expand";
+  }
+}
+
 export default function (pi: ExtensionAPI): void {
   pi.registerTool({
     name: "github-search",
@@ -200,6 +208,48 @@ export default function (pi: ExtensionAPI): void {
       const suffix = [params.command, ...(params.args ?? [])].join(" ");
       return new Text(
         `${theme.fg("toolTitle", theme.bold("github-search "))}${theme.fg("dim", suffix)}`,
+        0,
+        0,
+      );
+    },
+
+    renderResult(result, { expanded }, theme, context) {
+      const details = result.details as
+        | {
+            command?: string;
+            code?: number;
+            stdout?: string;
+            stderr?: string;
+            error?: string;
+          }
+        | undefined;
+      const isError =
+        context.isError || (result as { isError?: boolean }).isError === true;
+      const icon = isError ? theme.fg("error", "✗") : theme.fg("success", "✓");
+      const title = `${icon} ${theme.fg("toolTitle", theme.bold("github-search"))}`;
+
+      if (details?.error) {
+        return new Text(`${title}\n${theme.fg("error", details.error)}`, 0, 0);
+      }
+
+      const command = details?.command ?? "gh";
+      const code = details?.code ?? (isError ? 1 : 0);
+      const output = formatOutput(
+        details?.stdout ?? "",
+        details?.stderr ?? "",
+        code,
+      );
+
+      if (!expanded) {
+        return new Text(
+          `${title} ${theme.fg("dim", command)}\n${theme.fg("dim", `(${expandHint()})`)}`,
+          0,
+          0,
+        );
+      }
+
+      return new Text(
+        `${title}\n${theme.fg("dim", `Command: ${command}`)}\n${theme.fg("dim", `Exit code: ${code}`)}\n\n${output}`,
         0,
         0,
       );

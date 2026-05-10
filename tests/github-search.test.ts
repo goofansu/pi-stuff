@@ -1,6 +1,26 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { validateGhInvocation } from "../extensions/github-search.ts";
+import githubSearchExtension, { validateGhInvocation } from "../extensions/github-search.ts";
+
+function registerGithubSearchTool() {
+  let tool: any;
+  githubSearchExtension({
+    registerTool(registeredTool: any) {
+      tool = registeredTool;
+    },
+  } as any);
+  assert.ok(tool, "github-search tool should be registered");
+  return tool;
+}
+
+const theme = {
+  fg(_name: string, text: string) {
+    return text;
+  },
+  bold(text: string) {
+    return text;
+  },
+};
 
 describe("validateGhInvocation", () => {
   it("allows a structured GitHub search command", () => {
@@ -68,5 +88,64 @@ describe("validateGhInvocation", () => {
 
     assert.equal(result.ok, false);
     assert.match(result.reason, /gh api only allows GET or HEAD/);
+  });
+});
+
+describe("github-search renderResult", () => {
+  it("renders a collapsed status with command summary and expand hint", () => {
+    const tool = registerGithubSearchTool();
+
+    const rendered = tool.renderResult(
+      {
+        isError: false,
+        content: [{ type: "text", text: "first line\nsecond line\nthird line" }],
+        details: {
+          command: "gh search code example --repo owner/repo",
+          code: 0,
+          stdout: "first line\nsecond line\nthird line",
+          stderr: "",
+        },
+      },
+      { expanded: false, isPartial: false },
+      theme,
+      { isError: false },
+    );
+
+    assert.match(rendered.text, /✓ github-search/);
+    assert.match(rendered.text, /gh search code example --repo owner\/repo/);
+    assert.doesNotMatch(rendered.text, /Done/);
+    assert.doesNotMatch(rendered.text, /first line/);
+    assert.doesNotMatch(rendered.text, /second line/);
+    assert.doesNotMatch(rendered.text, /third line/);
+    assert.match(rendered.text, /to expand/);
+    assert.doesNotMatch(rendered.text, /Exit code:/);
+  });
+
+  it("renders expanded command, exit code, and full formatted output", () => {
+    const tool = registerGithubSearchTool();
+
+    const rendered = tool.renderResult(
+      {
+        isError: true,
+        content: [{ type: "text", text: "stdout line\n\nstderr:\nstderr line" }],
+        details: {
+          command: "gh api repos/owner/repo",
+          code: 1,
+          stdout: "stdout line",
+          stderr: "stderr line",
+        },
+      },
+      { expanded: true, isPartial: false },
+      theme,
+      { isError: true },
+    );
+
+    assert.match(rendered.text, /✗ github-search/);
+    assert.doesNotMatch(rendered.text, /Failed/);
+    assert.match(rendered.text, /Command: gh api repos\/owner\/repo/);
+    assert.match(rendered.text, /Exit code: 1/);
+    assert.match(rendered.text, /stdout line/);
+    assert.match(rendered.text, /stderr:\nstderr line/);
+    assert.doesNotMatch(rendered.text, /to expand/);
   });
 });
