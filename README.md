@@ -7,5 +7,5 @@ This repository stores my customizations for the [pi coding agent](https://githu
 ```shell
 git clone git@github.com:goofansu/pi-stuff.git
 cd pi-stuff
-make
+make install
 ```
