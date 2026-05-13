@@ -1,5 +1,4 @@
 ---
-name: code-reviewer
 description: Review completed implementation steps against the original plan and coding standards.
 ---
 
