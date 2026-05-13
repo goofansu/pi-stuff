@@ -14,7 +14,6 @@ Save one or multiple bookmarks to [Raindrop.io](https://raindrop.io) via its RES
 
 - **`RAINDROP_TOKEN`** environment variable must be set (a Raindrop.io API token — get one from raindrop.io/settings/integrations).
 - **Required fields per bookmark:** `link`, `title`
-- **Optional:** `note` — personal context about when/why the bookmark was saved (maps directly to Raindrop's `note` field)
 - **Optional:** `tags` — array of strings; infer relevant tags from context if the user doesn't provide them
 
 If the user doesn't provide a title, infer one from context (the page title if known, the URL path, or a short description from the conversation).
@@ -34,7 +33,6 @@ curl -s -X POST \
   -d '{
     "link": "https://example.com",
     "title": "Example Title",
-    "note": "Why/when I saved this",
     "tags": ["tag1", "tag2"],
     "pleaseParse": {}
   }' \
@@ -54,8 +52,8 @@ curl -s -X POST \
   -H "Content-Type: application/json" \
   -d '{
     "items": [
-      {"link": "https://example.com/a", "title": "Title A", "note": "Note A", "tags": ["tag1"], "pleaseParse": {}},
-      {"link": "https://example.com/b", "title": "Title B", "note": "Note B", "tags": ["tag2"], "pleaseParse": {}}
+      {"link": "https://example.com/a", "title": "Title A", "tags": ["tag1"], "pleaseParse": {}},
+      {"link": "https://example.com/b", "title": "Title B", "tags": ["tag2"], "pleaseParse": {}}
     ]
   }' \
   "https://api.raindrop.io/rest/v1/raindrops"
@@ -78,7 +76,6 @@ curl -s -X PUT \
   -H "Content-Type: application/json" \
   -d '{
     "title": "New Title",
-    "note": "Updated note",
     "tags": ["tag1", "tag2"],
     "important": true
   }' \
@@ -110,7 +107,7 @@ Response: `{ "result": true }`
 
 ## Workflow
 
-1. **Collect** link(s), title(s), optional note(s), and optional tag(s) from the user. Ask for any missing required fields (`link`, `title`). Infer tags if not provided.
+1. **Collect** link(s), title(s), and optional tag(s) from the user. Ask for any missing required fields (`link`, `title`). Infer tags if not provided.
 2. **Determine intent:** save (POST), update (PUT), or delete (DELETE)? For update/delete, obtain the raindrop `id` from the user or from a prior save response.
 3. **Choose** single vs. bulk endpoint for saves based on count.
 4. **Call** the API with `curl`. Pipe through `jq` if available for readable output.
