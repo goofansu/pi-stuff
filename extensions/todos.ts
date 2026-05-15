@@ -327,7 +327,6 @@ class TodoSelectorComponent extends Container implements Focusable {
     this.onCancelCallback = onCancel;
 
     this.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
-    this.addChild(new Spacer(1));
 
     this.headerText = new Text("", 1, 0);
     this.addChild(this.headerText);
@@ -350,7 +349,6 @@ class TodoSelectorComponent extends Container implements Focusable {
     this.addChild(new Spacer(1));
     this.hintText = new Text("", 1, 0);
     this.addChild(this.hintText);
-    this.addChild(new Spacer(1));
     this.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
 
     this.updateHeader();

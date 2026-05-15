@@ -1255,7 +1255,7 @@ export default function (pi: ExtensionAPI) {
         container.addChild(listContainer);
         container.addChild(
           new Text(
-            theme.fg("dim", "Type to filter • ") +
+            theme.fg("dim", "Type to search • ") +
               keyHint("tui.select.confirm", "select") +
               theme.fg("dim", " • ") +
               keyHint("tui.select.cancel", "cancel"),
@@ -1378,7 +1378,7 @@ export default function (pi: ExtensionAPI) {
         container.addChild(listContainer);
         container.addChild(
           new Text(
-            theme.fg("dim", "Type to filter • ") +
+            theme.fg("dim", "Type to search • ") +
               keyHint("tui.select.confirm", "select") +
               theme.fg("dim", " • ") +
               keyHint("tui.select.cancel", "cancel"),

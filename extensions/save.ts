@@ -328,7 +328,7 @@ async function showSavesSelector(
       container.addChild(new Spacer(1));
       container.addChild(
         new Text(
-          theme.fg("dim", "Type to filter • ") +
+          theme.fg("dim", "Type to search • ") +
             keyHint("tui.select.confirm", "actions") +
             theme.fg("dim", " • ") +
             keyHint("tui.select.cancel", "close"),
