@@ -324,6 +324,8 @@ async function showSavesSelector(
 
       const listContainer = new Container();
       container.addChild(listContainer);
+      const counterText = new Text("", 1, 0);
+      container.addChild(counterText);
       container.addChild(new Spacer(1));
       container.addChild(
         new Text(
@@ -339,14 +341,25 @@ async function showSavesSelector(
 
       let filteredItems = items;
       let selectList: SelectList | null = null;
+      let selectedIdx = 0;
+
+      const updateCounter = () => {
+        counterText.setText(
+          filteredItems.length > 0
+            ? theme.fg("dim", `(${selectedIdx + 1}/${filteredItems.length})`)
+            : "",
+        );
+      };
 
       const updateList = () => {
         listContainer.clear();
+        selectedIdx = 0;
         if (filteredItems.length === 0) {
           listContainer.addChild(
             new Text(theme.fg("warning", "  No matching saves"), 0, 0),
           );
           selectList = null;
+          updateCounter();
           return;
         }
         selectList = new SelectList(
@@ -355,13 +368,20 @@ async function showSavesSelector(
           {
             selectedPrefix: (text) => theme.fg("accent", text),
             selectedText: (text) => theme.fg("accent", text),
+            description: (text) => theme.fg("muted", text),
             scrollInfo: (text) => theme.fg("dim", text),
             noMatch: (text) => theme.fg("warning", text),
           },
         );
         selectList.onSelect = (item) => done(item.value as string);
         selectList.onCancel = () => done(null);
+        selectList.onSelectionChange = (item) => {
+          selectedIdx = filteredItems.findIndex((f) => f.value === item.value);
+          updateCounter();
+          tui.requestRender();
+        };
         listContainer.addChild(selectList);
+        updateCounter();
       };
 
       const applyFilter = () => {
