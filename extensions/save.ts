@@ -9,12 +9,23 @@ import { spawnSync } from "node:child_process";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import { join } from "node:path";
-import type { TextContent, UserMessage } from "@earendil-works/pi-ai";
+import type {
+  Api,
+  Model,
+  TextContent,
+  UserMessage,
+} from "@earendil-works/pi-ai";
+import { complete } from "@earendil-works/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionContext,
+  ModelRegistry,
 } from "@earendil-works/pi-coding-agent";
-import { DynamicBorder, keyHint } from "@earendil-works/pi-coding-agent";
+import {
+  BorderedLoader,
+  DynamicBorder,
+  keyHint,
+} from "@earendil-works/pi-coding-agent";
 import {
   Container,
   fuzzyFilter,
@@ -25,6 +36,10 @@ import {
   Text,
 } from "@earendil-works/pi-tui";
 
+// --- Constants ---
+
+const HAIKU_MODEL_ID = "claude-haiku-4-5";
+
 // --- Types ---
 
 type SaveFile = {
@@ -34,6 +49,18 @@ type SaveFile = {
 };
 
 // --- Shared helpers ---
+
+async function selectSummaryModel(
+  modelRegistry: ModelRegistry,
+  fallback: Model<Api>,
+): Promise<Model<Api>> {
+  const haiku = modelRegistry.find("opencode", HAIKU_MODEL_ID);
+  if (haiku) {
+    const auth = await modelRegistry.getApiKeyAndHeaders(haiku);
+    if (auth.ok) return haiku;
+  }
+  return fallback;
+}
 
 function extractText(content: UserMessage["content"] | string): string | null {
   if (typeof content === "string") return content;
@@ -184,7 +211,74 @@ async function gistSaveFile(
       result.code === 0 ? "success" : "error",
     );
   } else {
-    const result = await pi.exec("gh", ["gist", "create", filepath]);
+    // Summarize a short description for searchability
+    let description = "";
+    if (ctx.hasUI && ctx.model) {
+      const sessionModel = ctx.model;
+      description = await ctx.ui.custom<string>((tui, theme, _kb, done) => {
+        const loader = new BorderedLoader(
+          tui,
+          theme,
+          "Summarizing description…",
+        );
+        loader.onAbort = () => done("");
+
+        const doSummarize = async () => {
+          const model = await selectSummaryModel(
+            ctx.modelRegistry,
+            sessionModel,
+          );
+          const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+          if (!auth.ok || !auth.apiKey) return "";
+
+          const userMessage: UserMessage = {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Write a short one-sentence description (max 100 chars) for this saved note, suitable for searching later:\n\n${content}`,
+              },
+            ],
+            timestamp: Date.now(),
+          };
+
+          const response = await complete(
+            model,
+            {
+              systemPrompt:
+                "You write short, searchable one-sentence descriptions for notes. Respond with only the description — no quotes, no trailing punctuation.",
+              messages: [userMessage],
+            },
+            {
+              apiKey: auth.apiKey,
+              headers: auth.headers,
+              signal: loader.signal,
+            },
+          );
+
+          if (response.stopReason === "aborted") return "";
+
+          return response.content
+            .filter(
+              (c): c is { type: "text"; text: string } => c.type === "text",
+            )
+            .map((c) => c.text)
+            .join("")
+            .trim()
+            .slice(0, 100);
+        };
+
+        doSummarize()
+          .then(done)
+          .catch(() => done(""));
+        return loader;
+      });
+    }
+
+    const ghArgs = ["gist", "create", filepath];
+    if (description) ghArgs.push("--desc", description);
+
+    const result = await pi.exec("gh", ghArgs);
     if (result.code !== 0) {
       ctx.ui.notify(result.stderr?.trim() || "Failed to create gist", "error");
       return;
