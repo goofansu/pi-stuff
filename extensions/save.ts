@@ -324,7 +324,7 @@ async function showSavesSelector(
 
       const listContainer = new Container();
       container.addChild(listContainer);
-      const counterText = new Text("", 1, 0);
+      const counterText = new Text("", 0, 0);
       container.addChild(counterText);
       container.addChild(new Spacer(1));
       container.addChild(
@@ -346,7 +346,7 @@ async function showSavesSelector(
       const updateCounter = () => {
         counterText.setText(
           filteredItems.length > 0
-            ? theme.fg("dim", `(${selectedIdx + 1}/${filteredItems.length})`)
+            ? theme.fg("dim", `  (${selectedIdx + 1}/${filteredItems.length})`)
             : "",
         );
       };
