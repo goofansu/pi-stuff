@@ -1,6 +1,6 @@
 ---
 name: github
-description: Use when the user wants to find, read, or download GitHub resources (issues, gists) to local. Triggers on "pull this issue", "download that gist", "get issue #123", "find my gists", "sync issues locally", or any request involving GitHub issues or gists that need to be fetched to disk for inspection or processing.
+description: Use when the user wants to find, read, or download GitHub resources (issues, gists) to local. Triggers on "pull this issue", "download that gist", "get issue 123", "find my gists", "sync issues locally", or any request involving GitHub issues or gists that need to be fetched to disk for inspection or processing.
 ---
 
 # GitHub
