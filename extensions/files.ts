@@ -1126,10 +1126,7 @@ const runFileBrowser = async (
   let lastSelectedPath: string | null = null;
   while (true) {
     const selected = await showFileSelector(ctx, files, lastSelectedPath);
-    if (!selected) {
-      ctx.ui.notify("Files cancelled", "info");
-      return;
-    }
+    if (!selected) return;
 
     lastSelectedPath = selected.canonicalPath;
 
