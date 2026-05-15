@@ -378,7 +378,7 @@ class TodoSelectorComponent extends Container implements Focusable {
 
   private updateHints(): void {
     this.hintText.setText(
-      this.theme.fg("dim", "Type to search • ↑↓ select • ") +
+      this.theme.fg("dim", "Type to search • ") +
         keyHint("tui.select.confirm", "actions") +
         this.theme.fg("dim", " • ctrl+shift+w work • ctrl+shift+r refine • ") +
         keyHint("tui.select.cancel", "close"),
