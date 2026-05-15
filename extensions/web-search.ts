@@ -244,15 +244,15 @@ async function braveLlmContext(
 
 export default function (pi: ExtensionAPI) {
   pi.registerTool({
-    name: "web-search",
+    name: "web_search",
     label: "Web Search",
     description:
       "Search the web with Brave LLM Context. Use when the user asks for current information, recent events, external facts, product/docs lookups, or web-grounded research.",
     promptSnippet:
       "Search the web with Brave LLM Context and return extracted content plus sources",
     promptGuidelines: [
-      "Use web-search for current information, recent events, external facts, or product/docs lookups. Do NOT use it when the user provides a specific URL to read or inspect — web-search is for queries, not fetching known URLs.",
-      "Rewrite the user's request into a concise search query before calling web-search, then cite the returned sources in your answer.",
+      "Use web_search for current information, recent events, external facts, or product/docs lookups. Do NOT use it when the user provides a specific URL to read or inspect — web_search is for queries, not fetching known URLs.",
+      "Rewrite the user's request into a concise search query before calling web_search, then cite the returned sources in your answer.",
     ],
     parameters: Type.Object({
       query: Type.String({
@@ -297,7 +297,7 @@ export default function (pi: ExtensionAPI) {
       const query = String((args as SearchParams).query ?? "");
       const preview = query.length > 80 ? `${query.slice(0, 77)}...` : query;
       return new Text(
-        theme.fg("toolTitle", theme.bold("web-search ")) +
+        theme.fg("toolTitle", theme.bold("web_search ")) +
           theme.fg("dim", preview),
         0,
         0,
@@ -315,7 +315,7 @@ export default function (pi: ExtensionAPI) {
         : isError
           ? theme.fg("error", "✗")
           : theme.fg("success", "✓");
-      const title = `${icon} ${theme.fg("toolTitle", theme.bold("web-search"))}`;
+      const title = `${icon} ${theme.fg("toolTitle", theme.bold("web_search"))}`;
 
       if (expanded) {
         const container = new Container();
@@ -378,7 +378,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerCommand("web-search", {
     description:
-      "Search the web with Brave LLM Context; the main agent rewrites the query and calls the web-search tool",
+      "Search the web with Brave LLM Context; the main agent rewrites the query and calls the web_search tool",
     handler: async (args, ctx: ExtensionContext) => {
       let request = args?.trim() || "";
 
@@ -396,7 +396,7 @@ export default function (pi: ExtensionAPI) {
         request = input.trim();
       }
 
-      pi.sendUserMessage(`Use the web-search tool to research: ${request}`, {
+      pi.sendUserMessage(`Use the web_search tool to research: ${request}`, {
         deliverAs: "followUp",
       });
     },

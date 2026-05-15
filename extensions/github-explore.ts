@@ -141,16 +141,16 @@ function expandHint(): string {
 
 export default function (pi: ExtensionAPI): void {
   pi.registerTool({
-    name: "github-explore",
+    name: "github_explore",
     label: "GitHub Explore",
     description:
       "Explore public GitHub repositories to gather ideas, examples, and inspiration. Search for code patterns, discover how other projects solve a problem, or browse public repos for reference.",
     promptSnippet:
       "Explore public GitHub repos and search code for ideas and examples",
     promptGuidelines: [
-      "Use github-explore to research how other public projects implement a feature or pattern — e.g. `search code 'streaming parser language:ts'` to find examples.",
-      "The github-explore tool only accepts structured input: set command to an allowed search/read subcommand and put every remaining CLI token in args.",
-      "Do NOT use github-explore for the current project (CI, workflow runs, PRs, issues, commits) or write operations — use the bash tool with `gh` instead.",
+      "Use github_explore to research how other public projects implement a feature or pattern — e.g. `search code 'streaming parser language:ts'` to find examples.",
+      "The github_explore tool only accepts structured input: set command to an allowed search/read subcommand and put every remaining CLI token in args.",
+      "Do NOT use github_explore for the current project (CI, workflow runs, PRs, issues, commits) or write operations — use the bash tool with `gh` instead.",
     ],
     parameters: Type.Object({
       command: StringEnum(READ_ONLY_COMMANDS, {
@@ -208,7 +208,7 @@ export default function (pi: ExtensionAPI): void {
       const params = args as GhToolParams;
       const suffix = [params.command, ...(params.args ?? [])].join(" ");
       return new Text(
-        `${theme.fg("toolTitle", theme.bold("github-explore "))}${theme.fg("dim", suffix)}`,
+        `${theme.fg("toolTitle", theme.bold("github_explore "))}${theme.fg("dim", suffix)}`,
         0,
         0,
       );
@@ -227,7 +227,7 @@ export default function (pi: ExtensionAPI): void {
       const isError =
         context.isError || (result as { isError?: boolean }).isError === true;
       const icon = isError ? theme.fg("error", "✗") : theme.fg("success", "✓");
-      const title = `${icon} ${theme.fg("toolTitle", theme.bold("github-explore"))}`;
+      const title = `${icon} ${theme.fg("toolTitle", theme.bold("github_explore"))}`;
 
       if (details?.error) {
         return new Text(`${title}\n${theme.fg("error", details.error)}`, 0, 0);
