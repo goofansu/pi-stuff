@@ -313,7 +313,6 @@ async function showSavesSelector(
     (tui, theme, keybindings, done) => {
       const container = new Container();
       container.addChild(new DynamicBorder((s) => theme.fg("accent", s)));
-      container.addChild(new Spacer(1));
       container.addChild(
         new Text(theme.fg("accent", theme.bold("Saves")), 1, 0),
       );
