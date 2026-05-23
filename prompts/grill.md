@@ -2,6 +2,7 @@
 description: Grill me on my changes — don't let me merge until I can explain them
 argument-hint: "[changes]"
 ---
+
 Grill me on these changes: $@
 
 Review the diff, then ask me tough questions about:

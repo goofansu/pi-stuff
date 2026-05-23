@@ -2,6 +2,7 @@
 description: Prove the current changes actually work by diffing behavior against the base branch
 argument-hint: "[changes]"
 ---
+
 Prove to me this works: $@
 
 Diff the behavior between the current branch and its base:

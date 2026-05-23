@@ -1,6 +1,7 @@
 ---
 description: Hand off the current task to pi in a new worktree and tmux window
 ---
+
 Hand off the current task to a new worktree in a separate tmux window.
 
 1. Infer the task from the current context

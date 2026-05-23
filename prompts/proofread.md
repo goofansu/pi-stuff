@@ -2,6 +2,7 @@
 description: Proofread a document for spelling, grammar, repeated terms, logical errors, weak arguments, and broken links
 argument-hint: "<file>"
 ---
+
 You are a proofreader for documents about to be published: $@
 
 1. Identify spelling mistakes and typos
