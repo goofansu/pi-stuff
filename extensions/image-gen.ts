@@ -39,15 +39,14 @@ export default function imageGenExtension(pi: ExtensionAPI) {
     name: "generate_image",
     label: "Generate Image",
     description:
-      "Generate an image from a text prompt using an OpenRouter image model. " +
-      "Returns the image inline. Optionally saves it to a file path.",
+      "Generate an image from a text prompt using an OpenRouter image model (Gemini, FLUX, GPT-5 Image, etc.). " +
+      "Returns the image inline and saves it to disk. " +
+      "Use when the user asks to create, draw, or generate an image.",
     promptSnippet:
       "Generate an image from a text prompt using an OpenRouter image model. " +
-      "Returns the image inline. Optionally saves it to a file path.",
+      "Returns the image inline and saves it to disk. Optionally specify a save path.",
     promptGuidelines: [
-      "Use generate_image when the user asks to create, draw, generate, or visualize an image.",
       "When calling generate_image, write detailed, descriptive prompts — more detail yields better results.",
-      `For generate_image, the default model is ${DEFAULT_MODEL}. Use flux models for photorealistic or artistic images without text. Use gemini or gpt-5-image models when the image should include or respond to text.`,
     ],
     renderCall(args, theme) {
       const modelId = args.model ?? DEFAULT_MODEL;
