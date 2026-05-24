@@ -13,9 +13,21 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import {
   CustomEditor,
+  DynamicBorder,
+  keyHint,
   ModelSelectorComponent,
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+import {
+  Container,
+  type Focusable,
+  fuzzyMatch,
+  Input,
+  type KeybindingsManager,
+  Spacer,
+  Text,
+  type TUI,
+} from "@earendil-works/pi-tui";
 
 // =============================================================================
 // Modes
@@ -745,6 +757,205 @@ async function applyMode(
   }
 }
 
+type KeybindingMatcher = Pick<KeybindingsManager, "matches">;
+
+class ModeSelectorComponent extends Container implements Focusable {
+  private searchInput: Input;
+  private listContainer: Container;
+  private allModes: string[];
+  private filteredModes: string[];
+  private selectedIndex = 0;
+  private onSelectCallback: (choice: string) => void;
+  private onCancelCallback: () => void;
+  private tuiRef: TUI;
+  private themeRef: Theme;
+  private keybindings: KeybindingMatcher;
+  private headerText: Text;
+  private hintText: Text;
+  private currentMode: string;
+
+  private _focused = false;
+  get focused(): boolean {
+    return this._focused;
+  }
+  set focused(value: boolean) {
+    this._focused = value;
+    this.searchInput.focused = value;
+  }
+
+  constructor(
+    tui: TUI,
+    theme: Theme,
+    keybindings: KeybindingMatcher,
+    modes: string[],
+    currentMode: string,
+    onSelect: (choice: string) => void,
+    onCancel: () => void,
+  ) {
+    super();
+    this.tuiRef = tui;
+    this.themeRef = theme;
+    this.keybindings = keybindings;
+    this.allModes = modes;
+    this.filteredModes = [...modes];
+    this.currentMode = currentMode;
+    this.onSelectCallback = onSelect;
+    this.onCancelCallback = onCancel;
+
+    this.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
+
+    this.headerText = new Text("", 1, 0);
+    this.addChild(this.headerText);
+    this.addChild(new Spacer(1));
+
+    this.searchInput = new Input();
+    this.searchInput.onSubmit = () => {
+      const selected = this.getSelectedItem();
+      if (selected) this.onSelectCallback(selected);
+    };
+    this.addChild(this.searchInput);
+
+    this.addChild(new Spacer(1));
+    this.listContainer = new Container();
+    this.addChild(this.listContainer);
+
+    this.addChild(new Spacer(1));
+    this.hintText = new Text("", 1, 0);
+    this.addChild(this.hintText);
+    this.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
+
+    this.updateHeader();
+    this.updateHints();
+    this.applyFilter("");
+  }
+
+  private getSelectedItem(): string | undefined {
+    const allItems = [...this.filteredModes, MODE_UI_CONFIGURE];
+    return allItems[this.selectedIndex];
+  }
+
+  private getTotalItems(): number {
+    return this.filteredModes.length + 1; // +1 for Configure
+  }
+
+  private updateHeader(): void {
+    const title = `Mode (current: ${this.currentMode})`;
+    this.headerText.setText(
+      this.themeRef.fg("accent", this.themeRef.bold(title)),
+    );
+  }
+
+  private updateHints(): void {
+    this.hintText.setText(
+      this.themeRef.fg("dim", "Type to filter • ") +
+        keyHint("tui.select.confirm", "select") +
+        this.themeRef.fg("dim", " • ") +
+        keyHint("tui.select.cancel", "close"),
+    );
+  }
+
+  private applyFilter(query: string): void {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      this.filteredModes = [...this.allModes];
+    } else {
+      this.filteredModes = this.allModes.filter((name) => {
+        const result = fuzzyMatch(trimmed, name);
+        return result.matches;
+      });
+    }
+    this.selectedIndex = Math.min(
+      this.selectedIndex,
+      Math.max(0, this.getTotalItems() - 1),
+    );
+    this.updateList();
+  }
+
+  private updateList(): void {
+    this.listContainer.clear();
+    const allItems = [...this.filteredModes, MODE_UI_CONFIGURE];
+
+    const maxVisible = 10;
+    const startIndex = Math.max(
+      0,
+      Math.min(
+        this.selectedIndex - Math.floor(maxVisible / 2),
+        Math.max(0, allItems.length - maxVisible),
+      ),
+    );
+    const endIndex = Math.min(startIndex + maxVisible, allItems.length);
+
+    for (let i = startIndex; i < endIndex; i += 1) {
+      const item = allItems[i];
+      if (!item) continue;
+      const isSelected = i === this.selectedIndex;
+      const isCurrent = item === this.currentMode;
+      const isConfig = item === MODE_UI_CONFIGURE;
+      const prefix = isSelected ? this.themeRef.fg("accent", "→ ") : "  ";
+      const nameColor = isConfig
+        ? "muted"
+        : isSelected
+          ? "accent"
+          : isCurrent
+            ? "success"
+            : "text";
+      const currentMarker = isCurrent
+        ? ` ${this.themeRef.fg("success", "✓")}`
+        : "";
+      const line = prefix + this.themeRef.fg(nameColor, item) + currentMarker;
+      this.listContainer.addChild(new Text(line, 0, 0));
+    }
+
+    if (startIndex > 0 || endIndex < allItems.length) {
+      const scrollInfo = this.themeRef.fg(
+        "dim",
+        `  (${this.selectedIndex + 1}/${allItems.length})`,
+      );
+      this.listContainer.addChild(new Text(scrollInfo, 0, 0));
+    }
+  }
+
+  handleInput(keyData: string): void {
+    const kb = this.keybindings;
+    const total = this.getTotalItems();
+    if (kb.matches(keyData, "tui.select.up")) {
+      if (total === 0) return;
+      this.selectedIndex =
+        this.selectedIndex === 0 ? total - 1 : this.selectedIndex - 1;
+      this.updateList();
+      this.tuiRef.requestRender();
+      return;
+    }
+    if (kb.matches(keyData, "tui.select.down")) {
+      if (total === 0) return;
+      this.selectedIndex =
+        this.selectedIndex === total - 1 ? 0 : this.selectedIndex + 1;
+      this.updateList();
+      this.tuiRef.requestRender();
+      return;
+    }
+    if (kb.matches(keyData, "tui.select.confirm")) {
+      const selected = this.getSelectedItem();
+      if (selected) this.onSelectCallback(selected);
+      return;
+    }
+    if (kb.matches(keyData, "tui.select.cancel")) {
+      this.onCancelCallback();
+      return;
+    }
+    this.searchInput.handleInput(keyData);
+    this.applyFilter(this.searchInput.getValue());
+    this.tuiRef.requestRender();
+  }
+
+  override invalidate(): void {
+    super.invalidate();
+    this.updateHeader();
+    this.updateHints();
+    this.updateList();
+  }
+}
+
 const MODE_UI_CONFIGURE = "Configure modes…";
 const MODE_UI_ADD = "Add mode…";
 const MODE_UI_BACK = "Back";
@@ -826,10 +1037,20 @@ async function selectModeUI(
   while (true) {
     await ensureRuntime(pi, ctx);
     const names = orderedModeNames(runtime.data.modes);
-    const choice = await ctx.ui.select(
-      `Mode (current: ${runtime.currentMode})`,
-      [...names, MODE_UI_CONFIGURE],
+
+    const choice = await ctx.ui.custom<string | null>(
+      (tui, theme, keybindings, done) =>
+        new ModeSelectorComponent(
+          tui,
+          theme,
+          keybindings,
+          names,
+          runtime.currentMode,
+          (selected) => done(selected),
+          () => done(null),
+        ),
     );
+
     if (!choice) return;
 
     if (choice === MODE_UI_CONFIGURE) {
