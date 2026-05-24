@@ -7,7 +7,8 @@
  * recent events, external facts, product/docs lookups, or anything that benefits
  * from web grounding. Also provides a /web-search command for direct use.
  *
- * Requires BRAVE_SEARCH_API_KEY from https://api.search.brave.com.
+ * Requires:
+ *   BRAVE_SEARCH_API_KEY — API key from https://api.search.brave.com
  */
 
 import { StringEnum, Type } from "@earendil-works/pi-ai";
@@ -243,6 +244,15 @@ async function braveLlmContext(
 }
 
 export default function (pi: ExtensionAPI) {
+  pi.on("session_start", (_event, ctx) => {
+    if (!process.env.BRAVE_SEARCH_API_KEY) {
+      ctx.ui.notify(
+        "web-search: BRAVE_SEARCH_API_KEY is not set — web_search tool will fail.",
+        "warning",
+      );
+    }
+  });
+
   pi.registerTool({
     name: "web_search",
     label: "Web Search",

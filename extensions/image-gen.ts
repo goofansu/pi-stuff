@@ -4,7 +4,8 @@
  * Registers a generate_image tool that lets the LLM generate images
  * via OpenRouter image models (Gemini, FLUX, GPT-5 Image, etc.).
  *
- * Requires: OPENROUTER_API_KEY environment variable.
+ * Requires:
+ *   OPENROUTER_API_KEY — API key from https://openrouter.ai
  */
 
 import { writeFileSync } from "node:fs";

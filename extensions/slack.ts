@@ -63,6 +63,18 @@ async function slackPost(
 }
 
 export default function (pi: ExtensionAPI) {
+  pi.on("session_start", (_event, ctx) => {
+    if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_CHANNEL_ID) {
+      const missing = ["SLACK_BOT_TOKEN", "SLACK_CHANNEL_ID"]
+        .filter((v) => !process.env[v])
+        .join(", ");
+      ctx.ui.notify(
+        `slack: ${missing} not set — slack_message tool will fail.`,
+        "warning",
+      );
+    }
+  });
+
   pi.registerTool({
     name: "slack_message",
     label: "Slack Message",
