@@ -46,8 +46,8 @@ export default function imageGenExtension(pi: ExtensionAPI) {
       "Returns the image inline. Optionally saves it to a file path.",
     promptGuidelines: [
       "Use generate_image when the user asks to create, draw, generate, or visualize an image.",
-      "Write detailed, descriptive prompts — more detail yields better results.",
-      `The default model is ${DEFAULT_MODEL}. Use flux models for photorealistic or artistic images without text. Use gemini or gpt-5-image models when the image should include or respond to text.`,
+      "When calling generate_image, write detailed, descriptive prompts — more detail yields better results.",
+      `For generate_image, the default model is ${DEFAULT_MODEL}. Use flux models for photorealistic or artistic images without text. Use gemini or gpt-5-image models when the image should include or respond to text.`,
     ],
     renderCall(args, theme) {
       const modelId = args.model ?? DEFAULT_MODEL;
