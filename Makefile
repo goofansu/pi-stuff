@@ -28,6 +28,6 @@ define skills-add
 endef
 
 third-party-skills:
-	$(call skills-add,anthropics/skills,skill-creator frontend-design)
+	$(call skills-add,anthropics/skills,frontend-design)
 	$(call skills-add,max-sixty/worktrunk,worktrunk)
 	$(call skills-add,obra/superpowers)
