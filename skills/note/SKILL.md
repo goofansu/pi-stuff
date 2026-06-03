@@ -1,8 +1,6 @@
 ---
 name: note
-description: >
-  Use when the user wants to create a note, take notes, jot something down, or
-  save information as a note.
+description: Use when the user asks to take a note.
 ---
 
 # Note
@@ -57,5 +55,3 @@ Use `~code~` for inline references to commands, variables, filenames, and short 
 1. **Create the note** with `denote-journal-new-entry` and capture the file path. Stop and tell the user if it fails.
 2. **Append content** using `cat >> "$NOTE"`.
 3. **Report**: Show the file path and ask the user to refresh the buffer in Emacs.
-
-
