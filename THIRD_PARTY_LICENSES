@@ -328,6 +328,7 @@ mattpocock/skills
 Source: https://github.com/mattpocock/skills
 Files:
   - skills/grill-with-docs/
+  - skills/handoff/
 License: MIT License
 Upstream license file: https://github.com/mattpocock/skills/blob/main/LICENSE
 
