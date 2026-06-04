@@ -1,19 +1,12 @@
 #!/bin/bash
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-# Source config if available
-if [ -f "$SCRIPT_DIR/config" ]; then
-  source "$SCRIPT_DIR/config"
-fi
-
 if [ -z "$1" ]; then
   echo "Usage: transcribe.sh <audio-file>"
   exit 1
 fi
 
 if [ -z "$GROQ_API_KEY" ]; then
-  echo "Error: GROQ_API_KEY not set. Create config file with: echo 'GROQ_API_KEY=\"your-key\"' > $SCRIPT_DIR/config"
+  echo "Error: GROQ_API_KEY not set."
   exit 1
 fi
 
