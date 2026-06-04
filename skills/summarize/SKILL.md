@@ -1,6 +1,6 @@
 ---
 name: summarize
-description: "Fetch a URL or convert a local file (PDF/DOCX/HTML/etc.) into Markdown using `uvx markitdown`, optionally it can summarize"
+description: Use when the user asks to convert a URL or local document into Markdown or summarize it.
 ---
 
 # Summarize

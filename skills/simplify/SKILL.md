@@ -1,6 +1,6 @@
 ---
 name: simplify
-description: Instructions for simplifying code
+description: Use when the user asks to simplify, review, or improve changed code.
 ---
 
 # Simplify

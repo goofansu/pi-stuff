@@ -1,6 +1,6 @@
 ---
 name: pi-share
-description: "Load and parse session transcripts from shittycodingagent.ai/buildwithpi.ai/buildwithpi.com/pi.dev (pi-share) URLs. Fetches gists, decodes embedded session data, and extracts conversation history."
+description: Use when the user asks to load, parse, or summarize pi-share session URLs or gist IDs.
 ---
 
 # pi-share / buildwithpi Session Loader

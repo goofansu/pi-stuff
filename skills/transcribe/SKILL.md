@@ -1,6 +1,6 @@
 ---
 name: transcribe
-description: Speech-to-text transcription using Groq Whisper API. Supports m4a, mp3, wav, ogg, flac, webm.
+description: Use when the user asks to transcribe audio files to text.
 ---
 
 # Transcribe

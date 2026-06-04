@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Use when the user asks to handoff current session.
+description: Use when the user asks to hand off the current session to a fresh agent.
 ---
 
 # Handoff

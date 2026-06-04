@@ -1,6 +1,6 @@
 ---
 name: commit
-description: "Read this skill before making git commits"
+description: Use when the user asks to create a git commit for current changes.
 ---
 
 Create a git commit for the current changes using a concise Conventional Commits-style subject.
