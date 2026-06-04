@@ -111,7 +111,7 @@ describe("github-explore renderResult", () => {
       { isError: false },
     );
 
-    assert.match(rendered.text, /✓ github-explore/);
+    assert.match(rendered.text, /✓ github_explore/);
     assert.match(rendered.text, /gh search code example --repo owner\/repo/);
     assert.doesNotMatch(rendered.text, /Done/);
     assert.doesNotMatch(rendered.text, /first line/);
@@ -140,7 +140,7 @@ describe("github-explore renderResult", () => {
       { isError: true },
     );
 
-    assert.match(rendered.text, /✗ github-explore/);
+    assert.match(rendered.text, /✗ github_explore/);
     assert.doesNotMatch(rendered.text, /Failed/);
     assert.match(rendered.text, /Command: gh api repos\/owner\/repo/);
     assert.match(rendered.text, /Exit code: 1/);

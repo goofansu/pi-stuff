@@ -5,6 +5,7 @@ import slackExtension from "../extensions/slack.ts";
 function registerSlackTool() {
   let tool: any;
   slackExtension({
+    on() {},
     registerTool(registeredTool: any) {
       tool = registeredTool;
     },

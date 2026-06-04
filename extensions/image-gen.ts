@@ -12,7 +12,6 @@ import { writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import {
   generateImages,
-  getImageModel,
   getImageModels,
   StringEnum,
 } from "@earendil-works/pi-ai";
@@ -89,7 +88,9 @@ export default function imageGenExtension(pi: ExtensionAPI) {
         details: { modelId, prompt: params.prompt, status: "generating" },
       });
 
-      const model = getImageModel("openrouter", modelId);
+      const model = getImageModels("openrouter").find(
+        (model) => model.id === modelId,
+      );
       if (!model) throw new Error(`Unknown image model: ${modelId}`);
 
       const result = await generateImages(
