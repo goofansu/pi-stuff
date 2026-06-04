@@ -278,8 +278,7 @@ export default function goalExtension(pi: ExtensionAPI) {
   }
 
   function accountElapsed(): boolean {
-    if (!goal || goal.status !== "active" || activeSinceMs === null)
-      return false;
+    if (goal?.status !== "active" || activeSinceMs === null) return false;
     const seconds = Math.max(
       0,
       Math.floor((Date.now() - activeSinceMs) / 1000),
@@ -389,7 +388,7 @@ export default function goalExtension(pi: ExtensionAPI) {
   }
 
   function maybeApplyBudgetLimit(): boolean {
-    if (!goal || goal.status !== "active" || goal.tokenBudget === undefined)
+    if (goal?.status !== "active" || goal.tokenBudget === undefined)
       return false;
     if (goal.tokensUsed < goal.tokenBudget) return false;
     accountElapsed();
@@ -402,7 +401,7 @@ export default function goalExtension(pi: ExtensionAPI) {
 
   function queueContinuation(ctx: ExtensionContext): void {
     const snapshot = currentGoalSnapshot();
-    if (!snapshot || snapshot.status !== "active") return;
+    if (snapshot?.status !== "active") return;
     if (continuationQueued || ctx.hasPendingMessages()) return;
 
     continuationQueued = true;
@@ -449,7 +448,7 @@ export default function goalExtension(pi: ExtensionAPI) {
 
   pi.on("before_agent_start", async (event) => {
     const snapshot = currentGoalSnapshot();
-    if (!snapshot || snapshot.status !== "active") return;
+    if (snapshot?.status !== "active") return;
     return {
       systemPrompt: `${event.systemPrompt}\n\n${activeGoalSystemPrompt(snapshot)}`,
     };

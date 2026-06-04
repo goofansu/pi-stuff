@@ -107,7 +107,7 @@ export default function imageGenExtension(pi: ExtensionAPI) {
       const imageBlock = result.output.find((b) => b.type === "image");
       const textBlock = result.output.find((b) => b.type === "text");
 
-      if (!imageBlock || imageBlock.type !== "image")
+      if (imageBlock?.type !== "image")
         throw new Error("No image was returned by the model");
 
       const ext = imageBlock.mimeType.split("/")[1] ?? "png";
