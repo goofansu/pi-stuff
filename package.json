@@ -8,10 +8,10 @@
     "test": "node --experimental-strip-types --test 'tests/**/*.test.ts'"
   },
   "peerDependencies": {
-    "@earendil-works/pi-agent-core": "^0.75.5",
-    "@earendil-works/pi-ai": "^0.75.5",
-    "@earendil-works/pi-coding-agent": "^0.75.5",
-    "@earendil-works/pi-tui": "^0.75.5",
+    "@earendil-works/pi-agent-core": "^0.78.0",
+    "@earendil-works/pi-ai": "^0.78.0",
+    "@earendil-works/pi-coding-agent": "^0.78.0",
+    "@earendil-works/pi-tui": "^0.78.0",
     "typebox": "*"
   },
   "devDependencies": {
