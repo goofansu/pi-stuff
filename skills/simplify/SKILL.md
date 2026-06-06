@@ -1,140 +1,119 @@
 ---
 name: simplify
-description: Use when the user asks to simplify or improve changed code.
+description: Use when the user asks to simplify, clean up, or improve changed code.
 ---
 
 # Simplify
 
-Review all changed files for reuse, quality, and efficiency. Fix any issues found.
+Improve the current changed code by making it simpler, more reusable, more maintainable, and more efficient without changing intended behavior.
 
-## Phase 1: Identify Changes
+## Desired outcome
 
-Run `git diff` (or `git diff HEAD` if there are staged changes) to see what changed. If there are no git changes, review the most recently modified files that the user mentioned or that you edited earlier in this conversation.
+The changed code should be cleaner and easier to review, with unnecessary complexity removed and behavior preserved.
 
-## Phase 2: Launch Three Review Subagents in Parallel
+A successful result may be either:
 
-Launch all three agents concurrently using the `subagent` tool. Pass each agent the full diff so it has the complete context.
+* changes that simplify the code, or
+* confirmation that the changed code is already clean.
 
-### Agent 1: Code Reuse Review
+## Scope
 
-```
-Subagent tool (general-purpose):
-  description: "Code Reuse Review"
-  prompt: |
-    Review the following diff for code reuse opportunities.
+Review the current git changes.
 
-    ## Diff
+Use:
 
-    [paste full diff here]
-
-    ## Your Job
-
-    For each change:
-
-    1. Search for existing utilities and helpers that could replace newly written code.
-       Look for similar patterns elsewhere in the codebase — common locations are utility
-       directories, shared modules, and files adjacent to the changed ones.
-    2. Flag any new function that duplicates existing functionality. Suggest the existing
-       function to use instead.
-    3. Flag any inline logic that could use an existing utility — hand-rolled string
-       manipulation, manual path handling, custom environment checks, ad-hoc type guards,
-       and similar patterns are common candidates.
-
-    ## Report Format
-
-    For each finding, report:
-    - File and line
-    - What was written
-    - What existing utility/function should be used instead
-    - If no issues found, say "No reuse issues found."
+```sh
+git status --short
+git diff
 ```
 
-### Agent 2: Code Quality Review
+If there are staged changes, also inspect:
 
-```
-Subagent tool (general-purpose):
-  description: "Code Quality Review"
-  prompt: |
-    Review the following diff for code quality issues.
-
-    ## Diff
-
-    [paste full diff here]
-
-    ## Your Job
-
-    Look for these hacky patterns:
-
-    1. **Redundant state**: state that duplicates existing state, cached values that could
-       be derived, observers/effects that could be direct calls
-    2. **Parameter sprawl**: adding new parameters to a function instead of generalizing
-       or restructuring existing ones
-    3. **Copy-paste with slight variation**: near-duplicate code blocks that should be
-       unified with a shared abstraction
-    4. **Leaky abstractions**: exposing internal details that should be encapsulated, or
-       breaking existing abstraction boundaries
-    5. **Stringly-typed code**: using raw strings where constants, enums (string unions),
-       or branded types already exist in the codebase
-    6. **Unnecessary JSX nesting**: wrapper elements that add no layout value — check if
-       inner component props already provide the needed behavior
-    7. **Nested conditionals**: ternary chains, nested if/else, or nested switch 3+ levels
-       deep — flatten with early returns, guard clauses, a lookup table, or if/else-if
-    8. **Unnecessary comments**: comments explaining WHAT the code does (well-named
-       identifiers already do that), narrating the change, or referencing the task/caller
-       — delete; keep only non-obvious WHY (hidden constraints, subtle invariants,
-       workarounds)
-
-    ## Report Format
-
-    For each finding, report:
-    - File and line
-    - Pattern violated
-    - Suggested fix
-    - If no issues found, say "No quality issues found."
+```sh
+git diff --staged
 ```
 
-### Agent 3: Efficiency Review
+If there are no git changes, review the most recently modified files that the user mentioned or that were edited earlier in the conversation.
 
-```
-Subagent tool (general-purpose):
-  description: "Code Efficiency Review"
-  prompt: |
-    Review the following diff for efficiency issues.
+Only edit files that are part of the current change unless an adjacent edit is clearly necessary to remove duplication or use an existing abstraction.
 
-    ## Diff
+## Review lenses
 
-    [paste full diff here]
+Evaluate the changed code through these lenses.
 
-    ## Your Job
+### 1. Reuse
 
-    Look for these efficiency problems:
+Look for newly added code that duplicates existing utilities, helpers, components, types, constants, or patterns.
 
-    1. **Unnecessary work**: redundant computations, repeated file reads, duplicate
-       network/API calls, N+1 patterns
-    2. **Missed concurrency**: independent operations run sequentially when they could
-       run in parallel
-    3. **Hot-path bloat**: new blocking work added to startup or per-request/per-render
-       hot paths
-    4. **Recurring no-op updates**: state/store updates inside polling loops, intervals,
-       or event handlers that fire unconditionally — add a change-detection guard so
-       downstream consumers aren't notified when nothing changed
-    5. **Unnecessary existence checks**: pre-checking file/resource existence before
-       operating (TOCTOU anti-pattern) — operate directly and handle the error
-    6. **Memory**: unbounded data structures, missing cleanup, event listener leaks
-    7. **Overly broad operations**: reading entire files when only a portion is needed,
-       loading all items when filtering for one
+Prefer existing project conventions over new one-off logic.
 
-    ## Report Format
+Common issues:
 
-    For each finding, report:
-    - File and line
-    - Problem category
-    - Suggested fix
-    - If no issues found, say "No efficiency issues found."
-```
+* hand-rolled string/path/date/env handling when utilities already exist
+* duplicated type guards or validation logic
+* new helpers that overlap with existing helpers
+* inline logic that should use shared code
+* repeated JSX or UI patterns that already have components
 
-## Phase 3: Fix Issues
+### 2. Code quality
 
-Wait for all three subagents to complete. Aggregate their findings and fix each issue directly. If a finding is a false positive or not worth addressing, note it and move on — do not argue with the finding, just skip it.
+Look for complexity or maintainability problems.
 
-When done, briefly summarize what was fixed (or confirm the code was already clean).
+Common issues:
+
+* redundant state that can be derived
+* unnecessary effects, observers, or caches
+* parameter sprawl instead of a clearer abstraction
+* copy-paste with slight variation
+* leaky abstractions
+* raw strings where constants, enums, or string unions already exist
+* unnecessary JSX wrappers
+* deeply nested conditionals that can be flattened
+* comments that explain obvious code, narrate the change, or reference the task instead of explaining non-obvious why
+
+### 3. Efficiency
+
+Look for avoidable work introduced by the change.
+
+Common issues:
+
+* repeated computation
+* duplicate file reads or network/API calls
+* N+1 patterns
+* independent async work done sequentially
+* blocking work added to startup, request, render, or other hot paths
+* unconditional state/store updates in loops, intervals, subscriptions, or event handlers
+* existence pre-checks that should instead operate directly and handle errors
+* unbounded memory growth or missing cleanup
+* broad reads or loads when a narrower operation is enough
+
+## How to work
+
+1. Inspect the changed files and surrounding code before editing.
+2. Search nearby/shared code for existing patterns before creating new abstractions.
+3. Apply only simplifications that clearly improve the current change.
+4. Preserve intended behavior and public APIs unless the user explicitly asks otherwise.
+5. Keep the diff smaller and clearer than what you started with.
+6. Do not introduce new dependencies unless explicitly justified.
+7. Do not perform broad rewrites, style-only churn, or speculative architecture changes.
+8. If a potential issue is subjective or low-value, leave it unchanged.
+
+For large or complex diffs, you may use subagents or separate review passes for reuse, quality, and efficiency. Do not use subagents mechanically for small diffs.
+
+## Validation
+
+After editing, run the most relevant available checks, such as targeted tests, typecheck, lint, or formatting.
+
+Prefer existing project scripts.
+
+If validation is unavailable, too expensive, or blocked, say what you were able to check instead.
+
+## Final response
+
+Briefly report:
+
+* what was simplified
+* any notable issues intentionally left unchanged
+* validation run and result
+
+If no edits were needed, say the changed code was already clean and mention what was checked.
