@@ -1,5 +1,5 @@
 ---
-description: Use when the user asks to proofread a document before publication.
+description: Proofread a document for spelling, grammar, repeated terms, logical errors, weak arguments, and broken links
 argument-hint: "<file>"
 ---
 
