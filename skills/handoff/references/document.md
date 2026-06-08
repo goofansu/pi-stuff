@@ -117,7 +117,7 @@ handoff-opencode-cache-20260606-143027-a7f3.md
 
 If a file with the chosen name already exists, do not overwrite it. Generate a new suffix.
 
-Prefer `$TMPDIR` when available. Otherwise use `/tmp`.
+Prefer `/tmp` for new handoff files.
 
 Do not save the handoff inside the current repository or workspace.
 
