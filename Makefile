@@ -1,6 +1,6 @@
-.PHONY: packages agents skills
+.PHONY: packages agents keybindings skills
 
-install: packages agents skills keybindings
+install: packages agents keybindings skills
 
 packages:
 	pi install .
@@ -22,9 +22,7 @@ define skills-add
 endef
 
 skills:
-	$(call skills-add,./skills)
-
-third-party-skills:
 	$(call skills-add,anthropics/skills,frontend-design)
 	$(call skills-add,mattpocock/skills,grill-with-docs)
 	$(call skills-add,obra/superpowers)
+	$(call skills-add,./pi-skills)
