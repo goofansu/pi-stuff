@@ -14,20 +14,15 @@ agents:
 		ln -svf $$f ~/.pi/agent/agents/$$(basename $$f); \
 	done
 
-skills:
-	mkdir -p ~/.pi/agent/skills
-	@for d in $(CURDIR)/skills/*/; do \
-		ln -svfn $$d ~/.pi/agent/skills/$$(basename $$d); \
-	done
-
 keybindings:
 	@ln -svf $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
 
 define skills-add
-	npx skills add $(1) $(if $(2),$(foreach s,$(2),-s $(s)),-s '*') -g -a codex -y
+	npx skills add $(1) $(if $(2),$(foreach s,$(2),-s $(s)),-s '*') -g -a codex -a claude-code -y
 endef
 
-third-party-skills:
+skills:
 	$(call skills-add,anthropics/skills,frontend-design)
 	$(call skills-add,mattpocock/skills,grill-with-docs)
 	$(call skills-add,obra/superpowers)
+	$(call skills-add,./skills)
