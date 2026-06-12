@@ -25,4 +25,3 @@ skills:
 	$(call skills-add,anthropics/skills,frontend-design)
 	$(call skills-add,mattpocock/skills,grill-with-docs)
 	$(call skills-add,obra/superpowers)
-	$(call skills-add,./pi-skills)
