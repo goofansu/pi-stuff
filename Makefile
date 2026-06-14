@@ -25,3 +25,10 @@ skills:
 	$(call skills-add,anthropics/skills,frontend-design)
 	$(call skills-add,mattpocock/skills,grill-with-docs)
 	$(call skills-add,obra/superpowers)
+
+SYNC_SKILLS := handoff transcribe
+
+sync-skills:
+	mkdir -p ~/.codex/skills ~/.claude/skills
+	@$(foreach skill,$(SYNC_SKILLS),ln -snvf $(CURDIR)/skills/$(skill) ~/.codex/skills/$(skill);)
+	@$(foreach skill,$(SYNC_SKILLS),ln -snvf $(CURDIR)/skills/$(skill) ~/.claude/skills/$(skill);)
