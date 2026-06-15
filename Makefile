@@ -23,10 +23,9 @@ endef
 
 skills:
 	$(call skills-add,anthropics/skills,frontend-design)
-	$(call skills-add,mattpocock/skills,grill-with-docs)
 	$(call skills-add,obra/superpowers)
 
-SYNC_SKILLS := handoff transcribe
+SYNC_SKILLS := handoff transcribe grill-with-docs
 
 sync-skills:
 	mkdir -p ~/.codex/skills ~/.claude/skills
