@@ -25,7 +25,7 @@ skills:
 	$(call skills-add,anthropics/skills,frontend-design)
 	$(call skills-add,obra/superpowers)
 
-SYNC_SKILLS := handoff transcribe grill-with-docs
+SYNC_SKILLS := handoff grill-with-docs
 
 sync-skills:
 	mkdir -p ~/.codex/skills ~/.claude/skills
