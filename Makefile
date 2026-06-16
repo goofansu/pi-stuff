@@ -18,7 +18,7 @@ keybindings:
 	@ln -svf $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
 
 define skills-add
-	npx skills add $(1) $(if $(2),$(foreach s,$(2),-s $(s)),-s '*') -g -a codex -a claude-code -y
+	npx skills add $(1) $(if $(2),$(foreach s,$(2),-s $(s)),-s '*') -g -a pi -y
 endef
 
 skills:
