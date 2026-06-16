@@ -32,8 +32,8 @@
   "prompt-editor.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/prompt-editor.ts",
-    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
-    "remark": "functionally_same: backported cycleMode fallback to first mode. Rest is code style (typed wrappers vs any casts)"
+    "reviewed": "a71bed215fb67005bdb23916110decff3dceeecb",
+    "remark": "functionally_same: applied bash status mode-label improvement and cycleMode fallback. Remaining diffs are code style (typed wrappers vs any casts)"
   },
   "review.ts": {
     "repo": "mitsuhiko/agent-stuff",
@@ -44,8 +44,8 @@
   "session-breakdown.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/session-breakdown.ts",
-    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
-    "remark": "functionally_same: keybinding system, visual polish (visibleWidth for correct ANSI width handling — bugfix over upstream .length), removed dead code"
+    "reviewed": "2ac44802c3629e8feb3e46ccf16c3928a4b356d6",
+    "remark": "functionally_same: applied faux-provider session skip. Remaining diffs are keybinding system, visual polish (visibleWidth for correct ANSI width handling — bugfix over upstream .length), removed dead code"
   },
   "todos.ts": {
     "repo": "mitsuhiko/agent-stuff",

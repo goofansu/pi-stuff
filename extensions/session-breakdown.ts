@@ -346,6 +346,27 @@ function modelKeyFromParts(
   return `${p}/${m}`;
 }
 
+function normalizedLowerString(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function isFauxModelReference(parts: {
+  api?: unknown;
+  provider?: unknown;
+  model?: unknown;
+  modelId?: unknown;
+}): boolean {
+  // pi-ai's test/mock provider is registered as api "faux:<random>" with provider "faux"
+  // and default model ids like "faux-1". It can emit token estimates, but those are
+  // synthetic and should not affect real session usage breakdowns.
+  const api = normalizedLowerString(parts.api);
+  if (api === "faux" || api.startsWith("faux:")) return true;
+  if (normalizedLowerString(parts.provider) === "faux") return true;
+
+  const model = normalizedLowerString(parts.model ?? parts.modelId);
+  return model === "faux" || model.startsWith("faux-");
+}
+
 function parseSessionStartFromFilename(name: string): Date | null {
   // Example: 2026-02-02T21-52-28-774Z_<uuid>.jsonl
   const m = name.match(
@@ -358,6 +379,7 @@ function parseSessionStartFromFilename(name: string): Date | null {
 }
 
 function extractProviderModelAndUsage(obj: unknown): {
+  api?: unknown;
   provider?: unknown;
   model?: unknown;
   modelId?: unknown;
@@ -369,6 +391,7 @@ function extractProviderModelAndUsage(obj: unknown): {
   const record = asRecord(obj);
   const msg = asRecord(record?.message);
   return {
+    api: record?.api ?? msg?.api,
     provider: record?.provider ?? msg?.provider,
     model: record?.model ?? msg?.model,
     modelId: record?.modelId ?? msg?.modelId,
@@ -508,6 +531,7 @@ async function parseSessionFile(
   const fileName = path.basename(filePath);
   let startedAt = parseSessionStartFromFilename(fileName);
   let currentModel: ModelKey | null = null;
+  let currentModelIsFaux = false;
   let cwd: CwdKey | null = null;
 
   const modelsUsed = new Set<ModelKey>();
@@ -549,9 +573,22 @@ async function parseSessionFile(
       }
 
       if (objRecord?.type === "model_change") {
+        if (
+          isFauxModelReference({
+            api: objRecord.api,
+            provider: objRecord.provider,
+            modelId: objRecord.modelId,
+          })
+        ) {
+          currentModel = null;
+          currentModelIsFaux = true;
+          continue;
+        }
+
         const mk = modelKeyFromParts(objRecord.provider, objRecord.modelId);
+        currentModel = mk;
+        currentModelIsFaux = false;
         if (mk) {
-          currentModel = mk;
           modelsUsed.add(mk);
         }
         continue;
@@ -559,13 +596,23 @@ async function parseSessionFile(
 
       if (objRecord?.type !== "message") continue;
 
-      const { provider, model, modelId, usage } =
+      const { api, provider, model, modelId, usage } =
         extractProviderModelAndUsage(obj);
-      const mk =
+      const explicitMk =
         modelKeyFromParts(provider, model) ??
-        modelKeyFromParts(provider, modelId) ??
-        currentModel ??
-        "unknown";
+        modelKeyFromParts(provider, modelId);
+      if (isFauxModelReference({ api, provider, model, modelId })) {
+        currentModel = null;
+        currentModelIsFaux = true;
+        continue;
+      }
+      if (!explicitMk && currentModelIsFaux) continue;
+
+      const mk = explicitMk ?? currentModel ?? "unknown";
+      if (explicitMk) {
+        currentModel = explicitMk;
+        currentModelIsFaux = false;
+      }
       modelsUsed.add(mk);
 
       messages += 1;
@@ -588,7 +635,12 @@ async function parseSessionFile(
     stream.destroy();
   }
 
-  if (!startedAt) return null;
+  if (
+    !startedAt ||
+    (messages === 0 && modelsUsed.size === 0 && tokens === 0 && totalCost === 0)
+  ) {
+    return null;
+  }
   const dayKeyLocal = toLocalDayKey(startedAt);
   const dow = DOW_NAMES[mondayIndex(startedAt)];
   const tod = todBucketForHour(startedAt.getHours());
