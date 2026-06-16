@@ -18,16 +18,10 @@ keybindings:
 	@ln -svf $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
 
 define skills-add
-	npx skills add $(1) $(if $(2),$(foreach s,$(2),-s $(s)),-s '*') -g -a pi -y
+	npx skills add $(1) $(if $(2),$(foreach s,$(2),-s $(s)),-s '*') -g -a codex -a claude-code -y
 endef
 
 skills:
 	$(call skills-add,anthropics/skills,frontend-design)
+	$(call skills-add,mattpocock/skills,grill-with-docs)
 	$(call skills-add,obra/superpowers)
-
-SYNC_SKILLS := handoff grill-with-docs
-
-sync-skills:
-	mkdir -p ~/.codex/skills ~/.claude/skills
-	@$(foreach skill,$(SYNC_SKILLS),ln -snvf $(CURDIR)/skills/$(skill) ~/.codex/skills/$(skill);)
-	@$(foreach skill,$(SYNC_SKILLS),ln -snvf $(CURDIR)/skills/$(skill) ~/.claude/skills/$(skill);)
