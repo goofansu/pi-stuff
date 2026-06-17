@@ -5,7 +5,7 @@
  * via OpenRouter image models (Gemini, FLUX, GPT-5 Image, etc.).
  *
  * Requires:
- *   OPENROUTER_API_KEY — API key from https://openrouter.ai
+ *   IMAGE_GEN_OPENROUTER_API_KEY — API key from https://openrouter.ai
  */
 
 import { writeFileSync } from "node:fs";
@@ -27,9 +27,9 @@ const DEFAULT_MODEL = "google/gemini-2.5-flash-image";
 
 export default function imageGenExtension(pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
-    if (!process.env.OPENROUTER_API_KEY) {
+    if (!process.env.IMAGE_GEN_OPENROUTER_API_KEY) {
       ctx.ui.notify(
-        "image-gen: OPENROUTER_API_KEY is not set — generate_image tool will fail.",
+        "image-gen: IMAGE_GEN_OPENROUTER_API_KEY is not set — generate_image tool will fail.",
         "warning",
       );
     }
@@ -77,9 +77,11 @@ export default function imageGenExtension(pi: ExtensionAPI) {
     }),
 
     async execute(_toolCallId, params, signal, onUpdate) {
-      const apiKey = process.env.OPENROUTER_API_KEY;
+      const apiKey = process.env.IMAGE_GEN_OPENROUTER_API_KEY;
       if (!apiKey)
-        throw new Error("OPENROUTER_API_KEY environment variable is not set.");
+        throw new Error(
+          "IMAGE_GEN_OPENROUTER_API_KEY environment variable is not set.",
+        );
 
       const modelId = params.model ?? DEFAULT_MODEL;
 
