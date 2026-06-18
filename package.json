@@ -3,7 +3,7 @@
   "scripts": {
     "lint": "biome check --write .",
     "lint:check": "biome check .",
-    "prepare": "husky",
+    "prepare": "node .husky/install.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test 'tests/**/*.test.ts'"
   },
