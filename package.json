@@ -8,6 +8,7 @@
     "test": "node --experimental-strip-types --test 'tests/**/*.test.ts'"
   },
   "peerDependencies": {
+    "@earendil-works/pi-agent-core": "*",
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*",
@@ -15,6 +16,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.13",
+    "@earendil-works/pi-agent-core": "^0.79.0",
     "@earendil-works/pi-ai": "^0.79.0",
     "@earendil-works/pi-coding-agent": "^0.79.0",
     "@earendil-works/pi-tui": "^0.79.0",
