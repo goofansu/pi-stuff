@@ -3,7 +3,7 @@
 install: packages keybindings
 
 packages:
-	pi install https://github.com/goofansu/pi-stuff
+	pi install .
 	pi install https://github.com/goofansu/pi-remote-control
 	pi install https://github.com/goofansu/pi-subagent
 	pi install https://github.com/davebcn87/pi-autoresearch
