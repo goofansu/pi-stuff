@@ -1,11 +1,11 @@
 ---
 name: simplify
-description: Use when the user asks to simplify, clean up, or improve changed code.
+description: Use when reviewing changed code to simplify it, remove duplication, improve readability, or reduce unnecessary complexity.
 ---
 
 # Simplify
 
-Improve the current changed code by making it simpler, more reusable, more maintainable, and more efficient without changing intended behavior.
+Improve the current code changes by making them simpler, more reusable, and more maintainable without changing intended behavior.
 
 ## Desired outcome
 
@@ -36,6 +36,8 @@ git diff --staged
 If there are no git changes, review the most recently modified files that the user mentioned or that were edited earlier in the conversation.
 
 Only edit files that are part of the current change unless an adjacent edit is clearly necessary to remove duplication or use an existing abstraction.
+
+Do not commit changes. Use the `commit` skill only if the user explicitly asks to create a commit.
 
 ## Review lenses
 
