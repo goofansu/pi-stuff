@@ -1,61 +1,49 @@
 ---
 name: summarize
-description: Use when the user asks to convert a URL or local document into Markdown or summarize it.
+description: Use when converting a URL or local document into Markdown, or summarizing extracted document content.
 ---
 
 # Summarize
 
-Turn "things" (URLs, PDFs, Word docs, PowerPoints, HTML pages, text files, etc.) into **Markdown** so they can be inspected/quoted/processed like normal text.
+Convert URLs or local documents into Markdown so they can be inspected, quoted, summarized, or processed like normal text.
 
-`markitdown` can fetch URLs by itself; this skill mainly wraps it to make saving + summarizing convenient.
-For PDF inputs, use the `markitdown[pdf]` extra (or the wrapper below, which now does this automatically).
+Supported inputs include URLs, PDFs, Word documents, PowerPoints, HTML pages, text files, and similar materials.
 
 ## When to use
 
 Use this skill when you need to:
-* pull down a web page as a document-like Markdown representation
-* convert binary docs (PDF/DOCX/PPTX) into Markdown for analysis
-* quickly produce a short summary of a long document before deeper work
+* convert a web page or document into Markdown
+* summarize a long URL or local document
+* preserve converted Markdown for later inspection or quotation
 
-## Quick usage
+## Usage
 
-### Convert a URL or file to Markdown
+Run from this skill folder.
 
-Run from **this skill folder** (the agent should `cd` here first):
-
-```bash
-uvx --from 'markitdown[pdf]' markitdown <url-or-path>
-```
-
-To write Markdown to a temp file (prints the path) use the wrapper:
+Convert to Markdown:
 
 ```bash
 node to-markdown.mjs <url-or-path> --tmp
 ```
 
-Tip: when summarizing, the script will **always** write the full converted Markdown to a temp `.md` file and will **always** print a final "Hint" line with the path (so you can open/inspect the full content).
-
-Write Markdown to a specific file:
+Convert and summarize:
 
 ```bash
-uvx --from 'markitdown[pdf]' markitdown <url-or-path> > /tmp/doc.md
+node to-markdown.mjs <url-or-path> --summary --prompt "<summary focus, audience, or extraction goal>"
 ```
 
-### Convert + summarize with haiku-4-5 (pass context!)
+When summarizing, provide a focused prompt describing what to extract and who the summary is for.
 
-Summaries are only useful when you provide **what you want extracted** and the **audience/purpose**.
+## Output expectations
 
-```bash
-node to-markdown.mjs <url-or-path> --summary --prompt "Summarize focusing on X, for audience Y. Extract Z."
-```
+When converting only, report the saved Markdown path.
 
-Or:
+When summarizing, provide the summary and include the path to the full converted Markdown.
 
-```bash
-node to-markdown.mjs <url-or-path> --summary --prompt "Focus on security implications and action items."
-```
+## Safety
 
-This will:
-1) convert to Markdown via `uvx --from 'markitdown[pdf]' markitdown`
-2) write the full Markdown to a temp `.md` file and print its path as a "Hint" line
-3) run `pi --model claude-haiku-4-5` (no-tools, no-session) to summarize using your extra prompt
+Do not invent content that is not present in the source.
+
+If conversion fails, report the failing command and the error.
+
+If the input is unavailable, private, behind authentication, or too large to process, report the limitation and suggest the closest usable next step.
