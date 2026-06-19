@@ -22,7 +22,6 @@ Files:
   - extensions/split-fork.ts
   - extensions/todos.ts
   - skills/commit/
-  - skills/pi-share/
   - skills/summarize/
 License: Apache License 2.0
 Upstream license file: https://github.com/mitsuhiko/agent-stuff/blob/main/LICENSE

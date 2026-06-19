@@ -1,6 +1,6 @@
-.PHONY: packages keybindings
+.PHONY: packages keybindings skills
 
-install: packages keybindings
+install: packages keybindings skills
 
 packages:
 	pi install .
@@ -12,3 +12,6 @@ packages:
 
 keybindings:
 	@ln -svf $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
+
+skills:
+	gh skill install mitsuhiko/agent-stuff pi-share --agent pi --scope user
