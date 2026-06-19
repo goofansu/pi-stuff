@@ -13,9 +13,9 @@ For PDF inputs, use the `markitdown[pdf]` extra (or the wrapper below, which now
 ## When to use
 
 Use this skill when you need to:
-- pull down a web page as a document-like Markdown representation
-- convert binary docs (PDF/DOCX/PPTX) into Markdown for analysis
-- quickly produce a short summary of a long document before deeper work
+* pull down a web page as a document-like Markdown representation
+* convert binary docs (PDF/DOCX/PPTX) into Markdown for analysis
+* quickly produce a short summary of a long document before deeper work
 
 ## Quick usage
 

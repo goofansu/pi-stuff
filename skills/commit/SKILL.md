@@ -11,9 +11,9 @@ Create a git commit using Conventional Commits format.
 2. Review `git status --short` and `git diff` to understand the current changes. Limit inspection to the provided file paths or globs when present.
 3. Optionally run `git log -n 50 --pretty=format:%s | grep -E '^[a-z]+\([^)]+\):'` to identify commonly used commit scopes.
 4. Determine the intended changes:
-   - If the user provided file paths or globs, use only those paths.
-   - If the user did not provide file paths or globs, use all current changes.
-   - If there are unrelated, ambiguous, generated, or risky changes, ask for clarification before committing.
+   * If the user provided file paths or globs, use only those paths.
+   * If the user did not provide file paths or globs, use all current changes.
+   * If there are unrelated, ambiguous, generated, or risky changes, ask for clarification before committing.
 5. Stage only the intended changes.
 6. Review `git diff --staged` and create a Conventional Commits message based only on the staged diff.
 7. Run `git commit -m "<subject>"` and include `-m "<body>"` only when a body is useful.

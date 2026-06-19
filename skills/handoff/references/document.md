@@ -60,8 +60,8 @@ Example:
 ```md
 ## Suggested Skills
 
-- `simplify`: Review the changed code for reuse, quality, and efficiency before committing.
-- `commit`: Create a concise Conventional Commits-style commit once the diff is final.
+* `simplify`: Review the changed code for reuse, quality, and efficiency before committing.
+* `commit`: Create a concise Conventional Commits-style commit once the diff is final.
 ```
 
 If the next step is to launch a fresh agent from the handoff document, suggest `handoff` and note that launch behavior is in [`launch.md`](launch.md).
