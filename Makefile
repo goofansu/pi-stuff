@@ -15,3 +15,4 @@ keybindings:
 
 skills:
 	gh skill install mitsuhiko/agent-stuff pi-share --agent pi --scope user
+	gh skill install langchain-ai/deepagents web-research --agent pi --scope user
