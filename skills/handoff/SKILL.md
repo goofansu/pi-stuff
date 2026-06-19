@@ -1,23 +1,24 @@
 ---
 name: handoff
-description: Use when the user asks to create a handoff document for another agent, or to launch a fresh agent from a handoff.
+description: Use when creating a handoff for another agent or launching a fresh agent from a handoff.
 ---
 
 # Handoff
 
 Create or use a handoff document so a fresh agent can continue the current work.
 
-Use `references/document.md` when writing a handoff document.
+## Modes
 
-Use `references/launch.md` only when the user explicitly asks to launch, spawn, start a fresh agent, or execute work from a handoff.
+- Document mode: use [`references/document.md`](references/document.md) when writing a new handoff document.
+- Launch mode: use [`references/launch.md`](references/launch.md) only when the user explicitly asks to launch, spawn, start a fresh agent, or execute work from a handoff.
 
-Do not launch tmux, worktree, or `pi` commands until the user explicitly chooses a launch option.
+Do not run tmux, worktree, or `pi` commands until the user explicitly chooses a launch option.
 
 ## Routing
 
-- Create a new handoff: write the document first.
-- Launch from the current handoff: ensure the document exists, then offer launch choices.
-- Launch from an old handoff: verify the path exists, then offer launch choices.
+- Create a new handoff: use document mode and write the document first.
+- Launch from the current handoff: ensure the document exists, then use launch mode and offer launch choices.
+- Launch from an old handoff: verify the path exists, then use launch mode and offer launch choices.
 
 ## Safety
 
