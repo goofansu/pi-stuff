@@ -1,4 +1,4 @@
-# Handoff launch reference
+# Launch mode reference
 
 Start a fresh agent in a new tmux window using an existing handoff document.
 
@@ -12,9 +12,9 @@ Use a worktree when requested so the fresh agent can work safely without interfe
 
 Use the handoff document path from the current session when available.
 
-If no handoff document path is known, ask the user for the path or create one first using `references/document.md`.
+If no handoff document path is known, ask the user for the path or create one first using [`document.md`](document.md).
 
-If the user passed arguments, treat them as the handoff document path and optional task focus.
+If the user provided arguments, treat them as the handoff document path and optional task focus.
 
 ## Execution choices
 
@@ -60,34 +60,34 @@ If the user chooses Worktree:
 4. Run:
 
 ```sh
-tmux new-window 'wt switch -c <branch> -b @ -x pi -- "<task>"'
+tmux new-window 'wt switch -c <branch> -b @ -x pi -- <quoted-task>'
 ```
 
 Replace:
 
-- `<branch>` with the generated branch name
-- `<task>` with the safely quoted task instruction
+* `<branch>` with the generated branch name.
+* `<quoted-task>` with the safely quoted task instruction.
 
 ## No-worktree option
 
 If the user chooses No worktree, run:
 
 ```sh
-tmux new-window -c "#{pane_current_path}" 'pi "<task>"'
+tmux new-window -c "#{pane_current_path}" 'pi <quoted-task>'
 ```
 
-Replace `<task>` with the safely quoted task instruction.
+Replace `<quoted-task>` with the safely quoted task instruction.
 
 ## Safety rules
 
-- Do not launch anything unless the user explicitly chooses an execution option.
-- Do not push.
-- Do not discard, reset, overwrite, or stash local changes unless explicitly asked.
-- Do not silently fall back from Worktree to No worktree.
-- If tmux is unavailable, report the issue and provide the command the user can run manually.
-- If worktree creation fails, report the error and stop.
-- If the handoff file does not exist, stop and ask for the correct path.
-- If the repository is in an unsafe state for worktree creation, report the issue and ask for guidance.
+* Do not launch anything unless the user explicitly chooses an execution option.
+* Do not push.
+* Do not discard, reset, overwrite, or stash local changes unless explicitly asked.
+* Do not silently fall back from Worktree to No worktree.
+* If tmux is unavailable, report the issue and provide the command the user can run manually.
+* If worktree creation fails, report the error and stop.
+* If the handoff file does not exist, stop and ask for the correct path.
+* If the repository is in an unsafe state for worktree creation, report the issue and ask for guidance.
 
 ## Final response
 
