@@ -64,11 +64,5 @@
     "path": "extensions/goal.ts",
     "reviewed": "ab79f98104bcd3c6a7c5491e609f6d6700a7414d",
     "remark": "functionally_same: biome formatting (tabs to spaces, line wrapping), replaced non-null assertions with return values from setGoalStatus/setGoal to satisfy noNonNullAssertion lint rule"
-  },
-  "draw.ts": {
-    "repo": "mitsuhiko/pi-draw",
-    "path": "draw.ts",
-    "reviewed": "6e3d4b17fa881f5835fd6b45e7793783f685bf38",
-    "remark": "functionally_same: biome formatting (tabs to spaces, line wrapping), replaced non-null assertions with local const to satisfy noNonNullAssertion lint rule"
   }
 }
