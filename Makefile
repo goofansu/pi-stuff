@@ -18,4 +18,3 @@ endef
 
 skills:
 	$(call skills-add,anthropics/skills,frontend-design) 
-	$(call skills-add,mattpocock/skills,codebase-design domain-modeling)
