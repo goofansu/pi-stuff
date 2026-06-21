@@ -64,5 +64,11 @@
     "path": "extensions/goal.ts",
     "reviewed": "ab79f98104bcd3c6a7c5491e609f6d6700a7414d",
     "remark": "functionally_same: biome formatting (tabs to spaces, line wrapping), replaced non-null assertions with return values from setGoalStatus/setGoal to satisfy noNonNullAssertion lint rule"
+  },
+  "notify.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/notify.ts",
+    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
+    "remark": "diverged: local uses BEL fallback for Zed terminals; upstream only emits OSC 777"
   }
 }

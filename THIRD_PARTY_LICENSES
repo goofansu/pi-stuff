@@ -15,6 +15,7 @@ Files:
   - extensions/files.ts
   - extensions/goal.ts
   - extensions/loop.ts
+  - extensions/notify.ts
   - extensions/prompt-editor.ts
   - extensions/review.ts
   - extensions/session-breakdown.ts
