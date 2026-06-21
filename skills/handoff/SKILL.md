@@ -3,8 +3,6 @@ name: handoff
 description: Use when creating a handoff for another agent or launching a fresh agent from a handoff.
 ---
 
-# Handoff
-
 Create or use a handoff document so a fresh agent can continue the current work.
 
 ## Modes

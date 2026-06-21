@@ -17,4 +17,4 @@ define skills-add
 endef
 
 skills:
-	$(call skills-add,anthropics/skills,frontend-design) 
+	$(call skills-add,anthropics/skills,frontend-design)
