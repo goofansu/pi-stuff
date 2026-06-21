@@ -3,7 +3,7 @@ name: commit
 description: Use when creating a git commit.
 ---
 
-Create a git commit using Conventional Commits format.
+Create exactly one git commit using Conventional Commits format.
 
 ## Steps
 
@@ -13,6 +13,7 @@ Create a git commit using Conventional Commits format.
 4. Determine the intended changes:
    - If the user provided file paths or globs, use only those paths.
    - If the user did not provide file paths or globs, use all current changes.
+   - If there are no intended changes to commit, do not create a commit. Report that there is nothing to commit.
    - If there are unrelated, ambiguous, generated, or risky changes, ask for clarification before committing.
 5. Stage only the intended changes.
 6. Review `git diff --staged` and create a Conventional Commits message based only on the staged diff.
