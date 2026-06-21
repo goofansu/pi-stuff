@@ -65,8 +65,8 @@ tmux new-window 'wt switch -c <branch> -b @ -x pi -- <quoted-task>'
 
 Replace:
 
-* `<branch>` with the generated branch name.
-* `<quoted-task>` with the safely quoted task instruction.
+- `<branch>` with the generated branch name.
+- `<quoted-task>` with the safely quoted task instruction.
 
 ## No-worktree option
 
@@ -80,14 +80,14 @@ Replace `<quoted-task>` with the safely quoted task instruction.
 
 ## Safety rules
 
-* Do not launch anything unless the user explicitly chooses an execution option.
-* Do not push.
-* Do not discard, reset, overwrite, or stash local changes unless explicitly asked.
-* Do not silently fall back from Worktree to No worktree.
-* If tmux is unavailable, report the issue and provide the command the user can run manually.
-* If worktree creation fails, report the error and stop.
-* If the handoff file does not exist, stop and ask for the correct path.
-* If the repository is in an unsafe state for worktree creation, report the issue and ask for guidance.
+- Do not launch anything unless the user explicitly chooses an execution option.
+- Do not push.
+- Do not discard, reset, overwrite, or stash local changes unless explicitly asked.
+- Do not silently fall back from Worktree to No worktree.
+- If tmux is unavailable, report the issue and provide the command the user can run manually.
+- If worktree creation fails, report the error and stop.
+- If the handoff file does not exist, stop and ask for the correct path.
+- If the repository is in an unsafe state for worktree creation, report the issue and ask for guidance.
 
 ## Final response
 
