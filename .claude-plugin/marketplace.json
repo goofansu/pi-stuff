@@ -1,0 +1,13 @@
+{
+  "name": "pi-stuff",
+  "owner": {
+    "name": "Yejun Su",
+    "email": "goofan.su@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "pi-stuff",
+      "source": "./"
+    }
+  ]
+}
