@@ -3,7 +3,7 @@ name: commit
 description: Use when creating a git commit.
 ---
 
-Create exactly one git commit using Conventional Commits format.
+Create a git commit using Conventional Commits format.
 
 ## Steps
 
