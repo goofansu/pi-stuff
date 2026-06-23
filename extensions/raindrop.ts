@@ -1,0 +1,390 @@
+/**
+ * Raindrop Extension
+ *
+ * Registers a raindrop tool that creates or updates many Raindrop.io bookmarks.
+ *
+ * Requires:
+ *   RAINDROP_API_KEY - Raindrop.io API key or test token used as a Bearer token.
+ */
+
+import { StringEnum } from "@earendil-works/pi-ai";
+import type {
+  AgentToolResult,
+  ExtensionAPI,
+} from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
+import { Type } from "typebox";
+
+const RAINDROP_API_BASE_URL = "https://api.raindrop.io/rest/v1";
+const RAINDROP_MAX_CREATE_ITEMS = 100;
+const ERROR_BODY_LIMIT = 500;
+
+const COMMANDS = ["create", "update"] as const;
+
+export type RaindropCommand = (typeof COMMANDS)[number];
+
+export interface RaindropCollectionRef {
+  $id: number;
+}
+
+export interface RaindropCreateItem {
+  link: string;
+  title?: string;
+  excerpt?: string;
+  note?: string;
+  tags?: string[];
+  important?: boolean;
+  collection?: RaindropCollectionRef;
+  cover?: string;
+  type?: string;
+  created?: string;
+  pleaseParse?: Record<string, unknown>;
+}
+
+export interface RaindropUpdateBody {
+  ids?: number[];
+  important?: boolean;
+  tags?: string[];
+  media?: unknown[];
+  cover?: string;
+  collection?: RaindropCollectionRef;
+}
+
+export interface RaindropToolParams {
+  command: RaindropCommand | string;
+  items?: RaindropCreateItem[];
+  collectionId?: number;
+  search?: string;
+  nested?: boolean;
+  body?: RaindropUpdateBody;
+}
+
+export type RaindropValidationResult =
+  | { ok: true }
+  | { ok: false; reason: string };
+
+export interface BuiltRaindropRequest {
+  method: "POST" | "PUT";
+  url: string;
+  body: unknown;
+  count: number;
+}
+
+interface RaindropApiResponse {
+  result?: boolean;
+  items?: unknown[];
+  modified?: number;
+}
+
+interface RaindropToolDetails {
+  error?: string;
+  command?: string;
+  endpoint?: string;
+  status?: number;
+  count?: number;
+  data?: RaindropApiResponse;
+}
+
+interface RaindropToolResult extends AgentToolResult<RaindropToolDetails> {
+  isError: boolean;
+}
+
+function isCreateCommand(params: RaindropToolParams): boolean {
+  return params.command === "create";
+}
+
+function isUpdateCommand(params: RaindropToolParams): boolean {
+  return params.command === "update";
+}
+
+export function validateRaindropParams(
+  params: RaindropToolParams,
+): RaindropValidationResult {
+  if (!COMMANDS.includes(params.command as RaindropCommand)) {
+    return {
+      ok: false,
+      reason: `${params.command || "<empty>"} is not an allowed raindrop command`,
+    };
+  }
+
+  if (isCreateCommand(params)) {
+    if (!Array.isArray(params.items)) {
+      return { ok: false, reason: "create requires items" };
+    }
+    if (params.items.length < 1) {
+      return { ok: false, reason: "create requires at least 1 item" };
+    }
+    if (params.items.length > RAINDROP_MAX_CREATE_ITEMS) {
+      return { ok: false, reason: "create accepts at most 100 items" };
+    }
+    return { ok: true };
+  }
+
+  if (isUpdateCommand(params)) {
+    if (typeof params.collectionId !== "number") {
+      return { ok: false, reason: "update requires collectionId" };
+    }
+    if (params.collectionId === 0) {
+      return {
+        ok: false,
+        reason: "Raindrop batch update does not support collectionId 0",
+      };
+    }
+    if (!params.body || typeof params.body !== "object") {
+      return { ok: false, reason: "update requires body" };
+    }
+    return { ok: true };
+  }
+
+  return {
+    ok: false,
+    reason: `${params.command || "<empty>"} is not an allowed raindrop command`,
+  };
+}
+
+export function buildRaindropRequest(
+  params: RaindropToolParams,
+): BuiltRaindropRequest {
+  if (params.command === "create") {
+    return {
+      method: "POST",
+      url: `${RAINDROP_API_BASE_URL}/raindrops`,
+      body: { items: params.items ?? [] },
+      count: params.items?.length ?? 0,
+    };
+  }
+
+  const url = new URL(
+    `${RAINDROP_API_BASE_URL}/raindrops/${params.collectionId}`,
+  );
+  if (params.search) url.searchParams.set("search", params.search);
+  if (typeof params.nested === "boolean") {
+    url.searchParams.set("nested", String(params.nested));
+  }
+
+  const ids = Array.isArray(params.body?.ids) ? params.body.ids : [];
+  return {
+    method: "PUT",
+    url: url.toString(),
+    body: params.body ?? {},
+    count: ids.length,
+  };
+}
+
+export function formatRaindropApiError(status: number, body: string): string {
+  const trimmed = body.trim();
+  const detail = trimmed ? ` - ${trimmed.slice(0, ERROR_BODY_LIMIT)}` : "";
+  return `Raindrop API failed: ${status}${detail}`;
+}
+
+export function formatRaindropSuccess(
+  command: RaindropCommand,
+  data: RaindropApiResponse,
+): string {
+  if (command === "create") {
+    return `Created/imported ${data.items?.length ?? 0} raindrop(s).`;
+  }
+  return `Updated ${data.modified ?? 0} raindrop(s).`;
+}
+
+export async function executeRaindropTool(
+  params: RaindropToolParams,
+  signal?: AbortSignal,
+): Promise<RaindropToolResult> {
+  const validation = validateRaindropParams(params);
+  if (!validation.ok) {
+    return {
+      isError: true,
+      content: [{ type: "text" as const, text: validation.reason }],
+      details: { error: validation.reason },
+    };
+  }
+
+  const apiKey = process.env.RAINDROP_API_KEY;
+  if (!apiKey) {
+    return {
+      isError: true,
+      content: [{ type: "text" as const, text: "RAINDROP_API_KEY is not set" }],
+      details: { error: "RAINDROP_API_KEY is not set" },
+    };
+  }
+
+  const request = buildRaindropRequest(params);
+  const response = await fetch(request.url, {
+    method: request.method,
+    signal,
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request.body),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    const error = formatRaindropApiError(response.status, body).replaceAll(
+      apiKey,
+      "[redacted]",
+    );
+    return {
+      isError: true,
+      content: [{ type: "text" as const, text: error }],
+      details: {
+        command: params.command,
+        endpoint: request.url,
+        status: response.status,
+        count: request.count,
+        error,
+      },
+    };
+  }
+
+  const data = (await response.json()) as RaindropApiResponse;
+  const command = params.command as RaindropCommand;
+  const text = formatRaindropSuccess(command, data);
+  return {
+    isError: false,
+    content: [{ type: "text" as const, text }],
+    details: {
+      command,
+      endpoint: request.url,
+      status: response.status,
+      count:
+        command === "create"
+          ? (data.items?.length ?? request.count)
+          : (data.modified ?? request.count),
+      data,
+    },
+  };
+}
+
+const CollectionRefSchema = Type.Object({
+  $id: Type.Number({
+    description: "Raindrop collection id.",
+  }),
+});
+
+const CreateItemSchema = Type.Object({
+  link: Type.String({
+    description: "Bookmark URL. Required for create.",
+  }),
+  title: Type.Optional(Type.String({ description: "Bookmark title." })),
+  excerpt: Type.Optional(Type.String({ description: "Bookmark excerpt." })),
+  note: Type.Optional(Type.String({ description: "Bookmark note." })),
+  tags: Type.Optional(Type.Array(Type.String({ description: "Tag name." }))),
+  important: Type.Optional(
+    Type.Boolean({ description: "Whether the bookmark is marked favorite." }),
+  ),
+  collection: Type.Optional(CollectionRefSchema),
+  cover: Type.Optional(Type.String({ description: "Cover image URL." })),
+  type: Type.Optional(Type.String({ description: "Raindrop item type." })),
+  created: Type.Optional(
+    Type.String({ description: "Creation timestamp accepted by Raindrop." }),
+  ),
+  pleaseParse: Type.Optional(
+    Type.Record(Type.String(), Type.Unknown(), {
+      description: "Optional Raindrop parsing options.",
+    }),
+  ),
+});
+
+const UpdateBodySchema = Type.Object({
+  ids: Type.Optional(Type.Array(Type.Number({ description: "Raindrop id." }))),
+  important: Type.Optional(
+    Type.Boolean({ description: "Set or unset favorite status." }),
+  ),
+  tags: Type.Optional(Type.Array(Type.String({ description: "Tag name." }))),
+  media: Type.Optional(
+    Type.Array(Type.Unknown({ description: "Media item to append." })),
+  ),
+  cover: Type.Optional(
+    Type.String({
+      description:
+        "Cover URL, or <screenshot> to set screenshots for matching raindrops.",
+    }),
+  ),
+  collection: Type.Optional(CollectionRefSchema),
+});
+
+export default function raindropExtension(pi: ExtensionAPI): void {
+  pi.on("session_start", (_event, ctx) => {
+    if (!process.env.RAINDROP_API_KEY) {
+      ctx.ui.notify(
+        "raindrop: RAINDROP_API_KEY is not set - raindrop tool will fail.",
+        "warning",
+      );
+    }
+  });
+
+  pi.registerTool({
+    name: "raindrop",
+    label: "Raindrop",
+    description:
+      "A Raindrop.io batch bookmark tool to create or update many raindrops.",
+    promptSnippet: "Create or update many Raindrop.io bookmarks in batch",
+    promptGuidelines: [
+      "Use raindrop with command=create when the user wants to save new bookmarks to Raindrop. Provide 1-100 items; each item must include link and may include title, excerpt, note, tags, important, collection, cover, type, created, or pleaseParse.",
+      "Use raindrop with command=update when the user wants to modify existing Raindrop bookmarks. Always constrain the target set with body.ids or an intentional search query.",
+      "The raindrop tool only accepts structured input: set command to create or update, put create records in items, and put update fields in body.",
+      "Do NOT use raindrop for deleting bookmarks, and do NOT use collectionId 0 for update because Raindrop batch update does not support it.",
+    ],
+    parameters: Type.Object({
+      command: StringEnum(COMMANDS, {
+        description: "Operation to perform: create or update.",
+      }),
+      items: Type.Optional(
+        Type.Array(CreateItemSchema, {
+          description: "Create items. Required for command=create. Max 100.",
+        }),
+      ),
+      collectionId: Type.Optional(
+        Type.Number({
+          description:
+            "Source collection id for command=update. Required for update. Do not use 0.",
+        }),
+      ),
+      search: Type.Optional(
+        Type.String({
+          description:
+            "Optional Raindrop search query to constrain command=update.",
+        }),
+      ),
+      nested: Type.Optional(
+        Type.Boolean({
+          description:
+            "When true, update also considers bookmarks in nested collections.",
+        }),
+      ),
+      body: Type.Optional(UpdateBodySchema),
+    }),
+    async execute(_toolCallId, params, signal) {
+      return executeRaindropTool(params as RaindropToolParams, signal);
+    },
+    renderCall(args, theme) {
+      const params = args as RaindropToolParams;
+      const summary =
+        params.command === "create"
+          ? `create ${params.items?.length ?? 0} item(s)`
+          : `update collection ${params.collectionId ?? "?"}`;
+      return new Text(
+        `${theme.fg("toolTitle", theme.bold("raindrop "))}${theme.fg("dim", summary)}`,
+        0,
+        0,
+      );
+    },
+    renderResult(result, _options, theme, context) {
+      const isError =
+        context.isError || (result as { isError?: boolean }).isError === true;
+      const icon = isError ? theme.fg("error", "✗") : theme.fg("success", "✓");
+      const text = result.content[0];
+      return new Text(
+        `${icon} ${theme.fg("toolTitle", theme.bold("raindrop"))}\n${
+          text?.type === "text" ? text.text : ""
+        }`,
+        0,
+        0,
+      );
+    },
+  });
+}

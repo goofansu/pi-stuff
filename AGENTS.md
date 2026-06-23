@@ -7,9 +7,12 @@
 - Each extension is self-contained — do not extract shared helpers or utilities into separate files. When creating a new extension, copy code from the most similar existing extension rather than abstracting shared logic.
 - If an extension requires env variables, declare them in the header comment and warn via `ctx.ui.notify` in a `session_start` handler — see `slack.ts` for the pattern.
 - For extensions that use `pi.registerTool()`:
-  - `description` = what the tool is.
-  - `promptSnippet` = how it appears in the tool list.
-  - `promptGuidelines` = how the agent should behave around it.
+  - `description` = what the tool is; keep it concise and focused on the tool's identity/capability.
+  - `promptSnippet` = how it appears in the tool list; write a short action phrase, not detailed usage instructions.
+  - `promptGuidelines` = how the agent should behave around it:
+    - Start usage guidance with `Use <tool_name> ...`.
+    - Include structured-input rules when the tool expects a specific command/parameter shape.
+    - Include explicit `Do NOT ...` guardrails for unsupported or risky uses.
 
 ## Skills
 
