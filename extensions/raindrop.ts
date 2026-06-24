@@ -1,7 +1,7 @@
 /**
  * Raindrop Extension
  *
- * Registers a raindrop tool that creates or updates many Raindrop.io bookmarks.
+ * Registers a raindrop tool that lists, creates, or updates many Raindrop.io bookmarks.
  *
  * Requires:
  *   RAINDROP_API_KEY - Raindrop.io API key or test token used as a Bearer token.
@@ -19,7 +19,7 @@ const RAINDROP_API_BASE_URL = "https://api.raindrop.io/rest/v1";
 const RAINDROP_MAX_CREATE_ITEMS = 100;
 const ERROR_BODY_LIMIT = 500;
 
-const COMMANDS = ["create", "update"] as const;
+const COMMANDS = ["list", "create", "update"] as const;
 
 export type RaindropCommand = (typeof COMMANDS)[number];
 
@@ -55,6 +55,9 @@ export interface RaindropToolParams {
   items?: RaindropCreateItem[];
   collectionId?: number;
   search?: string;
+  sort?: string;
+  page?: number;
+  perpage?: number;
   nested?: boolean;
   body?: RaindropUpdateBody;
 }
@@ -64,9 +67,9 @@ export type RaindropValidationResult =
   | { ok: false; reason: string };
 
 export interface BuiltRaindropRequest {
-  method: "POST" | "PUT";
+  method: "GET" | "POST" | "PUT";
   url: string;
-  body: unknown;
+  body?: unknown;
   count: number;
 }
 
@@ -93,6 +96,10 @@ function isCreateCommand(params: RaindropToolParams): boolean {
   return params.command === "create";
 }
 
+function isListCommand(params: RaindropToolParams): boolean {
+  return params.command === "list";
+}
+
 function isUpdateCommand(params: RaindropToolParams): boolean {
   return params.command === "update";
 }
@@ -107,7 +114,9 @@ export function validateRaindropParams(
     };
   }
 
-  if (isCreateCommand(params)) {
+  if (isListCommand(params)) {
+    return { ok: true };
+  } else if (isCreateCommand(params)) {
     if (!Array.isArray(params.items)) {
       return { ok: false, reason: "create requires items" };
     }
@@ -145,6 +154,28 @@ export function validateRaindropParams(
 export function buildRaindropRequest(
   params: RaindropToolParams,
 ): BuiltRaindropRequest {
+  if (params.command === "list") {
+    const collectionId = params.collectionId ?? 0;
+    const url = new URL(`${RAINDROP_API_BASE_URL}/raindrops/${collectionId}`);
+    if (params.search) url.searchParams.set("search", params.search);
+    if (typeof params.nested === "boolean") {
+      url.searchParams.set("nested", String(params.nested));
+    }
+    if (params.sort) url.searchParams.set("sort", params.sort);
+    if (typeof params.page === "number") {
+      url.searchParams.set("page", String(params.page));
+    }
+    if (typeof params.perpage === "number") {
+      url.searchParams.set("perpage", String(params.perpage));
+    }
+
+    return {
+      method: "GET",
+      url: url.toString(),
+      count: 0,
+    };
+  }
+
   if (params.command === "create") {
     return {
       method: "POST",
@@ -181,6 +212,9 @@ export function formatRaindropSuccess(
   command: RaindropCommand,
   data: RaindropApiResponse,
 ): string {
+  if (command === "list") {
+    return `Found ${data.items?.length ?? 0} raindrop(s).`;
+  }
   if (command === "create") {
     return `Created/imported ${data.items?.length ?? 0} raindrop(s).`;
   }
@@ -210,7 +244,7 @@ export async function executeRaindropTool(
   }
 
   const request = buildRaindropRequest(params);
-  const response = await fetch(request.url, {
+  const init: RequestInit = {
     method: request.method,
     signal,
     headers: {
@@ -218,8 +252,10 @@ export async function executeRaindropTool(
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(request.body),
-  });
+  };
+  if (request.body !== undefined) init.body = JSON.stringify(request.body);
+
+  const response = await fetch(request.url, init);
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
@@ -251,7 +287,7 @@ export async function executeRaindropTool(
       endpoint: request.url,
       status: response.status,
       count:
-        command === "create"
+        command === "list" || command === "create"
           ? (data.items?.length ?? request.count)
           : (data.modified ?? request.count),
       data,
@@ -321,17 +357,19 @@ export default function raindropExtension(pi: ExtensionAPI): void {
     name: "raindrop",
     label: "Raindrop",
     description:
-      "A Raindrop.io batch bookmark tool to create or update many raindrops.",
-    promptSnippet: "Create or update many Raindrop.io bookmarks in batch",
+      "A Raindrop.io batch bookmark tool to list, create, or update many raindrops.",
+    promptSnippet:
+      "List, create, or update many Raindrop.io bookmarks in batch",
     promptGuidelines: [
+      "Use raindrop with command=list when the user wants to find existing Raindrop bookmarks. Default to collectionId 0 with a search query for broad multi-item lookups.",
       "Use raindrop with command=create when the user wants to save new bookmarks to Raindrop. Provide 1-100 items; each item must include link and may include title, excerpt, note, tags, important, collection, cover, type, created, or pleaseParse.",
       "Use raindrop with command=update when the user wants to modify existing Raindrop bookmarks. Always constrain the target set with body.ids or an intentional search query.",
-      "The raindrop tool only accepts structured input: set command to create or update, put create records in items, and put update fields in body.",
+      "The raindrop tool only accepts structured input: set command to list, create, or update; put create records in items; and put update fields in body.",
       "Do NOT use raindrop for deleting bookmarks, and do NOT use collectionId 0 for update because Raindrop batch update does not support it.",
     ],
     parameters: Type.Object({
       command: StringEnum(COMMANDS, {
-        description: "Operation to perform: create or update.",
+        description: "Operation to perform: list, create, or update.",
       }),
       items: Type.Optional(
         Type.Array(CreateItemSchema, {
@@ -347,13 +385,30 @@ export default function raindropExtension(pi: ExtensionAPI): void {
       search: Type.Optional(
         Type.String({
           description:
-            "Optional Raindrop search query to constrain command=update.",
+            "Optional Raindrop search query for command=list or to constrain command=update.",
+        }),
+      ),
+      sort: Type.Optional(
+        Type.String({
+          description:
+            "Optional sort for command=list, such as -created, created, title, -title, domain, or -domain.",
+        }),
+      ),
+      page: Type.Optional(
+        Type.Number({
+          description: "Optional zero-based page number for command=list.",
+        }),
+      ),
+      perpage: Type.Optional(
+        Type.Number({
+          description:
+            "Optional page size for command=list. Raindrop max is 50.",
         }),
       ),
       nested: Type.Optional(
         Type.Boolean({
           description:
-            "When true, update also considers bookmarks in nested collections.",
+            "When true, list or update also considers bookmarks in nested collections.",
         }),
       ),
       body: Type.Optional(UpdateBodySchema),
@@ -364,9 +419,11 @@ export default function raindropExtension(pi: ExtensionAPI): void {
     renderCall(args, theme) {
       const params = args as RaindropToolParams;
       const summary =
-        params.command === "create"
-          ? `create ${params.items?.length ?? 0} item(s)`
-          : `update collection ${params.collectionId ?? "?"}`;
+        params.command === "list"
+          ? `list collection ${params.collectionId ?? 0}`
+          : params.command === "create"
+            ? `create ${params.items?.length ?? 0} item(s)`
+            : `update collection ${params.collectionId ?? "?"}`;
       return new Text(
         `${theme.fg("toolTitle", theme.bold("raindrop "))}${theme.fg("dim", summary)}`,
         0,

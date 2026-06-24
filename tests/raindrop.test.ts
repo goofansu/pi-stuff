@@ -9,6 +9,12 @@ import {
 } from "../extensions/raindrop.ts";
 
 describe("validateRaindropParams", () => {
+  it("accepts a minimal list request", () => {
+    const result = validateRaindropParams({ command: "list" });
+
+    assert.deepEqual(result, { ok: true });
+  });
+
   it("accepts a minimal create request", () => {
     const result = validateRaindropParams({
       command: "create",
@@ -77,6 +83,25 @@ describe("validateRaindropParams", () => {
 });
 
 describe("buildRaindropRequest", () => {
+  it("builds a list request defaulting to all non-trash raindrops", () => {
+    const request = buildRaindropRequest({
+      command: "list",
+      search: "tag:docs",
+      nested: true,
+      sort: "-created",
+      page: 1,
+      perpage: 25,
+    });
+
+    assert.equal(request.method, "GET");
+    assert.equal(
+      request.url,
+      "https://api.raindrop.io/rest/v1/raindrops/0?search=tag%3Adocs&nested=true&sort=-created&page=1&perpage=25",
+    );
+    assert.equal(request.body, undefined);
+    assert.equal(request.count, 0);
+  });
+
   it("builds a create request", () => {
     const request = buildRaindropRequest({
       command: "create",
@@ -133,6 +158,13 @@ describe("buildRaindropRequest", () => {
 });
 
 describe("result formatting", () => {
+  it("formats list success from returned items", () => {
+    assert.equal(
+      formatRaindropSuccess("list", { result: true, items: [{}, {}, {}] }),
+      "Found 3 raindrop(s).",
+    );
+  });
+
   it("formats create success from returned items", () => {
     assert.equal(
       formatRaindropSuccess("create", { result: true, items: [{}, {}] }),
@@ -191,6 +223,20 @@ const theme = {
 };
 
 describe("raindrop rendering", () => {
+  it("renders list call summaries", () => {
+    const { tool } = registerRaindropTool();
+
+    const rendered = tool.renderCall(
+      {
+        command: "list",
+        search: "tag:docs",
+      },
+      theme,
+    );
+
+    assert.match(rendered.text, /raindrop list collection 0/);
+  });
+
   it("renders create call summaries", () => {
     const { tool } = registerRaindropTool();
 
@@ -245,7 +291,7 @@ describe("raindrop extension registration", () => {
 
     assert.equal(tool.name, "raindrop");
     assert.equal(tool.label, "Raindrop");
-    assert.match(tool.description, /create or update many/i);
+    assert.match(tool.description, /list, create, or update many/i);
   });
 
   it("warns at session start when RAINDROP_API_KEY is missing", () => {
@@ -343,6 +389,57 @@ describe("executeRaindropTool", () => {
           ],
         }),
       );
+    } finally {
+      globalThis.fetch = oldFetch;
+      if (oldKey === undefined) {
+        delete process.env.RAINDROP_API_KEY;
+      } else {
+        process.env.RAINDROP_API_KEY = oldKey;
+      }
+    }
+  });
+
+  it("executes a list request with bearer auth and no body", async () => {
+    const { tool } = registerRaindropTool();
+    const oldKey = process.env.RAINDROP_API_KEY;
+    const oldFetch = globalThis.fetch;
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    process.env.RAINDROP_API_KEY = "test-token";
+    globalThis.fetch = (async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      calls.push({ url: String(url), init: init ?? {} });
+      return new Response(
+        JSON.stringify({ result: true, items: [{ _id: 1 }, { _id: 2 }] }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }) as typeof fetch;
+
+    try {
+      const result = await tool.execute(
+        "call-1",
+        {
+          command: "list",
+          search: "tag:docs",
+          perpage: 25,
+        },
+        undefined,
+      );
+
+      assert.equal(result.isError, false);
+      assert.equal(result.content[0].text, "Found 2 raindrop(s).");
+      assert.equal(
+        calls[0].url,
+        "https://api.raindrop.io/rest/v1/raindrops/0?search=tag%3Adocs&perpage=25",
+      );
+      assert.equal(calls[0].init.method, "GET");
+      assert.deepEqual(calls[0].init.headers, {
+        Accept: "application/json",
+        Authorization: "Bearer test-token",
+        "Content-Type": "application/json",
+      });
+      assert.equal(calls[0].init.body, undefined);
     } finally {
       globalThis.fetch = oldFetch;
       if (oldKey === undefined) {
