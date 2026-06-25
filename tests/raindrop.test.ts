@@ -291,14 +291,25 @@ describe("raindrop rendering", () => {
     assert.match(rendered.text, /raindrop update collection 123/);
   });
 
-  it("renders result text", () => {
+  it("renders collapsed list results with summary and expand hint", () => {
     const { tool } = registerRaindropTool();
 
     const rendered = tool.renderResult(
       {
         isError: false,
-        content: [{ type: "text", text: "Created/imported 1 raindrop(s)." }],
-        details: {},
+        content: [
+          {
+            type: "text",
+            text: [
+              "Found 1 raindrop(s).",
+              "",
+              "1. How Ruby uses memory (Talk)",
+              "   https://www.schneems.com/ruby-memory-talk",
+              "   schneems.com · 2026-06-23",
+            ].join("\n"),
+          },
+        ],
+        details: { command: "list", count: 1 },
       },
       { expanded: false, isPartial: false },
       theme,
@@ -306,7 +317,42 @@ describe("raindrop rendering", () => {
     );
 
     assert.match(rendered.text, /✓ raindrop/);
-    assert.match(rendered.text, /Created\/imported 1 raindrop\(s\)\./);
+    assert.match(rendered.text, /Found 1 raindrop\(s\)\./);
+    assert.match(rendered.text, /to expand/);
+    assert.doesNotMatch(rendered.text, /How Ruby uses memory/);
+    assert.doesNotMatch(rendered.text, /schneems\.com/);
+  });
+
+  it("renders expanded list results with item details", () => {
+    const { tool } = registerRaindropTool();
+
+    const rendered = tool.renderResult(
+      {
+        isError: false,
+        content: [
+          {
+            type: "text",
+            text: [
+              "Found 1 raindrop(s).",
+              "",
+              "1. How Ruby uses memory (Talk)",
+              "   https://www.schneems.com/ruby-memory-talk",
+              "   schneems.com · 2026-06-23",
+            ].join("\n"),
+          },
+        ],
+        details: { command: "list", count: 1 },
+      },
+      { expanded: true, isPartial: false },
+      theme,
+      { isError: false },
+    );
+
+    assert.match(rendered.text, /✓ raindrop/);
+    assert.match(rendered.text, /Found 1 raindrop\(s\)\./);
+    assert.match(rendered.text, /How Ruby uses memory/);
+    assert.match(rendered.text, /schneems\.com/);
+    assert.doesNotMatch(rendered.text, /to expand/);
   });
 });
 

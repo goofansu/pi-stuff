@@ -8,9 +8,10 @@
  */
 
 import { StringEnum } from "@earendil-works/pi-ai";
-import type {
-  AgentToolResult,
-  ExtensionAPI,
+import {
+  type AgentToolResult,
+  type ExtensionAPI,
+  keyHint,
 } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
@@ -231,6 +232,14 @@ function formatRaindropListItem(item: RaindropListItem): string | undefined {
   return [title, link && `   ${link}`, metadata && `   ${metadata}`]
     .filter(Boolean)
     .join("\n");
+}
+
+function expandHint(): string {
+  try {
+    return keyHint("app.tools.expand", "to expand");
+  } catch {
+    return "Ctrl+O to expand";
+  }
 }
 
 export function formatRaindropSuccess(
@@ -462,18 +471,30 @@ export default function raindropExtension(pi: ExtensionAPI): void {
         0,
       );
     },
-    renderResult(result, _options, theme, context) {
+    renderResult(result, { expanded }, theme, context) {
       const isError =
         context.isError || (result as { isError?: boolean }).isError === true;
       const icon = isError ? theme.fg("error", "✗") : theme.fg("success", "✓");
+      const title = `${icon} ${theme.fg("toolTitle", theme.bold("raindrop"))}`;
       const text = result.content[0];
-      return new Text(
-        `${icon} ${theme.fg("toolTitle", theme.bold("raindrop"))}\n${
-          text?.type === "text" ? text.text : ""
-        }`,
-        0,
-        0,
-      );
+      const content = text?.type === "text" ? text.text : "";
+      const details = result.details as RaindropToolDetails | undefined;
+
+      if (
+        !expanded &&
+        !isError &&
+        details?.command === "list" &&
+        content.includes("\n")
+      ) {
+        const summary = content.split("\n", 1)[0] ?? "";
+        return new Text(
+          `${title}\n${summary}\n${theme.fg("dim", `(${expandHint()})`)}`,
+          0,
+          0,
+        );
+      }
+
+      return new Text(`${title}\n${content}`, 0, 0);
     },
   });
 }
