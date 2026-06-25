@@ -73,6 +73,13 @@ export interface BuiltRaindropRequest {
   count: number;
 }
 
+interface RaindropListItem {
+  title?: string;
+  link?: string;
+  domain?: string;
+  created?: string;
+}
+
 interface RaindropApiResponse {
   result?: boolean;
   items?: unknown[];
@@ -208,12 +215,37 @@ export function formatRaindropApiError(status: number, body: string): string {
   return `Raindrop API failed: ${status}${detail}`;
 }
 
+function isRaindropListItem(item: unknown): item is RaindropListItem {
+  return typeof item === "object" && item !== null;
+}
+
+function formatRaindropListItem(item: RaindropListItem): string | undefined {
+  const title = item.title?.trim();
+  const link = item.link?.trim();
+  const metadata = [item.domain, item.created?.slice(0, 10)]
+    .filter(Boolean)
+    .join(" · ");
+
+  if (!title && !link && !metadata) return undefined;
+
+  return [title, link && `   ${link}`, metadata && `   ${metadata}`]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function formatRaindropSuccess(
   command: RaindropCommand,
   data: RaindropApiResponse,
 ): string {
   if (command === "list") {
-    return `Found ${data.items?.length ?? 0} raindrop(s).`;
+    const summary = `Found ${data.items?.length ?? 0} raindrop(s).`;
+    const items = (data.items ?? [])
+      .filter(isRaindropListItem)
+      .map(formatRaindropListItem)
+      .filter((item): item is string => item !== undefined)
+      .map((item, index) => `${index + 1}. ${item}`);
+
+    return items.length > 0 ? `${summary}\n\n${items.join("\n")}` : summary;
   }
   if (command === "create") {
     return `Created/imported ${data.items?.length ?? 0} raindrop(s).`;

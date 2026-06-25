@@ -158,10 +158,35 @@ describe("buildRaindropRequest", () => {
 });
 
 describe("result formatting", () => {
-  it("formats list success from returned items", () => {
+  it("formats list success with returned item details", () => {
     assert.equal(
-      formatRaindropSuccess("list", { result: true, items: [{}, {}, {}] }),
-      "Found 3 raindrop(s).",
+      formatRaindropSuccess("list", {
+        result: true,
+        items: [
+          {
+            title: "How Ruby uses memory (Talk)",
+            link: "https://www.schneems.com/ruby-memory-talk",
+            domain: "schneems.com",
+            created: "2026-06-23T12:34:56.000Z",
+          },
+          {
+            title: "Debugging a memory leak on Heroku",
+            link: "https://blog.codeship.com/debugging-memory-leak-heroku/",
+            domain: "blog.codeship.com",
+            created: "2026-06-23T11:22:33.000Z",
+          },
+        ],
+      }),
+      [
+        "Found 2 raindrop(s).",
+        "",
+        "1. How Ruby uses memory (Talk)",
+        "   https://www.schneems.com/ruby-memory-talk",
+        "   schneems.com · 2026-06-23",
+        "2. Debugging a memory leak on Heroku",
+        "   https://blog.codeship.com/debugging-memory-leak-heroku/",
+        "   blog.codeship.com · 2026-06-23",
+      ].join("\n"),
     );
   });
 
