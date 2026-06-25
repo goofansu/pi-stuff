@@ -49,6 +49,46 @@ describe("validateGhInvocation", () => {
     }
   });
 
+  it("allows repo read-file and repo read-dir commands", () => {
+    assert.deepEqual(
+      validateGhInvocation({
+        command: "repo read-file",
+        args: ["README.md", "--repo", "owner/repo", "--ref", "main"],
+      }),
+      {
+        ok: true,
+        argv: [
+          "repo",
+          "read-file",
+          "README.md",
+          "--repo",
+          "owner/repo",
+          "--ref",
+          "main",
+        ],
+      },
+    );
+
+    assert.deepEqual(
+      validateGhInvocation({
+        command: "repo read-dir",
+        args: ["docs", "--repo", "owner/repo", "--json", "name,path,type"],
+      }),
+      {
+        ok: true,
+        argv: [
+          "repo",
+          "read-dir",
+          "docs",
+          "--repo",
+          "owner/repo",
+          "--json",
+          "name,path,type",
+        ],
+      },
+    );
+  });
+
   it("rejects gh commands that are mutating or unavailable", () => {
     for (const command of [
       "repo create",
@@ -88,6 +128,92 @@ describe("validateGhInvocation", () => {
 
     assert.equal(result.ok, false);
     assert.match(result.reason, /gh api only allows GET or HEAD/);
+  });
+
+  it("rejects api calls when any repeated method flag is mutating", () => {
+    const result = validateGhInvocation({
+      command: "api",
+      args: ["repos/owner/repo", "--method", "GET", "--method", "POST"],
+    });
+
+    assert.equal(result.ok, false);
+    assert.match(result.reason, /gh api only allows GET or HEAD/);
+  });
+
+  it("rejects compact api body flags that can mutate data", () => {
+    for (const args of [
+      ["repos/owner/repo/issues", "-fbody=Hi"],
+      ["repos/owner/repo/issues", "-Fbody=Hi"],
+    ]) {
+      const result = validateGhInvocation({ command: "api", args });
+
+      assert.equal(result.ok, false, args.join(" "));
+      assert.match(result.reason, /request body fields can mutate data/);
+    }
+  });
+
+  it("rejects api graphql even when valued flags precede the endpoint", () => {
+    const result = validateGhInvocation({
+      command: "api",
+      args: ["--method", "GET", "graphql"],
+    });
+
+    assert.equal(result.ok, false);
+    assert.match(result.reason, /gh api graphql is blocked/);
+  });
+
+  it("rejects flags that open a browser", () => {
+    for (const args of [
+      ["owner/repo", "--web"],
+      ["owner/repo", "--web=true"],
+      ["owner/repo", "-w"],
+    ]) {
+      const result = validateGhInvocation({ command: "repo view", args });
+
+      assert.equal(result.ok, false, args.join(" "));
+      assert.match(result.reason, /blocked because it has side effects/);
+    }
+  });
+
+  it("rejects flags that write local files or caches", () => {
+    for (const args of [
+      ["README.md", "--repo", "owner/repo", "--output", "README.md"],
+      ["README.md", "--repo", "owner/repo", "--output=README.md"],
+      ["README.md", "--repo", "owner/repo", "-o", "README.md"],
+      ["README.md", "--repo", "owner/repo", "-oREADME.md"],
+      ["README.md", "--repo", "owner/repo", "--clobber"],
+    ]) {
+      const result = validateGhInvocation({
+        command: "repo read-file",
+        args,
+      });
+
+      assert.equal(result.ok, false, args.join(" "));
+      assert.match(result.reason, /blocked because it writes local files/);
+    }
+
+    for (const args of [
+      ["README.md", "--repo", "owner/repo", "--allow-escape-sequences"],
+      ["README.md", "--repo", "owner/repo", "--allow-escape-sequences=true"],
+    ]) {
+      const terminalEscapeResult = validateGhInvocation({
+        command: "repo read-file",
+        args,
+      });
+
+      assert.equal(terminalEscapeResult.ok, false, args.join(" "));
+      assert.match(terminalEscapeResult.reason, /terminal escape/);
+    }
+
+    for (const args of [
+      ["repos/owner/repo", "--cache", "1h"],
+      ["repos/owner/repo", "--cache=1h"],
+    ]) {
+      const result = validateGhInvocation({ command: "api", args });
+
+      assert.equal(result.ok, false, args.join(" "));
+      assert.match(result.reason, /blocked because it writes a local cache/);
+    }
   });
 });
 
