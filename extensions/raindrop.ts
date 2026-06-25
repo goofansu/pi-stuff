@@ -75,10 +75,20 @@ export interface BuiltRaindropRequest {
 }
 
 interface RaindropListItem {
+  _id?: number | string;
   title?: string;
   link?: string;
   domain?: string;
   created?: string;
+  lastUpdate?: string;
+  type?: string;
+  tags?: string[];
+  important?: boolean;
+  collection?: RaindropCollectionRef;
+  collectionId?: number;
+  excerpt?: string;
+  note?: string;
+  cover?: string;
 }
 
 interface RaindropApiResponse {
@@ -220,18 +230,38 @@ function isRaindropListItem(item: unknown): item is RaindropListItem {
   return typeof item === "object" && item !== null;
 }
 
+function trimString(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
 function formatRaindropListItem(item: RaindropListItem): string | undefined {
-  const title = item.title?.trim();
-  const link = item.link?.trim();
-  const metadata = [item.domain, item.created?.slice(0, 10)]
-    .filter(Boolean)
-    .join(" · ");
+  const title = trimString(item.title);
+  const tags = Array.isArray(item.tags)
+    ? item.tags
+        .filter((tag): tag is string => typeof tag === "string")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .join(", ")
+    : undefined;
+  const fields = [
+    item._id !== undefined && `   ID: ${item._id}`,
+    trimString(item.link) && `   Link: ${trimString(item.link)}`,
+    tags && `   Tags: ${tags}`,
+    trimString(item.excerpt) && `   Excerpt: ${trimString(item.excerpt)}`,
+    trimString(item.note) && `   Note: ${trimString(item.note)}`,
+  ].filter(
+    (field): field is string => typeof field === "string" && field.length > 0,
+  );
 
-  if (!title && !link && !metadata) return undefined;
+  if (!title && fields.length === 0) return undefined;
+  if (!title) {
+    return fields
+      .map((field, index) => (index === 0 ? field.replace(/^ {3}/, "") : field))
+      .join("\n");
+  }
 
-  return [title, link && `   ${link}`, metadata && `   ${metadata}`]
-    .filter(Boolean)
-    .join("\n");
+  return [title, ...fields].join("\n");
 }
 
 function expandHint(): string {

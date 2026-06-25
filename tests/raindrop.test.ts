@@ -164,28 +164,47 @@ describe("result formatting", () => {
         result: true,
         items: [
           {
+            _id: 101,
             title: "How Ruby uses memory (Talk)",
             link: "https://www.schneems.com/ruby-memory-talk",
             domain: "schneems.com",
             created: "2026-06-23T12:34:56.000Z",
+            lastUpdate: "2026-06-24T09:08:07.000Z",
+            type: "link",
+            tags: ["ruby", "memory", "talk", "ppt"],
+            important: true,
+            collection: { $id: 42 },
+            excerpt: "A talk about Ruby memory use.",
+            note: "Review later.",
+            cover: "https://example.com/cover.png",
           },
           {
             title: "Debugging a memory leak on Heroku",
             link: "https://blog.codeship.com/debugging-memory-leak-heroku/",
             domain: "blog.codeship.com",
             created: "2026-06-23T11:22:33.000Z",
+            tags: [],
+          },
+          {
+            title: "Collection fallback",
+            collectionId: 84,
+            tags: ["valid", 123, ""],
           },
         ],
       }),
       [
-        "Found 2 raindrop(s).",
+        "Found 3 raindrop(s).",
         "",
         "1. How Ruby uses memory (Talk)",
-        "   https://www.schneems.com/ruby-memory-talk",
-        "   schneems.com · 2026-06-23",
+        "   ID: 101",
+        "   Link: https://www.schneems.com/ruby-memory-talk",
+        "   Tags: ruby, memory, talk, ppt",
+        "   Excerpt: A talk about Ruby memory use.",
+        "   Note: Review later.",
         "2. Debugging a memory leak on Heroku",
-        "   https://blog.codeship.com/debugging-memory-leak-heroku/",
-        "   blog.codeship.com · 2026-06-23",
+        "   Link: https://blog.codeship.com/debugging-memory-leak-heroku/",
+        "3. Collection fallback",
+        "   Tags: valid",
       ].join("\n"),
     );
   });
@@ -499,7 +518,10 @@ describe("executeRaindropTool", () => {
       );
 
       assert.equal(result.isError, false);
-      assert.equal(result.content[0].text, "Found 2 raindrop(s).");
+      assert.equal(
+        result.content[0].text,
+        ["Found 2 raindrop(s).", "", "1. ID: 1", "2. ID: 2"].join("\n"),
+      );
       assert.equal(
         calls[0].url,
         "https://api.raindrop.io/rest/v1/raindrops/0?search=tag%3Adocs&perpage=25",
