@@ -12,6 +12,16 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Markdown, type MarkdownTheme } from "@earendil-works/pi-tui";
 
 /**
+ * Wrap terminal escape sequences for tmux passthrough.
+ */
+export const wrapForTmux = (sequence: string): string => {
+  if (!process.env.TMUX) return sequence;
+
+  const escaped = sequence.split("\x1b").join("\x1b\x1b");
+  return `\x1bPtmux;${escaped}\x1b\\`;
+};
+
+/**
  * Send a desktop notification via OSC 777 escape sequence.
  */
 const notify = (title: string, body: string): void => {
@@ -21,7 +31,8 @@ const notify = (title: string, body: string): void => {
   }
 
   // OSC 777 format: ESC ] 777 ; notify ; title ; body BEL
-  process.stdout.write(`\x1b]777;notify;${title};${body}\x07`);
+  const sequence = `\x1b]777;notify;${title};${body}\x07`;
+  process.stdout.write(wrapForTmux(sequence));
 };
 
 const isTextPart = (part: unknown): part is { type: "text"; text: string } =>
