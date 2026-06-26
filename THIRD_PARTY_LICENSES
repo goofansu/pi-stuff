@@ -236,6 +236,7 @@ Files:
   - skills/domain-modeling/
   - skills/grill-with-docs/
   - skills/grilling/
+  - skills/triage/
 License: MIT License
 Upstream license file: https://github.com/mattpocock/skills/blob/main/LICENSE
 
