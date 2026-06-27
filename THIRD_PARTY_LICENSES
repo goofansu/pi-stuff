@@ -14,7 +14,6 @@ Files:
   - extensions/control.ts
   - extensions/files.ts
   - extensions/goal.ts
-  - extensions/loop.ts
   - extensions/notify.ts
   - extensions/prompt-editor.ts
   - extensions/review.ts
