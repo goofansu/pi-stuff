@@ -1,7 +1,7 @@
 /**
  * Raindrop Extension
  *
- * Registers a raindrop tool that lists, creates, or updates many Raindrop.io bookmarks.
+ * Registers a raindrop tool that lists, creates, or updates many Raindrop.io bookmarks and tags.
  *
  * Requires:
  *   RAINDROP_API_KEY - Raindrop.io API key or test token used as a Bearer token.
@@ -20,7 +20,15 @@ const RAINDROP_API_BASE_URL = "https://api.raindrop.io/rest/v1";
 const RAINDROP_MAX_CREATE_ITEMS = 100;
 const ERROR_BODY_LIMIT = 500;
 
-const COMMANDS = ["list", "create", "update"] as const;
+const COMMANDS = [
+  "list",
+  "create",
+  "update",
+  "tags",
+  "rename_tag",
+  "merge_tags",
+  "remove_tags",
+] as const;
 
 export type RaindropCommand = (typeof COMMANDS)[number];
 
@@ -46,6 +54,7 @@ export interface RaindropUpdateBody {
   ids?: number[];
   important?: boolean;
   tags?: string[];
+  replace?: string;
   media?: unknown[];
   cover?: string;
   collection?: RaindropCollectionRef;
@@ -68,7 +77,7 @@ export type RaindropValidationResult =
   | { ok: false; reason: string };
 
 export interface BuiltRaindropRequest {
-  method: "GET" | "POST" | "PUT";
+  method: "GET" | "POST" | "PUT" | "DELETE";
   url: string;
   body?: unknown;
   count: number;
@@ -97,6 +106,11 @@ interface RaindropApiResponse {
   modified?: number;
 }
 
+interface RaindropTagItem {
+  _id?: string;
+  count?: number;
+}
+
 interface RaindropToolDetails {
   error?: string;
   command?: string;
@@ -122,6 +136,30 @@ function isUpdateCommand(params: RaindropToolParams): boolean {
   return params.command === "update";
 }
 
+function isTagsCommand(params: RaindropToolParams): boolean {
+  return params.command === "tags";
+}
+
+function isRenameTagCommand(params: RaindropToolParams): boolean {
+  return params.command === "rename_tag";
+}
+
+function isMergeTagsCommand(params: RaindropToolParams): boolean {
+  return params.command === "merge_tags";
+}
+
+function isRemoveTagsCommand(params: RaindropToolParams): boolean {
+  return params.command === "remove_tags";
+}
+
+function tagBodyTags(params: RaindropToolParams): string[] {
+  return Array.isArray(params.body?.tags) ? params.body.tags : [];
+}
+
+function hasReplace(params: RaindropToolParams): boolean {
+  return typeof params.body?.replace === "string" && params.body.replace !== "";
+}
+
 export function validateRaindropParams(
   params: RaindropToolParams,
 ): RaindropValidationResult {
@@ -132,7 +170,7 @@ export function validateRaindropParams(
     };
   }
 
-  if (isListCommand(params)) {
+  if (isListCommand(params) || isTagsCommand(params)) {
     return { ok: true };
   } else if (isCreateCommand(params)) {
     if (!Array.isArray(params.items)) {
@@ -159,6 +197,33 @@ export function validateRaindropParams(
     }
     if (!params.body || typeof params.body !== "object") {
       return { ok: false, reason: "update requires body" };
+    }
+    return { ok: true };
+  }
+
+  if (isRenameTagCommand(params)) {
+    if (tagBodyTags(params).length !== 1) {
+      return { ok: false, reason: "rename_tag requires exactly one tag" };
+    }
+    if (!hasReplace(params)) {
+      return { ok: false, reason: "rename_tag requires replace" };
+    }
+    return { ok: true };
+  }
+
+  if (isMergeTagsCommand(params)) {
+    if (tagBodyTags(params).length < 1) {
+      return { ok: false, reason: "merge_tags requires at least 1 tag" };
+    }
+    if (!hasReplace(params)) {
+      return { ok: false, reason: "merge_tags requires replace" };
+    }
+    return { ok: true };
+  }
+
+  if (isRemoveTagsCommand(params)) {
+    if (tagBodyTags(params).length < 1) {
+      return { ok: false, reason: "remove_tags requires at least 1 tag" };
     }
     return { ok: true };
   }
@@ -203,6 +268,30 @@ export function buildRaindropRequest(
     };
   }
 
+  if (params.command === "tags") {
+    const collectionId = params.collectionId ?? 0;
+    return {
+      method: "GET",
+      url: `${RAINDROP_API_BASE_URL}/tags/${collectionId}`,
+      count: 0,
+    };
+  }
+
+  if (
+    params.command === "rename_tag" ||
+    params.command === "merge_tags" ||
+    params.command === "remove_tags"
+  ) {
+    const collectionId = params.collectionId ?? 0;
+    const tags = tagBodyTags(params);
+    return {
+      method: params.command === "remove_tags" ? "DELETE" : "PUT",
+      url: `${RAINDROP_API_BASE_URL}/tags/${collectionId}`,
+      body: params.body ?? {},
+      count: tags.length,
+    };
+  }
+
   const url = new URL(
     `${RAINDROP_API_BASE_URL}/raindrops/${params.collectionId}`,
   );
@@ -230,9 +319,19 @@ function isRaindropListItem(item: unknown): item is RaindropListItem {
   return typeof item === "object" && item !== null;
 }
 
+function isRaindropTagItem(item: unknown): item is RaindropTagItem {
+  return typeof item === "object" && item !== null;
+}
+
 function trimString(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function formatRaindropTagItem(item: RaindropTagItem): string | undefined {
+  const name = trimString(item._id);
+  if (!name) return undefined;
+  return `${name} (${item.count ?? 0})`;
 }
 
 function formatRaindropListItem(item: RaindropListItem): string | undefined {
@@ -286,8 +385,25 @@ export function formatRaindropSuccess(
 
     return items.length > 0 ? `${summary}\n\n${items.join("\n")}` : summary;
   }
+  if (command === "tags") {
+    const summary = `Found ${data.items?.length ?? 0} tag(s).`;
+    const items = (data.items ?? [])
+      .filter(isRaindropTagItem)
+      .map(formatRaindropTagItem)
+      .filter((item): item is string => item !== undefined)
+      .map((item, index) => `${index + 1}. ${item}`);
+
+    return items.length > 0 ? `${summary}\n\n${items.join("\n")}` : summary;
+  }
   if (command === "create") {
     return `Created/imported ${data.items?.length ?? 0} raindrop(s).`;
+  }
+  if (
+    command === "rename_tag" ||
+    command === "merge_tags" ||
+    command === "remove_tags"
+  ) {
+    return "Updated tag(s).";
   }
   return `Updated ${data.modified ?? 0} raindrop(s).`;
 }
@@ -402,6 +518,7 @@ const UpdateBodySchema = Type.Object({
     Type.Boolean({ description: "Set or unset favorite status." }),
   ),
   tags: Type.Optional(Type.Array(Type.String({ description: "Tag name." }))),
+  replace: Type.Optional(Type.String({ description: "Replacement tag name." })),
   media: Type.Optional(
     Type.Array(Type.Unknown({ description: "Media item to append." })),
   ),
@@ -428,19 +545,24 @@ export default function raindropExtension(pi: ExtensionAPI): void {
     name: "raindrop",
     label: "Raindrop",
     description:
-      "A Raindrop.io batch bookmark tool to list, create, or update many raindrops.",
+      "A Raindrop.io batch bookmark and tag tool to list, create, update, rename, merge, or remove items.",
     promptSnippet:
-      "List, create, or update many Raindrop.io bookmarks in batch",
+      "List, create, update, rename, merge, or remove Raindrop.io data",
     promptGuidelines: [
       "Use raindrop with command=list when the user wants to find existing Raindrop bookmarks. Default to collectionId 0 with a search query for broad multi-item lookups.",
       "Use raindrop with command=create when the user wants to save new bookmarks to Raindrop. Provide 1-100 items; each item must include link and may include title, excerpt, note, tags, important, collection, cover, type, created, or pleaseParse.",
       "Use raindrop with command=update when the user wants to modify existing Raindrop bookmarks. Always constrain the target set with body.ids or an intentional search query.",
-      "The raindrop tool only accepts structured input: set command to list, create, or update; put create records in items; and put update fields in body.",
-      "Do NOT use raindrop for deleting bookmarks, and do NOT use collectionId 0 for update because Raindrop batch update does not support it.",
+      "Use raindrop with command=tags when the user wants to list tags. Omit collectionId, or set collectionId to limit tags to one collection.",
+      "Use raindrop with command=rename_tag with body.tags containing exactly one tag and body.replace containing the new tag name.",
+      "Use raindrop with command=merge_tags with body.tags containing source tags and body.replace containing the destination tag name.",
+      "Use raindrop with command=remove_tags with body.tags containing the tags to remove.",
+      "The raindrop tool only accepts structured input: set command to list, create, update, tags, rename_tag, merge_tags, or remove_tags; put create records in items; and put bookmark/tag update fields in body.",
+      "Do NOT use raindrop for deleting bookmarks, and do NOT use collectionId 0 for bookmark update because Raindrop batch update does not support it.",
     ],
     parameters: Type.Object({
       command: StringEnum(COMMANDS, {
-        description: "Operation to perform: list, create, or update.",
+        description:
+          "Operation to perform: list, create, update, tags, rename_tag, merge_tags, or remove_tags.",
       }),
       items: Type.Optional(
         Type.Array(CreateItemSchema, {
@@ -450,7 +572,7 @@ export default function raindropExtension(pi: ExtensionAPI): void {
       collectionId: Type.Optional(
         Type.Number({
           description:
-            "Source collection id for command=update. Required for update. Do not use 0.",
+            "Collection id. Required for command=update. Optional for tag commands. Do not use 0 for update.",
         }),
       ),
       search: Type.Optional(
@@ -494,7 +616,11 @@ export default function raindropExtension(pi: ExtensionAPI): void {
           ? `list collection ${params.collectionId ?? 0}`
           : params.command === "create"
             ? `create ${params.items?.length ?? 0} item(s)`
-            : `update collection ${params.collectionId ?? "?"}`;
+            : params.command === "update"
+              ? `update collection ${params.collectionId ?? "?"}`
+              : params.command === "tags"
+                ? `tags collection ${params.collectionId ?? 0}`
+                : `${params.command} collection ${params.collectionId ?? 0}`;
       return new Text(
         `${theme.fg("toolTitle", theme.bold("raindrop "))}${theme.fg("dim", summary)}`,
         0,

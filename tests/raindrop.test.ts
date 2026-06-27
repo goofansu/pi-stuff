@@ -80,6 +80,52 @@ describe("validateRaindropParams", () => {
     assert.equal(result.ok, false);
     assert.match(result.reason, /update requires body/);
   });
+
+  it("accepts a minimal tags request", () => {
+    const result = validateRaindropParams({ command: "tags" });
+
+    assert.deepEqual(result, { ok: true });
+  });
+
+  it("accepts a rename_tag request with one source tag and replacement", () => {
+    const result = validateRaindropParams({
+      command: "rename_tag",
+      collectionId: 123,
+      body: { tags: ["old"], replace: "new" },
+    });
+
+    assert.deepEqual(result, { ok: true });
+  });
+
+  it("rejects rename_tag with more than one source tag", () => {
+    const result = validateRaindropParams({
+      command: "rename_tag",
+      body: { tags: ["old", "older"], replace: "new" },
+    });
+
+    assert.equal(result.ok, false);
+    assert.match(result.reason, /rename_tag requires exactly one tag/);
+  });
+
+  it("rejects merge_tags without replacement", () => {
+    const result = validateRaindropParams({
+      command: "merge_tags",
+      body: { tags: ["old", "older"] },
+    });
+
+    assert.equal(result.ok, false);
+    assert.match(result.reason, /merge_tags requires replace/);
+  });
+
+  it("rejects remove_tags without tags", () => {
+    const result = validateRaindropParams({
+      command: "remove_tags",
+      body: { tags: [] },
+    });
+
+    assert.equal(result.ok, false);
+    assert.match(result.reason, /remove_tags requires at least 1 tag/);
+  });
 });
 
 describe("buildRaindropRequest", () => {
@@ -155,6 +201,40 @@ describe("buildRaindropRequest", () => {
     });
     assert.equal(request.count, 2);
   });
+
+  it("builds a tags request defaulting to all collections", () => {
+    const request = buildRaindropRequest({ command: "tags" });
+
+    assert.equal(request.method, "GET");
+    assert.equal(request.url, "https://api.raindrop.io/rest/v1/tags/0");
+    assert.equal(request.body, undefined);
+    assert.equal(request.count, 0);
+  });
+
+  it("builds a rename_tag request scoped to a collection", () => {
+    const request = buildRaindropRequest({
+      command: "rename_tag",
+      collectionId: 123,
+      body: { tags: ["old"], replace: "new" },
+    });
+
+    assert.equal(request.method, "PUT");
+    assert.equal(request.url, "https://api.raindrop.io/rest/v1/tags/123");
+    assert.deepEqual(request.body, { tags: ["old"], replace: "new" });
+    assert.equal(request.count, 1);
+  });
+
+  it("builds a remove_tags request", () => {
+    const request = buildRaindropRequest({
+      command: "remove_tags",
+      body: { tags: ["old", "unused"] },
+    });
+
+    assert.equal(request.method, "DELETE");
+    assert.equal(request.url, "https://api.raindrop.io/rest/v1/tags/0");
+    assert.deepEqual(request.body, { tags: ["old", "unused"] });
+    assert.equal(request.count, 2);
+  });
 });
 
 describe("result formatting", () => {
@@ -220,6 +300,26 @@ describe("result formatting", () => {
     assert.equal(
       formatRaindropSuccess("update", { result: true, modified: 7 }),
       "Updated 7 raindrop(s).",
+    );
+  });
+
+  it("formats tags success with tag counts", () => {
+    assert.equal(
+      formatRaindropSuccess("tags", {
+        result: true,
+        items: [
+          { _id: "api", count: 100 },
+          { _id: "docs", count: 2 },
+        ],
+      }),
+      ["Found 2 tag(s).", "", "1. api (100)", "2. docs (2)"].join("\n"),
+    );
+  });
+
+  it("formats tag mutation success", () => {
+    assert.equal(
+      formatRaindropSuccess("remove_tags", { result: true }),
+      "Updated tag(s).",
     );
   });
 
@@ -310,6 +410,20 @@ describe("raindrop rendering", () => {
     assert.match(rendered.text, /raindrop update collection 123/);
   });
 
+  it("renders tag call summaries", () => {
+    const { tool } = registerRaindropTool();
+
+    const rendered = tool.renderCall(
+      {
+        command: "remove_tags",
+        body: { tags: ["unused"] },
+      },
+      theme,
+    );
+
+    assert.match(rendered.text, /raindrop remove_tags collection 0/);
+  });
+
   it("renders collapsed list results with summary and expand hint", () => {
     const { tool } = registerRaindropTool();
 
@@ -381,7 +495,7 @@ describe("raindrop extension registration", () => {
 
     assert.equal(tool.name, "raindrop");
     assert.equal(tool.label, "Raindrop");
-    assert.match(tool.description, /list, create, or update many/i);
+    assert.match(tool.description, /bookmark and tag tool/i);
   });
 
   it("warns at session start when RAINDROP_API_KEY is missing", () => {
@@ -533,6 +647,56 @@ describe("executeRaindropTool", () => {
         "Content-Type": "application/json",
       });
       assert.equal(calls[0].init.body, undefined);
+    } finally {
+      globalThis.fetch = oldFetch;
+      if (oldKey === undefined) {
+        delete process.env.RAINDROP_API_KEY;
+      } else {
+        process.env.RAINDROP_API_KEY = oldKey;
+      }
+    }
+  });
+
+  it("executes a remove_tags request with bearer auth", async () => {
+    const { tool } = registerRaindropTool();
+    const oldKey = process.env.RAINDROP_API_KEY;
+    const oldFetch = globalThis.fetch;
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    process.env.RAINDROP_API_KEY = "test-token";
+    globalThis.fetch = (async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      calls.push({ url: String(url), init: init ?? {} });
+      return new Response(JSON.stringify({ result: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    try {
+      const result = await tool.execute(
+        "call-1",
+        {
+          command: "remove_tags",
+          body: { tags: ["unused", "old"] },
+        },
+        undefined,
+      );
+
+      assert.equal(result.isError, false);
+      assert.equal(result.content[0].text, "Updated tag(s).");
+      assert.equal(calls[0].url, "https://api.raindrop.io/rest/v1/tags/0");
+      assert.equal(calls[0].init.method, "DELETE");
+      assert.deepEqual(calls[0].init.headers, {
+        Accept: "application/json",
+        Authorization: "Bearer test-token",
+        "Content-Type": "application/json",
+      });
+      assert.equal(
+        calls[0].init.body,
+        JSON.stringify({ tags: ["unused", "old"] }),
+      );
     } finally {
       globalThis.fetch = oldFetch;
       if (oldKey === undefined) {
