@@ -2,7 +2,7 @@
   "answer.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/answer.ts",
-    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
+    "reviewed": "67bfb288446351cfd6ae4293bb217e4fe9ed9fe2",
     "remark": "diverged: local adds markdown rendering for question text and context (Markdown component + getMarkdownTheme). Upstream renders questions as plain wrapped text. Also: config (model ID, provider), keybinding system (keyHint vs hardcoded), visual (editor theme, confirmation dialog style)"
   },
   "btw.ts": {
@@ -26,8 +26,8 @@
   "loop.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/loop.ts",
-    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
-    "remark": "functionally_same: config (provider check), keybinding, import path (typebox)"
+    "reviewed": "ac79012425c315ce545a8b2564f866c803d619c8",
+    "remark": "removed locally to match upstream ac79012: loop behavior is now folded into session-backed goal.ts"
   },
   "prompt-editor.ts": {
     "repo": "mitsuhiko/agent-stuff",
@@ -62,7 +62,7 @@
   "goal.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/goal.ts",
-    "reviewed": "ab79f98104bcd3c6a7c5491e609f6d6700a7414d",
+    "reviewed": "ac79012425c315ce545a8b2564f866c803d619c8",
     "remark": "functionally_same: biome formatting (tabs to spaces, line wrapping), replaced non-null assertions with return values from setGoalStatus/setGoal to satisfy noNonNullAssertion lint rule"
   },
   "notify.ts": {

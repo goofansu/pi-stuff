@@ -14,6 +14,7 @@ import {
   type Api,
   complete,
   type Model,
+  parseJsonWithRepair,
   type UserMessage,
 } from "@earendil-works/pi-ai";
 import type {
@@ -52,6 +53,11 @@ interface ExtractionResult {
   questions: ExtractedQuestion[];
 }
 
+type ExtractionOutcome =
+  | { status: "ok"; result: ExtractionResult }
+  | { status: "cancelled" }
+  | { status: "error"; message: string };
+
 const SYSTEM_PROMPT = `You are a question extractor. Given text from a conversation, extract any questions that need answering.
 
 Output a JSON object with this structure:
@@ -84,21 +90,28 @@ Example output:
   ]
 }`;
 
-const CODEX_MODEL_ID = "gpt-5.4-mini";
+const CODEX_MODEL_IDS = [
+  "gpt-5.4-mini",
+  "gpt-5.3-codex-spark",
+  "gpt-5.4",
+  "gpt-5.3-codex",
+];
 const HAIKU_MODEL_ID = "claude-haiku-4-5";
 
 /**
- * Prefer Codex mini for extraction when available, otherwise fallback to haiku or the current model.
+ * Prefer a fast configured Codex model for extraction, then haiku, then the current model.
  */
 async function selectExtractionModel(
   currentModel: Model<Api>,
   modelRegistry: ModelRegistry,
 ): Promise<Model<Api>> {
-  const codexModel = modelRegistry.find("opencode", CODEX_MODEL_ID);
-  if (codexModel) {
-    const auth = await modelRegistry.getApiKeyAndHeaders(codexModel);
-    if (auth.ok) {
-      return codexModel;
+  for (const modelId of CODEX_MODEL_IDS) {
+    const codexModel = modelRegistry.find("opencode", modelId);
+    if (codexModel) {
+      const auth = await modelRegistry.getApiKeyAndHeaders(codexModel);
+      if (auth.ok) {
+        return codexModel;
+      }
     }
   }
 
@@ -115,28 +128,80 @@ async function selectExtractionModel(
   return haikuModel;
 }
 
-/**
- * Parse the JSON response from the LLM
- */
-function parseExtractionResult(text: string): ExtractionResult | null {
-  try {
-    // Try to find JSON in the response (it might be wrapped in markdown code blocks)
-    let jsonStr = text;
-
-    // Remove markdown code block if present
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1].trim();
-    }
-
-    const parsed = JSON.parse(jsonStr);
-    if (parsed && Array.isArray(parsed.questions)) {
-      return parsed as ExtractionResult;
-    }
-    return null;
-  } catch {
+function toExtractedQuestion(value: unknown): ExtractedQuestion | null {
+  if (typeof value !== "object" || value === null) {
     return null;
   }
+  const record = value as Record<string, unknown>;
+  const question = record.question;
+  const context = record.context;
+  if (typeof question !== "string") {
+    return null;
+  }
+  if (
+    context !== undefined &&
+    context !== null &&
+    typeof context !== "string"
+  ) {
+    return null;
+  }
+  return typeof context === "string" && context.length > 0
+    ? { question, context }
+    : { question };
+}
+
+function toExtractionResult(value: unknown): ExtractionResult | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  if (!Array.isArray(record.questions)) {
+    return null;
+  }
+  const questions: ExtractedQuestion[] = [];
+  for (const question of record.questions) {
+    const extractedQuestion = toExtractedQuestion(question);
+    if (!extractedQuestion) {
+      return null;
+    }
+    questions.push(extractedQuestion);
+  }
+  return { questions };
+}
+
+/**
+ * Parse the JSON response from the LLM.
+ */
+function parseExtractionResult(text: string): ExtractionResult | null {
+  const candidates: string[] = [];
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    candidates.push(jsonMatch[1].trim());
+  }
+
+  const trimmed = text.trim();
+  candidates.push(trimmed);
+
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(trimmed.slice(firstBrace, lastBrace + 1));
+  }
+
+  for (const candidate of candidates) {
+    try {
+      const result = toExtractionResult(
+        parseJsonWithRepair<unknown>(candidate),
+      );
+      if (result) {
+        return result;
+      }
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -487,27 +552,27 @@ export default function (pi: ExtensionAPI) {
 
     const assistantText = lastAssistantText;
 
-    // Select the best model for extraction (prefer Codex mini, then haiku)
+    // Select the best model for extraction.
     const extractionModel = await selectExtractionModel(
       ctx.model,
       ctx.modelRegistry,
     );
 
     // Run extraction with loader UI
-    const extractionResult = await ctx.ui.custom<ExtractionResult | null>(
+    const extractionOutcome = await ctx.ui.custom<ExtractionOutcome>(
       (tui, theme, _kb, done) => {
         const loader = new BorderedLoader(
           tui,
           theme,
           `Extracting questions using ${extractionModel.id}...`,
         );
-        loader.onAbort = () => done(null);
+        loader.onAbort = () => done({ status: "cancelled" });
 
-        const doExtract = async () => {
+        const doExtract = async (): Promise<ExtractionOutcome> => {
           const auth =
             await ctx.modelRegistry.getApiKeyAndHeaders(extractionModel);
           if (!auth.ok) {
-            throw new Error(auth.error);
+            return { status: "error", message: auth.error };
           }
           const userMessage: UserMessage = {
             role: "user",
@@ -526,7 +591,13 @@ export default function (pi: ExtensionAPI) {
           );
 
           if (response.stopReason === "aborted") {
-            return null;
+            return { status: "cancelled" };
+          }
+          if (response.stopReason === "error") {
+            return {
+              status: "error",
+              message: response.errorMessage ?? "question extraction failed",
+            };
           }
 
           const responseText = response.content
@@ -535,23 +606,42 @@ export default function (pi: ExtensionAPI) {
             )
             .map((c) => c.text)
             .join("\n");
+          const result = parseExtractionResult(responseText);
+          if (!result) {
+            return {
+              status: "error",
+              message: "question extraction returned invalid JSON",
+            };
+          }
 
-          return parseExtractionResult(responseText);
+          return { status: "ok", result };
         };
 
         doExtract()
           .then(done)
-          .catch(() => done(null));
+          .catch((error: unknown) => {
+            const message =
+              error instanceof Error ? error.message : String(error);
+            done({ status: "error", message });
+          });
 
         return loader;
       },
     );
 
-    if (extractionResult === null) {
+    if (extractionOutcome.status === "cancelled") {
       ctx.ui.notify("Cancelled", "info");
       return;
     }
+    if (extractionOutcome.status === "error") {
+      ctx.ui.notify(
+        `Question extraction failed: ${extractionOutcome.message}`,
+        "error",
+      );
+      return;
+    }
 
+    const extractionResult = extractionOutcome.result;
     if (extractionResult.questions.length === 0) {
       ctx.ui.notify("No questions found in the last message", "info");
       return;
