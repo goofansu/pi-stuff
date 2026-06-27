@@ -70,5 +70,35 @@
     "path": "extensions/notify.ts",
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
     "remark": "diverged: local uses BEL fallback for Zed terminals; upstream only emits OSC 777"
+  },
+  "skills/codebase-design": {
+    "repo": "mattpocock/skills",
+    "path": "skills/engineering/codebase-design",
+    "reviewed": "ee8bae40062cd6b435073368ed0c540f48c35862",
+    "remark": "matches_upstream: vendored skill directory content matches mattpocock/skills skills/engineering/codebase-design at reviewed SHA; see THIRD_PARTY_LICENSES for MIT license attribution"
+  },
+  "skills/domain-modeling": {
+    "repo": "mattpocock/skills",
+    "path": "skills/engineering/domain-modeling",
+    "reviewed": "ee8bae40062cd6b435073368ed0c540f48c35862",
+    "remark": "matches_upstream: vendored skill directory content matches mattpocock/skills skills/engineering/domain-modeling at reviewed SHA; see THIRD_PARTY_LICENSES for MIT license attribution"
+  },
+  "skills/grill-with-docs": {
+    "repo": "mattpocock/skills",
+    "path": "skills/engineering/grill-with-docs",
+    "reviewed": "658d53e6ded8cc0eaa26a96e0580bee9381ca0e3",
+    "remark": "matches_upstream: vendored skill directory content matches mattpocock/skills skills/engineering/grill-with-docs at reviewed SHA; see THIRD_PARTY_LICENSES for MIT license attribution"
+  },
+  "skills/grilling": {
+    "repo": "mattpocock/skills",
+    "path": "skills/productivity/grilling",
+    "reviewed": "bc4cf903ff4855ce23199a8dd3bf98b3dbd7ad71",
+    "remark": "matches_upstream: vendored skill directory content matches mattpocock/skills skills/productivity/grilling at reviewed SHA; see THIRD_PARTY_LICENSES for MIT license attribution"
+  },
+  "skills/triage": {
+    "repo": "mattpocock/skills",
+    "path": "skills/engineering/triage",
+    "reviewed": "e00eadb4bb32c3d5a631ead1a5ed5d6a7c5f74e2",
+    "remark": "diverged: local adapts upstream generic issue-tracker/config wording to GitHub-specific issues, labels, and external PR discovery; see THIRD_PARTY_LICENSES for MIT license attribution"
   }
 }

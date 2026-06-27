@@ -6,7 +6,7 @@ description: Check whether upstream GitHub repositories have new commits since t
 # check-upstream
 
 Track and selectively apply upstream bug fixes to locally modified vendored
-extensions.
+extensions and skills.
 
 Upstream sources and last-reviewed commit SHAs are stored in
 `upstream.json` (next to the script). The script queries GitHub for
@@ -16,12 +16,12 @@ messages and links so you can identify bug fixes worth cherry-picking.
 ## upstream.json
 
 Located at `.pi/skills/check-upstream/upstream.json`.
-Each key is a local filename, with these fields:
+Each key is a local file or skill directory, with these fields:
 
 - `repo` — GitHub repo (`owner/repo`)
-- `path` — path to the file in that repo
+- `path` — path to the file or directory in that repo
 - `reviewed` — last-reviewed commit SHA
-- `remark` — *(optional but recommended)* a short note explaining why the local copy diverges from upstream, so future reviews have context
+- `remark` — *(optional but recommended)* a short note explaining why the local copy diverges from upstream, or where licensing/attribution context lives
 
 ```json
 {
@@ -46,7 +46,7 @@ Run the script and summarize the results to the user:
 bash .pi/skills/check-upstream/check.sh
 ```
 
-Output shows new commits per file since the last reviewed SHA:
+Output shows new commits per tracked file or directory since the last reviewed SHA:
 
 ```
 ✓  answer.ts
@@ -71,7 +71,7 @@ For each commit the user wants to apply:
 After applying the fixes, advance the reviewed SHA so those commits stop appearing:
 
 ```bash
-# Mark a specific file (advances to its latest upstream commit)
+# Mark a specific file or directory (advances to its latest upstream commit)
 bash .pi/skills/check-upstream/check.sh mark btw.ts
 
 # Mark all files at once
@@ -81,16 +81,17 @@ bash .pi/skills/check-upstream/check.sh mark
 bash .pi/skills/check-upstream/check.sh mark btw.ts abc1234
 ```
 
-## Adding a new extension to track
+## Adding a new extension or skill to track
 
 Add an entry to `upstream.json`, setting `reviewed` to the commit you based
-your local copy on:
+your local copy on. For vendored skill packs, track the skill directory rather
+than each markdown file inside it:
 
 ```json
-"new-ext.ts": {
+"skills/new-skill": {
   "repo": "owner/repo",
-  "path": "path/to/file.ts",
+  "path": "skills/category/new-skill",
   "reviewed": "<commit-sha>",
-  "remark": "<brief note on intentional local differences, or omit if none yet>"
+  "remark": "<brief note on intentional local differences or license context>"
 }
 ```

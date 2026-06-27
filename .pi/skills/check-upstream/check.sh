@@ -33,17 +33,12 @@ cmd_check() {
     fpath=$(jq -r --arg n "$name" '.[$n].path' "$UPSTREAM")
     reviewed=$(jq -r --arg n "$name" '.[$n].reviewed' "$UPSTREAM")
 
-    # Date of reviewed commit
-    local pin_date
-    pin_date=$(_api "/repos/$repo/commits/$reviewed" --jq '.commit.committer.date') || {
-      echo "⚠  $name — cannot fetch commit ${reviewed:0:7}"
-      continue
-    }
-
-    # Newer commits touching this file
+    # Newer commits touching this path. Walk the path-specific commit list until
+    # the reviewed SHA instead of filtering by date; GitHub commits can share a
+    # timestamp, which otherwise causes already-reviewed sibling commits to reappear.
     local raw
-    raw=$(_api "/repos/$repo/commits?path=$fpath&since=$pin_date&per_page=30" \
-      --jq ".[] | select(.sha != \"$reviewed\") | \"\(.sha)\t\(.commit.committer.date[:10])\t\(.commit.message | split(\"\n\")[0])\"") || true
+    raw=$(_api "/repos/$repo/commits?path=$fpath&per_page=100" \
+      --jq "label \$out | .[] | if .sha == \"$reviewed\" then break \$out else \"\(.sha)\t\(.commit.committer.date[:10])\t\(.commit.message | split(\"\n\")[0])\" end") || true
 
     if [[ -z "$raw" ]]; then
       echo "✓  $name"
