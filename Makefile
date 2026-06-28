@@ -6,7 +6,6 @@ packages:
 	pi install .
 	pi install https://github.com/goofansu/pi-remote-control
 	pi install https://github.com/goofansu/pi-subagent
-	pi install https://github.com/goofansu/pi-raindrop
 	pi install https://github.com/obra/superpowers
 
 keybindings:
