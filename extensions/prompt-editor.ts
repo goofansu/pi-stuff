@@ -1360,6 +1360,7 @@ interface PromptEntry {
 
 class PromptEditor extends CustomEditor {
   public modeLabelProvider?: () => string;
+  public sessionNameProvider?: () => string | undefined;
   /**
    * Color function for the mode label. If unset, the label inherits the border color.
    * We use this to keep the label consistent (e.g. same as the footer/status bar).
@@ -1419,6 +1420,14 @@ class PromptEditor extends CustomEditor {
         { text: " ", color: labelColor },
         { text: "──", color: (text: string) => this.borderColor(text) },
         { text: " bash", color: labelColor },
+      );
+    }
+    const sessionName = this.sessionNameProvider?.()?.trim();
+    if (sessionName) {
+      labelParts.push(
+        { text: " ", color: labelColor },
+        { text: "──", color: (text: string) => this.borderColor(text) },
+        { text: ` ${sessionName}`, color: labelColor },
       );
     }
 
@@ -1655,6 +1664,7 @@ function setEditor(
     const editor = new PromptEditor(tui, theme, keybindings);
     requestEditorRender = () => editor.requestRenderNow();
     editor.modeLabelProvider = () => runtime.currentMode;
+    editor.sessionNameProvider = () => pi.getSessionName();
     // Keep the mode label color stable (match footer/status bar).
     editor.modeLabelColor = (text: string) => uiTheme.fg("dim", text);
     const borderColor = (text: string) => {
@@ -1793,6 +1803,10 @@ export default function (pi: ExtensionAPI) {
     }
 
     applyEditor(pi, ctx);
+  });
+
+  pi.on("session_info_changed", () => {
+    requestEditorRender?.();
   });
 
   pi.on("model_select", async (event, ctx) => {
