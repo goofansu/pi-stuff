@@ -17,3 +17,9 @@ endef
 
 skills:
 	$(call skills-add,anthropics/skills,frontend-design skill-creator)
+
+update-skills:
+	gh skill install mattpocock/skills grilling --dir skills --agent pi
+	gh skill install mattpocock/skills grill-with-docs --dir skills --agent pi
+	gh skill install mattpocock/skills domain-modeling --dir skills --agent pi
+	gh skill install mattpocock/skills codebase-design --dir skills --agent pi
