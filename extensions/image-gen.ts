@@ -5,31 +5,92 @@
  * via OpenRouter image models (Gemini, FLUX, GPT-5 Image, etc.).
  *
  * Requires:
- *   IMAGE_GEN_OPENROUTER_API_KEY — API key from https://openrouter.ai
+ *   OPENROUTER_API_KEY — API key from https://openrouter.ai
  */
 
-import { writeFileSync } from "node:fs";
-import { isAbsolute, join } from "node:path";
-import {
-  generateImages,
-  getImageModels,
-  StringEnum,
-} from "@earendil-works/pi-ai/compat";
+import { existsSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, parse } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
-const MODEL_IDS = getImageModels("openrouter")
+type ImageModel = { id: string };
+type ImageOutputBlock =
+  | { type: "image"; data: string; mimeType: string }
+  | { type: "text"; text: string };
+type ImageGenerationResult = {
+  stopReason?: string;
+  errorMessage?: string;
+  output: ImageOutputBlock[];
+  usage?: { cost: { total: number } };
+};
+type ImagesModels = {
+  getModels(provider?: string): readonly ImageModel[];
+  getModel(provider: string, id: string): ImageModel | undefined;
+  getAuth(model: ImageModel): Promise<unknown | undefined>;
+  generateImages(
+    model: ImageModel,
+    context: { input: { type: "text"; text: string }[] },
+    options?: { signal?: AbortSignal },
+  ): Promise<ImageGenerationResult>;
+};
+
+function StringEnum<T extends readonly string[]>(
+  values: T,
+  options?: { description?: string; default?: T[number] },
+): ReturnType<typeof Type.Unsafe> {
+  return Type.Unsafe({
+    type: "string",
+    enum: values,
+    ...(options?.description ? { description: options.description } : {}),
+    ...(options?.default ? { default: options.default } : {}),
+  });
+}
+
+function findPiAiProvidersAllPath(startUrl: string) {
+  let dir = dirname(fileURLToPath(startUrl));
+  const root = parse(dir).root;
+
+  while (true) {
+    const candidate = join(
+      dir,
+      "node_modules",
+      "@earendil-works",
+      "pi-ai",
+      "dist",
+      "providers",
+      "all.js",
+    );
+    if (existsSync(candidate)) return candidate;
+    if (dir === root) break;
+    dir = dirname(dir);
+  }
+
+  throw new Error("Unable to locate @earendil-works/pi-ai providers/all.js");
+}
+
+const { builtinImagesModels } = (await import(
+  pathToFileURL(findPiAiProvidersAllPath(import.meta.url)).href
+)) as { builtinImagesModels: () => ImagesModels };
+const imagesModels = builtinImagesModels();
+
+const MODEL_IDS = imagesModels
+  .getModels("openrouter")
   .map((m) => m.id)
   .filter((id) => id !== "openrouter/auto") as [string, ...string[]];
 
 const DEFAULT_MODEL = "google/gemini-2.5-flash-image";
 
 export default function imageGenExtension(pi: ExtensionAPI) {
-  pi.on("session_start", (_event, ctx) => {
-    if (!process.env.IMAGE_GEN_OPENROUTER_API_KEY) {
+  pi.on("session_start", async (_event, ctx) => {
+    const defaultModel = imagesModels.getModel("openrouter", DEFAULT_MODEL);
+    const auth = defaultModel
+      ? await imagesModels.getAuth(defaultModel)
+      : undefined;
+    if (!auth) {
       ctx.ui.notify(
-        "image-gen: IMAGE_GEN_OPENROUTER_API_KEY is not set — generate_image tool will fail.",
+        "image-gen: OPENROUTER_API_KEY is not set — generate_image tool will fail.",
         "warning",
       );
     }
@@ -49,12 +110,14 @@ export default function imageGenExtension(pi: ExtensionAPI) {
       "When calling generate_image, write detailed, descriptive prompts — more detail yields better results.",
     ],
     renderCall(args, theme) {
-      const modelId = args.model ?? DEFAULT_MODEL;
+      const modelId =
+        typeof args.model === "string" ? args.model : DEFAULT_MODEL;
+      const prompt = typeof args.prompt === "string" ? args.prompt : "";
       const header =
         theme.fg("toolTitle", theme.bold("generate_image")) +
         " " +
         theme.fg("muted", modelId);
-      const body = `\n${theme.fg("dim", args.prompt)}`;
+      const body = `\n${theme.fg("dim", prompt)}`;
       return new Text(`${header}${body}`, 0, 0);
     },
 
@@ -77,28 +140,25 @@ export default function imageGenExtension(pi: ExtensionAPI) {
     }),
 
     async execute(_toolCallId, params, signal, onUpdate) {
-      const apiKey = process.env.IMAGE_GEN_OPENROUTER_API_KEY;
-      if (!apiKey)
-        throw new Error(
-          "IMAGE_GEN_OPENROUTER_API_KEY environment variable is not set.",
-        );
-
-      const modelId = params.model ?? DEFAULT_MODEL;
+      const modelId =
+        typeof params.model === "string" ? params.model : DEFAULT_MODEL;
+      const prompt = typeof params.prompt === "string" ? params.prompt : "";
 
       onUpdate?.({
         content: [{ type: "text", text: `Generating image with ${modelId}…` }],
-        details: { modelId, prompt: params.prompt, status: "generating" },
+        details: { modelId, prompt, status: "generating" },
       });
 
-      const model = getImageModels("openrouter").find(
-        (model) => model.id === modelId,
-      );
+      const model = imagesModels.getModel("openrouter", modelId);
       if (!model) throw new Error(`Unknown image model: ${modelId}`);
 
-      const result = await generateImages(
+      const auth = await imagesModels.getAuth(model);
+      if (!auth) throw new Error("OPENROUTER_API_KEY is not set");
+
+      const result = await imagesModels.generateImages(
         model,
-        { input: [{ type: "text", text: params.prompt }] },
-        { apiKey, signal },
+        { input: [{ type: "text", text: prompt }] },
+        { signal },
       );
 
       if (result.stopReason === "error")
@@ -140,7 +200,7 @@ export default function imageGenExtension(pi: ExtensionAPI) {
         ],
         details: {
           modelId,
-          prompt: params.prompt,
+          prompt,
           mimeType: imageBlock.mimeType,
           savedPath,
           usage: result.usage,
