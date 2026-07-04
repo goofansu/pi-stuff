@@ -1,71 +1,71 @@
 {
-  "answer.ts": {
+  "extensions/answer.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/answer.ts",
     "reviewed": "67bfb288446351cfd6ae4293bb217e4fe9ed9fe2",
     "remark": "diverged: local adds markdown rendering for question text and context (Markdown component + getMarkdownTheme). Upstream renders questions as plain wrapped text. Also: config (model ID, provider), keybinding system (keyHint vs hardcoded), visual (editor theme, confirmation dialog style)"
   },
-  "btw.ts": {
+  "extensions/btw.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/btw.ts",
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
     "remark": "functionally_same: backported isIdle() conditional delivery. codingTools and replaceMessages not available in current pi version — remaining diffs are API unavailability, config/keybinding/visual"
   },
-  "control.ts": {
+  "extensions/control.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/control.ts",
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
     "remark": "functionally_same: backported result.isError check. Rest is config (provider), keybinding, visual, code style"
   },
-  "files.ts": {
+  "extensions/files.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/files.ts",
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
     "remark": "functionally_same: intentional removals (3 keyboard shortcuts, quick-diff, findLatestFileReference), added defensive content guard, config (zed vs code), keybinding, visual"
   },
-  "loop.ts": {
+  "extensions/loop.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/loop.ts",
     "reviewed": "ac79012425c315ce545a8b2564f866c803d619c8",
     "remark": "removed locally to match upstream ac79012: loop behavior is now folded into session-backed goal.ts"
   },
-  "prompt-editor.ts": {
+  "extensions/prompt-editor.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/prompt-editor.ts",
     "reviewed": "a71bed215fb67005bdb23916110decff3dceeecb",
-    "remark": "functionally_same: applied bash status mode-label improvement and cycleMode fallback. Remaining diffs are code style (typed wrappers vs any casts)"
+    "remark": "diverged: local adds mode persistence/config UI, prompt history, typed wrappers, and prompt border labels; latest local addition displays the current pi session name as a right-side editor-border segment after bash. Upstream-reviewed functional fixes applied through a71bed2; remaining diffs are intentional local behavior plus code style."
   },
-  "review.ts": {
+  "extensions/review.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/review.ts",
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
     "remark": "functionally_same: deliverAs:followUp is an intentional local addition (upstream sends plain), keybinding, visual, code style"
   },
-  "session-breakdown.ts": {
+  "extensions/session-breakdown.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/session-breakdown.ts",
     "reviewed": "2ac44802c3629e8feb3e46ccf16c3928a4b356d6",
     "remark": "functionally_same: applied faux-provider session skip. Remaining diffs are keybinding system, visual polish (visibleWidth for correct ANSI width handling — bugfix over upstream .length), removed dead code"
   },
-  "todos.ts": {
+  "extensions/todos.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/todos.ts",
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
     "remark": "functionally_same: upstream listTodosSync() is dead code (defined but never called) — local uses async listTodos() throughout. Rest is keybinding, import path, code style (stricter typing)"
   },
-  "context.ts": {
+  "extensions/context.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/context.ts",
     "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948",
     "remark": "functionally_same: keybinding system, visual, code style (type-safe helpers vs any casts, constructor signature)"
   },
-  "goal.ts": {
+  "extensions/goal.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/goal.ts",
     "reviewed": "ac79012425c315ce545a8b2564f866c803d619c8",
     "remark": "functionally_same: biome formatting (tabs to spaces, line wrapping), replaced non-null assertions with return values from setGoalStatus/setGoal to satisfy noNonNullAssertion lint rule"
   },
-  "notify.ts": {
+  "extensions/notify.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/notify.ts",
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
