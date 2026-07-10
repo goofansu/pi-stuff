@@ -50,7 +50,7 @@ Output shows new commits per tracked file or directory since the last reviewed S
 
 ```
 ✓  answer.ts
-↑  btw.ts — 2 new commit(s):
+↑  answer.ts — 2 new commit(s):
    abc1234 2026-04-20 fix: session cleanup race condition
         https://github.com/mitsuhiko/agent-stuff/commit/abc1234
    def5678 2026-04-22 refactor: clean up imports
@@ -72,13 +72,13 @@ After applying the fixes, advance the reviewed SHA so those commits stop appeari
 
 ```bash
 # Mark a specific file or directory (advances to its latest upstream commit)
-bash .pi/skills/check-upstream/check.sh mark btw.ts
+bash .pi/skills/check-upstream/check.sh mark answer.ts
 
 # Mark all files at once
 bash .pi/skills/check-upstream/check.sh mark
 
 # Mark at a specific commit (not latest)
-bash .pi/skills/check-upstream/check.sh mark btw.ts abc1234
+bash .pi/skills/check-upstream/check.sh mark answer.ts abc1234
 ```
 
 ## Adding a new extension or skill to track

@@ -5,18 +5,6 @@
     "reviewed": "67bfb288446351cfd6ae4293bb217e4fe9ed9fe2",
     "remark": "diverged: local adds markdown rendering for question text and context (Markdown component + getMarkdownTheme). Upstream renders questions as plain wrapped text. Also: config (model ID, provider), keybinding system (keyHint vs hardcoded), visual (editor theme, confirmation dialog style)"
   },
-  "extensions/btw.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/btw.ts",
-    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
-    "remark": "functionally_same: backported isIdle() conditional delivery. codingTools and replaceMessages not available in current pi version — remaining diffs are API unavailability, config/keybinding/visual"
-  },
-  "extensions/control.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/control.ts",
-    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
-    "remark": "functionally_same: backported result.isError check. Rest is config (provider), keybinding, visual, code style"
-  },
   "extensions/files.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/files.ts",
@@ -46,12 +34,6 @@
     "path": "extensions/session-breakdown.ts",
     "reviewed": "2ac44802c3629e8feb3e46ccf16c3928a4b356d6",
     "remark": "functionally_same: applied faux-provider session skip. Remaining diffs are keybinding system, visual polish (visibleWidth for correct ANSI width handling — bugfix over upstream .length), removed dead code"
-  },
-  "extensions/todos.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/todos.ts",
-    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
-    "remark": "functionally_same: upstream listTodosSync() is dead code (defined but never called) — local uses async listTodos() throughout. Rest is keybinding, import path, code style (stricter typing)"
   },
   "extensions/context.ts": {
     "repo": "mitsuhiko/agent-stuff",
