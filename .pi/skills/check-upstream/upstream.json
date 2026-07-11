@@ -35,12 +35,6 @@
     "reviewed": "2ac44802c3629e8feb3e46ccf16c3928a4b356d6",
     "remark": "functionally_same: applied faux-provider session skip. Remaining diffs are keybinding system, visual polish (visibleWidth for correct ANSI width handling — bugfix over upstream .length), removed dead code"
   },
-  "extensions/context.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/context.ts",
-    "reviewed": "b861028c706edf3e3f983cde09dd8cc8549ec948",
-    "remark": "functionally_same: keybinding system, visual, code style (type-safe helpers vs any casts, constructor signature)"
-  },
   "extensions/goal.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/goal.ts",
