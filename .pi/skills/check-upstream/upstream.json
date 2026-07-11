@@ -11,12 +11,6 @@
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
     "remark": "functionally_same: intentional removals (3 keyboard shortcuts, quick-diff, findLatestFileReference), added defensive content guard, config (zed vs code), keybinding, visual"
   },
-  "extensions/loop.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/loop.ts",
-    "reviewed": "ac79012425c315ce545a8b2564f866c803d619c8",
-    "remark": "removed locally to match upstream ac79012: loop behavior is now folded into session-backed goal.ts"
-  },
   "extensions/prompt-editor.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/prompt-editor.ts",
