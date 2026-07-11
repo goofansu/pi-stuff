@@ -8,16 +8,11 @@
  * - current context window usage + session totals (tokens/cost)
  */
 
-import { existsSync } from "node:fs";
-import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-  ExtensionContext,
   Theme,
-  ToolResultEvent,
 } from "@earendil-works/pi-coding-agent";
 import { DynamicBorder, keyHint } from "@earendil-works/pi-coding-agent";
 import {
@@ -39,133 +34,9 @@ function estimateTokens(text: string): number {
   return Math.max(0, Math.ceil(text.length / 4));
 }
 
-function normalizeReadPath(inputPath: string, cwd: string): string {
-  // Similar to pi's resolveToCwd/resolveReadPath, but simplified.
-  let p = inputPath;
-  if (p.startsWith("@")) p = p.slice(1);
-  if (p === "~") p = os.homedir();
-  else if (p.startsWith("~/")) p = path.join(os.homedir(), p.slice(2));
-  if (!path.isAbsolute(p)) p = path.resolve(cwd, p);
-  return path.resolve(p);
-}
-
-function getAgentDir(): string {
-  // Mirrors pi's behavior reasonably well.
-  const envCandidates = ["PI_CODING_AGENT_DIR", "TAU_CODING_AGENT_DIR"];
-  let envDir: string | undefined;
-  for (const k of envCandidates) {
-    if (process.env[k]) {
-      envDir = process.env[k];
-      break;
-    }
-  }
-  if (!envDir) {
-    for (const [k, v] of Object.entries(process.env)) {
-      if (k.endsWith("_CODING_AGENT_DIR") && v) {
-        envDir = v;
-        break;
-      }
-    }
-  }
-
-  if (envDir) {
-    if (envDir === "~") return os.homedir();
-    if (envDir.startsWith("~/"))
-      return path.join(os.homedir(), envDir.slice(2));
-    return envDir;
-  }
-  return path.join(os.homedir(), ".pi", "agent");
-}
-
-async function readFileIfExists(
-  filePath: string,
-): Promise<{ path: string; content: string; bytes: number } | null> {
-  if (!existsSync(filePath)) return null;
-  try {
-    const buf = await fs.readFile(filePath);
-    return {
-      path: filePath,
-      content: buf.toString("utf8"),
-      bytes: buf.byteLength,
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function loadProjectContextFiles(
-  cwd: string,
-): Promise<Array<{ path: string; tokens: number; bytes: number }>> {
-  const out: Array<{ path: string; tokens: number; bytes: number }> = [];
-  const seen = new Set<string>();
-
-  const loadFromDir = async (dir: string) => {
-    for (const name of ["AGENTS.md", "CLAUDE.md"]) {
-      const p = path.join(dir, name);
-      const f = await readFileIfExists(p);
-      if (f && !seen.has(f.path)) {
-        seen.add(f.path);
-        out.push({
-          path: f.path,
-          tokens: estimateTokens(f.content),
-          bytes: f.bytes,
-        });
-        // pi loads at most one of those per dir
-        return;
-      }
-    }
-  };
-
-  await loadFromDir(getAgentDir());
-
-  // Ancestors: root → cwd (same order as pi)
-  const stack: string[] = [];
-  let current = path.resolve(cwd);
-  while (true) {
-    stack.push(current);
-    const parent = path.resolve(current, "..");
-    if (parent === current) break;
-    current = parent;
-  }
-  stack.reverse();
-  for (const dir of stack) await loadFromDir(dir);
-
-  return out;
-}
-
 function normalizeSkillName(name: string): string {
   return name.startsWith("skill:") ? name.slice("skill:".length) : name;
 }
-
-type SkillIndexEntry = {
-  name: string;
-  skillFilePath: string;
-  skillDir: string;
-};
-
-function buildSkillIndex(pi: ExtensionAPI, cwd: string): SkillIndexEntry[] {
-  return pi
-    .getCommands()
-    .filter((c) => c.source === "skill")
-    .map((c) => {
-      const p = c.sourceInfo?.path
-        ? normalizeReadPath(c.sourceInfo.path, cwd)
-        : "";
-      return {
-        name: normalizeSkillName(c.name),
-        skillFilePath: p,
-        skillDir: p ? path.dirname(p) : "",
-      };
-    })
-    .filter((x) => x.name && x.skillDir);
-}
-
-const SKILL_LOADED_ENTRY = "context:skill_loaded";
-
-type SkillLoadedEntryData = {
-  name: string;
-  path: string;
-};
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -173,23 +44,6 @@ function asRecord(value: unknown): UnknownRecord | undefined {
   return value && typeof value === "object"
     ? (value as UnknownRecord)
     : undefined;
-}
-
-function hasSkillLoadedEntryData(
-  value: unknown,
-): value is SkillLoadedEntryData {
-  const data = asRecord(value);
-  return typeof data?.name === "string" && typeof data.path === "string";
-}
-
-function getLoadedSkillsFromSession(ctx: ExtensionContext): Set<string> {
-  const out = new Set<string>();
-  for (const e of ctx.sessionManager.getEntries()) {
-    if (e.type !== "custom") continue;
-    if (e.customType !== SKILL_LOADED_ENTRY) continue;
-    if (hasSkillLoadedEntryData(e.data)) out.add(e.data.name);
-  }
-  return out;
 }
 
 function extractCostTotal(usage: unknown): number {
@@ -210,7 +64,7 @@ function extractCostTotal(usage: unknown): number {
   return 0;
 }
 
-function sumSessionUsage(ctx: ExtensionCommandContext): {
+export function sumSessionUsage(ctx: ExtensionCommandContext): {
   input: number;
   output: number;
   cacheRead: number;
@@ -230,8 +84,8 @@ function sumSessionUsage(ctx: ExtensionCommandContext): {
     if (msg.role !== "assistant") continue;
     const usage = asRecord(msg.usage);
     if (!usage) continue;
-    input += Number(usage.inputTokens ?? 0) || 0;
-    output += Number(usage.outputTokens ?? 0) || 0;
+    input += Number(usage.input ?? 0) || 0;
+    output += Number(usage.output ?? 0) || 0;
     cacheRead += Number(usage.cacheRead ?? 0) || 0;
     cacheWrite += Number(usage.cacheWrite ?? 0) || 0;
     totalCost += extractCostTotal(usage);
@@ -494,60 +348,6 @@ class ContextView implements Component {
 }
 
 export default function (pi: ExtensionAPI) {
-  // Track which skills were actually pulled in via read tool calls.
-  let lastSessionId: string | null = null;
-  let cachedLoadedSkills = new Set<string>();
-  let cachedSkillIndex: SkillIndexEntry[] = [];
-
-  const ensureCaches = (ctx: ExtensionContext) => {
-    const sid = ctx.sessionManager.getSessionId();
-    if (sid !== lastSessionId) {
-      lastSessionId = sid;
-      cachedLoadedSkills = getLoadedSkillsFromSession(ctx);
-      cachedSkillIndex = buildSkillIndex(pi, ctx.cwd);
-    }
-    if (cachedSkillIndex.length === 0) {
-      cachedSkillIndex = buildSkillIndex(pi, ctx.cwd);
-    }
-  };
-
-  const matchSkillForPath = (absPath: string): string | null => {
-    let best: SkillIndexEntry | null = null;
-    for (const s of cachedSkillIndex) {
-      if (!s.skillDir) continue;
-      if (
-        absPath === s.skillFilePath ||
-        absPath.startsWith(s.skillDir + path.sep)
-      ) {
-        if (!best || s.skillDir.length > best.skillDir.length) best = s;
-      }
-    }
-    return best?.name ?? null;
-  };
-
-  pi.on("tool_result", (event: ToolResultEvent, ctx: ExtensionContext) => {
-    // Only count successful reads.
-    if (event.toolName !== "read") return;
-    if (event.isError) return;
-
-    const input = event.input as { path?: unknown } | undefined;
-    const p = typeof input?.path === "string" ? input.path : "";
-    if (!p) return;
-
-    ensureCaches(ctx);
-    const abs = normalizeReadPath(p, ctx.cwd);
-    const skillName = matchSkillForPath(abs);
-    if (!skillName) return;
-
-    if (!cachedLoadedSkills.has(skillName)) {
-      cachedLoadedSkills.add(skillName);
-      pi.appendEntry<SkillLoadedEntryData>(SKILL_LOADED_ENTRY, {
-        name: skillName,
-        path: abs,
-      });
-    }
-  });
-
   pi.registerCommand("context", {
     description: "Show loaded context overview",
     handler: async (_args, ctx: ExtensionCommandContext) => {
@@ -566,11 +366,21 @@ export default function (pi: ExtensionAPI) {
         .map((p) => (p === "<unknown>" ? p : path.basename(p)))
         .sort((a, b) => a.localeCompare(b));
 
-      const skills = skillCmds
-        .map((c) => normalizeSkillName(c.name))
+      const promptOptions = ctx.getSystemPromptOptions();
+      const loadedSkills = (promptOptions.skills ?? [])
+        .map((s) => s.name)
         .sort((a, b) => a.localeCompare(b));
+      const skills = Array.from(
+        new Set([
+          ...skillCmds.map((c) => normalizeSkillName(c.name)),
+          ...loadedSkills,
+        ]),
+      ).sort((a, b) => a.localeCompare(b));
 
-      const agentFiles = await loadProjectContextFiles(ctx.cwd);
+      const agentFiles = (promptOptions.contextFiles ?? []).map((f) => ({
+        path: f.path,
+        tokens: estimateTokens(f.content),
+      }));
       const agentFilePaths = agentFiles.map((f) =>
         shortenPath(f.path, ctx.cwd),
       );
@@ -582,8 +392,9 @@ export default function (pi: ExtensionAPI) {
         : 0;
 
       const usage = ctx.getContextUsage();
-      const messageTokens = usage?.tokens ?? 0;
-      const ctxWindow = usage?.contextWindow ?? 0;
+      const knownUsage = usage && usage.tokens !== null ? usage : undefined;
+      const messageTokens = knownUsage?.tokens ?? 0;
+      const ctxWindow = knownUsage?.contextWindow ?? 0;
 
       // Tool definitions are not part of ctx.getContextUsage() (it estimates message tokens).
       // We approximate their token impact from tool name + description, and apply a fudge
@@ -611,7 +422,7 @@ export default function (pi: ExtensionAPI) {
       const makePlainText = () => {
         const lines: string[] = [];
         lines.push("Context");
-        if (usage) {
+        if (knownUsage) {
           lines.push(
             `Window: ~${effectiveTokens.toLocaleString()} / ${ctxWindow.toLocaleString()} (${percent.toFixed(1)}% used, ~${remainingTokens.toLocaleString()} left)`,
           );
@@ -639,7 +450,7 @@ export default function (pi: ExtensionAPI) {
         return lines.join("\n");
       };
 
-      if (!ctx.hasUI) {
+      if (ctx.mode !== "tui") {
         pi.sendMessage(
           { customType: "context", content: makePlainText(), display: true },
           { triggerTurn: false },
@@ -647,12 +458,8 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
-      const loadedSkills = Array.from(getLoadedSkillsFromSession(ctx)).sort(
-        (a, b) => a.localeCompare(b),
-      );
-
       const viewData: ContextViewData = {
-        usage: usage
+        usage: knownUsage
           ? {
               messageTokens,
               contextWindow: ctxWindow,
