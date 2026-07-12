@@ -25,7 +25,7 @@ _api() { gh api "$@" 2>/dev/null; }
 cmd_check() {
   local any_new=false
   local names
-  names=$(jq -r 'keys[]' "$UPSTREAM")
+  names=$(jq -r 'keys[] | select(startswith("extensions/"))' "$UPSTREAM")
 
   for name in $names; do
     local repo fpath reviewed
@@ -70,7 +70,7 @@ cmd_check() {
 cmd_mark() {
   local target="${1:-}" explicit_sha="${2:-}"
   local names
-  names=$(jq -r 'keys[]' "$UPSTREAM")
+  names=$(jq -r 'keys[] | select(startswith("extensions/"))' "$UPSTREAM")
 
   for name in $names; do
     [[ -n "$target" && "$name" != "$target" ]] && continue
