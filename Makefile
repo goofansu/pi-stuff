@@ -10,7 +10,7 @@ keybindings:
 	@ln -svf $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
 
 skills:
-	@gh skill install mattpocock/skills grilling        --dir skills --agent pi
-	@gh skill install mattpocock/skills grill-with-docs --dir skills --agent pi
-	@gh skill install mattpocock/skills domain-modeling --dir skills --agent pi
-	@gh skill install mattpocock/skills codebase-design --dir skills --agent pi
+	@gh skill install --dir skills --agent pi -f mattpocock/skills grill-with-docs
+	@gh skill install --dir skills --agent pi -f mattpocock/skills grilling
+	@gh skill install --dir skills --agent pi -f mattpocock/skills domain-modeling
+	@gh skill install --dir skills --agent pi -f mattpocock/skills codebase-design
