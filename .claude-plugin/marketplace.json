@@ -1,5 +1,6 @@
 {
   "name": "pi-stuff",
+  "description": "Personal marketplace of Claude Code skills, agents, and commands.",
   "owner": {
     "name": "Yejun Su",
     "email": "goofan.su@gmail.com"
