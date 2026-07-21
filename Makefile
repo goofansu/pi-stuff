@@ -10,4 +10,15 @@ keybindings:
 	@ln -svf $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
 
 skills:
-	npx skills add mattpocock/skills -a claude-code -a pi -g
+	npx skills add mattpocock/skills -a claude-code -a codex -a pi -g -y \
+		-s ask-matt \
+		-s codebase-design \
+		-s domain-modeling \
+		-s grill-with-docs \
+		-s grilling \
+		-s setup-matt-pocock-skills \
+		-s to-spec \
+		-s to-tickets \
+		-s triage \
+		-s wayfinder \
+		-s writing-great-skills
