@@ -16,6 +16,7 @@ skills:
 		-s domain-modeling \
 		-s grill-with-docs \
 		-s grilling \
+		-s implement \
 		-s setup-matt-pocock-skills \
 		-s to-spec \
 		-s to-tickets \
