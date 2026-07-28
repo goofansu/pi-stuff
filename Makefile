@@ -11,7 +11,7 @@ keybindings:
 
 skills:
 	npx skills add ./skills -a claude-code -g -y
-	npx skills add mattpocock/skills -a claude-code -a codex -a pi -g -y \
+	npx skills add mattpocock/skills -a claude-code -g -y \
 		-s ask-matt \
 		-s codebase-design \
 		-s domain-modeling \
