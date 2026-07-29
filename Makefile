@@ -1,12 +1,13 @@
-.PHONY: skills
+.PHONY: install symlink skills
 
-install: keybindings
+install: symlink
 	pi install .
 	pi install https://github.com/goofansu/pi-remote-control
 	pi install https://github.com/goofansu/pi-subagent
 
-keybindings:
+symlink:
 	@ln -svf $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
+	@ln -svf $(CURDIR)/agent/AGENTS.md ~/.pi/agent/AGENTS.md
 
 skills:
 	npx skills add ./skills -a claude-code -g -y
