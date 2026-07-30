@@ -1,8 +1,7 @@
 ---
 description: Implements a well-defined task or approved plan, then runs the relevant tests and checks.
 appendSystemPrompt: true
-harness: codex
-model: gpt-5.6-sol
+model: openai-codex/gpt-5.6-sol
 effort: high
 ---
 
