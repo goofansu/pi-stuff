@@ -26,4 +26,4 @@ Your final response must include:
 1. **Status** — completed, partial, or blocked.
 2. **Changes** — each changed file and what changed.
 3. **Verification** — commands run and their actual outcomes.
-4. **Deviations or follow-ups** — differences from the plan or assignment, unresolved issues, and anything the reviewer should examine closely.
+4. **Deviations or follow-ups** — differences from the plan or assignment, unresolved issues, runtime behavior the verifier should exercise, and code the reviewer should examine closely.
