@@ -1,5 +1,5 @@
 ---
-description: User-invoked claude harness.
+description: Handles general-purpose research, analysis, and multi-step tasks that do not fit a specialized agent.
 appendSystemPrompt: true
 harness: claude
 model: opus
