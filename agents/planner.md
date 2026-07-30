@@ -1,6 +1,5 @@
 ---
 description: Investigates non-trivial or ambiguous changes and produces an implementation-ready plan without editing files.
-appendSystemPrompt: true
 harness: claude
 model: opus
 effort: high

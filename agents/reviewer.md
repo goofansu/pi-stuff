@@ -1,6 +1,5 @@
 ---
 description: Independently reviews a completed change for correctness, regressions, and adherence to its requirements without editing files.
-appendSystemPrompt: true
 harness: claude
 model: opus
 effort: medium
