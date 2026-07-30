@@ -11,19 +11,21 @@ symlink:
 
 skills:
 	npx skills add ./skills -a claude-code -g -y
-	npx skills add mattpocock/skills -a claude-code -a pi -g -y \
+	npx skills add mattpocock/skills -a claude-code -g -y \
+		-s implement \
+		-s tdd \
 		-s code-review \
 		-s codebase-design \
-		-s domain-modeling \
+		-s triage
+	npx skills add mattpocock/skills -a pi -g -y \
+		-s setup-matt-pocock-skills \
 		-s grill-with-docs \
 		-s grilling \
-		-s implement \
-		-s prototype \
-		-s research \
-		-s setup-matt-pocock-skills \
-		-s tdd \
+		-s domain-modeling \
 		-s to-spec \
 		-s to-tickets \
-		-s triage \
 		-s wayfinder \
+		-s prototype \
+		-s research \
+		-s triage \
 		-s writing-great-skills
