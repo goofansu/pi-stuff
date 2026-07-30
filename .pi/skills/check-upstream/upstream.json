@@ -26,8 +26,8 @@
   "extensions/session-breakdown.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/session-breakdown.ts",
-    "reviewed": "2ac44802c3629e8feb3e46ccf16c3928a4b356d6",
-    "remark": "functionally_same: applied faux-provider session skip. Remaining diffs are keybinding system, visual polish (visibleWidth for correct ANSI width handling — bugfix over upstream .length), removed dead code"
+    "reviewed": "ab1e7f3414e4c8aa54a3eda0a3c634c32d3794f0",
+    "remark": "functionally_same through ab1e7f3: intentional local differences are the keybindings manager with keyHint-based close/cancel help, faux-provider filtering, visibleWidth/truncateToWidth correctness for ANSI and wide text, and formatting/style"
   },
   "extensions/goal.ts": {
     "repo": "mitsuhiko/agent-stuff",
