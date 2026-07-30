@@ -1,6 +1,7 @@
 ---
 description: Implements a well-defined task or approved plan, then runs the relevant tests and checks.
-model: openai-codex/gpt-5.6-sol
+harness: codex
+model: gpt-5.6-sol
 effort: high
 ---
 
