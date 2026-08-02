@@ -1,7 +1,7 @@
 ---
 description: Handles general-purpose research, analysis, and multi-step tasks that do not fit a specialized agent.
-harness: claude
-model: opus
+harness: codex
+model: gpt-5.6-sol
 effort: medium
 ---
 
