@@ -1,16 +1,12 @@
-.PHONY: packages files skills
-
-install: packages files skills
+install: packages keybindings skills
 
 packages:
 	pi install .
-	pi install https://github.com/goofansu/pi-remote-control
 	pi install https://github.com/goofansu/pi-subagent
-	pi install https://github.com/obra/superpowers
+	pi install https://github.com/goofansu/pi-remote-control
 
-files:
+keybindings:
 	@ln -svf $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
 
 skills:
-	npx skills add ./skills -a claude-code -g -y
-	npx skills add mattpocock/skills -a claude-code -g
+	npx skills add goofansu/skills -s commit -a pi -g -y

@@ -8,9 +8,9 @@
  *   OPENROUTER_API_KEY — API key from https://openrouter.ai
  */
 
-import { existsSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, parse } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { writeFileSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
+import { builtinImagesModels } from "@earendil-works/pi-ai/providers/all";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
@@ -48,32 +48,7 @@ function StringEnum<T extends readonly string[]>(
   });
 }
 
-function findPiAiProvidersAllPath(startUrl: string) {
-  let dir = dirname(fileURLToPath(startUrl));
-  const root = parse(dir).root;
-
-  while (true) {
-    const candidate = join(
-      dir,
-      "node_modules",
-      "@earendil-works",
-      "pi-ai",
-      "dist",
-      "providers",
-      "all.js",
-    );
-    if (existsSync(candidate)) return candidate;
-    if (dir === root) break;
-    dir = dirname(dir);
-  }
-
-  throw new Error("Unable to locate @earendil-works/pi-ai providers/all.js");
-}
-
-const { builtinImagesModels } = (await import(
-  pathToFileURL(findPiAiProvidersAllPath(import.meta.url)).href
-)) as { builtinImagesModels: () => ImagesModels };
-const imagesModels = builtinImagesModels();
+const imagesModels = builtinImagesModels() as ImagesModels;
 
 const MODEL_IDS = imagesModels
   .getModels("openrouter")
