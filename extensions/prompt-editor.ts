@@ -3,7 +3,6 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
-import type { Api, Model } from "@earendil-works/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -15,8 +14,6 @@ import {
   CustomEditor,
   DynamicBorder,
   keyHint,
-  ModelSelectorComponent,
-  SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import {
   Container,
@@ -1282,28 +1279,16 @@ async function pickModelForModeUI(
 ): Promise<{ provider: string; modelId: string } | undefined> {
   if (!ctx.hasUI) return undefined;
 
-  const settingsManager = SettingsManager.inMemory();
-  const currentModel =
-    spec.provider && spec.modelId
-      ? ctx.modelRegistry.find(spec.provider, spec.modelId)
-      : ctx.model;
+  const models =
+    ctx.scopedModels.length > 0
+      ? ctx.scopedModels.map(({ model }) => model)
+      : ctx.modelRegistry.getAvailable();
+  const choices = models.map((model) => `${model.provider}/${model.id}`);
+  const selected = await ctx.ui.select("Select model", choices);
+  if (!selected) return undefined;
 
-  const scopedModels: Array<{ model: Model<Api>; thinkingLevel?: string }> = [];
-
-  return ctx.ui.custom<{ provider: string; modelId: string } | undefined>(
-    (tui, _theme, _keybindings, done) => {
-      const selector = new ModelSelectorComponent(
-        tui,
-        currentModel,
-        settingsManager,
-        ctx.modelRegistry,
-        scopedModels,
-        (model) => done({ provider: model.provider, modelId: model.id }),
-        () => done(undefined),
-      );
-      return selector;
-    },
-  );
+  const model = models[choices.indexOf(selected)];
+  return model ? { provider: model.provider, modelId: model.id } : undefined;
 }
 
 async function pickThinkingLevelForModeUI(
