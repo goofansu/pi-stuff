@@ -10,6 +10,7 @@ Source: https://github.com/mitsuhiko/agent-stuff
 Files:
   - extensions/answer.ts
   - extensions/context.ts
+  - extensions/control.ts
   - extensions/files.ts
   - extensions/goal.ts
   - extensions/notify.ts
