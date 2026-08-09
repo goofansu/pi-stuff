@@ -70,6 +70,12 @@ interface BraveApiResponse {
 
 type GroundingKind = "generic" | "poi" | "map";
 
+const GROUNDING_KIND_PRIORITY: Record<GroundingKind, number> = {
+  generic: 0,
+  map: 1,
+  poi: 2,
+};
+
 /**
  * One numbered grounding entry. Collection and rendering both walk this single
  * ordered, URL-deduplicated list so entry numbers and source numbers cannot
@@ -83,6 +89,47 @@ interface GroundingEntry {
   date?: string;
 }
 
+function mergeSnippets(
+  left: unknown[] | undefined,
+  right: unknown[] | undefined,
+): unknown[] | undefined {
+  const merged: unknown[] = [];
+  const seenStrings = new Set<string>();
+
+  for (const snippet of [...(left ?? []), ...(right ?? [])]) {
+    if (typeof snippet === "string") {
+      if (seenStrings.has(snippet)) continue;
+      seenStrings.add(snippet);
+    }
+    merged.push(snippet);
+  }
+
+  return merged.length > 0 ? merged : undefined;
+}
+
+/**
+ * Brave can represent one URL in multiple grounding collections. Consolidate
+ * those records into one citable entry without dropping local-result labels or
+ * snippets that only occur in the later POI/map record.
+ */
+function mergeGroundingEntry(
+  entry: GroundingEntry,
+  kind: GroundingKind,
+  item: BraveGroundingItem,
+): void {
+  const preferIncomingKind =
+    GROUNDING_KIND_PRIORITY[kind] > GROUNDING_KIND_PRIORITY[entry.kind];
+  entry.kind = preferIncomingKind ? kind : entry.kind;
+  entry.item = {
+    url: entry.item.url ?? item.url,
+    title: entry.item.title ?? item.title,
+    name: preferIncomingKind
+      ? (item.name ?? entry.item.name)
+      : (entry.item.name ?? item.name),
+    snippets: mergeSnippets(entry.item.snippets, item.snippets),
+  };
+}
+
 interface SearchDetails {
   query: string;
   count: number;
@@ -92,7 +139,7 @@ interface SearchDetails {
   freshness?: string;
   threshold: string;
   goggles?: string;
-  /** Sources that actually returned content, bounded by min(count, max_urls). */
+  /** Unique source URLs that actually returned grounding content. */
   returned_sources: number;
   sources: SearchSource[];
 }
@@ -152,9 +199,10 @@ function formatAge(age: unknown): string | undefined {
 
 /**
  * Flatten Brave's grounding container into one ordered list: generic results,
- * then the point of interest, then map results. Entries are deduplicated by URL
+ * then the point of interest, then map results. Entries are consolidated by URL
  * and numbered once, so the numbers in the result body match the numbers in the
- * source list. Entries without a URL stay in the body but cannot be cited.
+ * source list without losing content from duplicate POI/map records. Entries
+ * without a URL stay in the body but cannot be cited.
  */
 function collectEntries(data: BraveApiResponse): GroundingEntry[] {
   const grounding = data?.grounding;
@@ -170,21 +218,26 @@ function collectEntries(data: BraveApiResponse): GroundingEntry[] {
     ];
 
   const entries: GroundingEntry[] = [];
-  const seen = new Set<string>();
+  const entryByUrl = new Map<string, GroundingEntry>();
   for (const { kind, item } of candidates) {
     if (!item) continue;
     if (item.url) {
-      if (seen.has(item.url)) continue;
-      seen.add(item.url);
+      const existing = entryByUrl.get(item.url);
+      if (existing) {
+        mergeGroundingEntry(existing, kind, item);
+        continue;
+      }
     }
     const meta = (item.url ? data?.sources?.[item.url] : undefined) ?? {};
-    entries.push({
+    const entry: GroundingEntry = {
       index: entries.length + 1,
       kind,
       item,
       meta,
       date: formatAge(meta.age),
-    });
+    };
+    entries.push(entry);
+    if (item.url) entryByUrl.set(item.url, entry);
   }
 
   return entries;
@@ -278,6 +331,10 @@ async function braveLlmContext(
 
   const query = params.query.trim();
   if (!query) throw new Error("query is required");
+  if (query.length > 400)
+    throw new Error("query must be at most 400 characters");
+  if (query.split(/\s+/).length > 50)
+    throw new Error("query must contain at most 50 words");
 
   const count = clampInt(params.count, 20, 1, 50);
   const maxTokens = clampInt(params.max_tokens, 8192, 1024, 32768);
@@ -366,15 +423,18 @@ export default function (pi: ExtensionAPI) {
       "Use web_search as the default for questions you will answer and cite yourself — current information, recent events, external facts, product/docs lookups, or research that needs synthesis across several sources. Rewrite the request into a concise query, then cite the returned sources; pass goggles to boost, downrank, or restrict domains when the user wants specific or authoritative sources.",
       "Use freshness for 'latest', recent, and news requests (pd/pw/pm/py, or a YYYY-MM-DDtoYYYY-MM-DD range). Each result reports a 'Page date' from Brave — treat it as approximate, because it can be the page's last-modified date rather than its first publication date, and prefer a date stated in the page content when one matters.",
       "Use count for the candidate pool Brave ranks and max_urls for how many of those candidates may return content: at most min(count, max_urls) sources come back, and often fewer once Brave drops low-relevance pages. Budgets: simple lookup count=5, max_urls=3, max_tokens=2048; standard query count=20, max_tokens=8192; complex research count=50, max_urls=10, max_tokens=16384. Cap a verbose source with max_tokens_per_url so one page cannot dominate the context.",
+      "Returned results already contain extracted page content. Do NOT scrape a returned URL unless the content needed to answer is absent, insufficient, or truncated.",
       "Do NOT repeat the same search or maximize count, max_urls, and token limits by default. Start with the task-sized budgets above; if results are weak, refine query, freshness, threshold, or goggles before broadening the candidate and context limits.",
     ],
     parameters: Type.Object({
       query: Type.String({
+        minLength: 1,
+        maxLength: 400,
         description:
           "Required web search query (1-400 characters, max 50 words).",
       }),
       count: Type.Optional(
-        Type.Number({
+        Type.Integer({
           minimum: 1,
           maximum: 50,
           description:
@@ -382,7 +442,7 @@ export default function (pi: ExtensionAPI) {
         }),
       ),
       max_urls: Type.Optional(
-        Type.Number({
+        Type.Integer({
           minimum: 1,
           maximum: 50,
           description:
@@ -390,7 +450,7 @@ export default function (pi: ExtensionAPI) {
         }),
       ),
       max_tokens: Type.Optional(
-        Type.Number({
+        Type.Integer({
           minimum: 1024,
           maximum: 32768,
           description:
@@ -398,7 +458,7 @@ export default function (pi: ExtensionAPI) {
         }),
       ),
       max_tokens_per_url: Type.Optional(
-        Type.Number({
+        Type.Integer({
           minimum: 512,
           maximum: 8192,
           description:
@@ -421,15 +481,16 @@ export default function (pi: ExtensionAPI) {
       goggles: Type.Optional(
         Type.String({
           description:
-            "Optional Brave Goggles URL or inline rules for custom ranking/filtering. Use to restrict, boost, downrank, or discard sources when the user asks for specific/authoritative sources. Inline syntax: $boost=N / $downrank=N (1–10), $discard, $site=example.com. Combine with commas: $site=example.com,boost=3. Separate rules with %0A.",
+            "Optional Brave Goggles URL or inline rules for custom ranking/filtering. Use to restrict, boost, downrank, or discard sources when the user asks for specific/authoritative sources. Inline syntax: $boost=N,site=example.com / $downrank=N,site=example.com (N is 1–10), or $discard,site=example.com. Separate multiple rules with %0A.",
         }),
       ),
     }),
 
-    // No prepareArguments shim is needed for sessions recorded before
-    // max_snippets_per_url was dropped: the schema allows extra properties, so a
-    // stale argument validates, is ignored when building the Brave request, and
-    // is ignored again when rendering stored details.
+    // Brave documents maximum_number_of_snippets_per_url, but live POST requests
+    // currently return the same per-URL snippet counts for low, high, and omitted
+    // values. Do not expose a control the service does not honor. Old recorded
+    // max_snippets_per_url arguments remain harmless because extra properties are
+    // ignored here and when rendering stored details.
     async execute(_toolCallId, params, signal) {
       const result = await braveLlmContext(params as SearchParams, signal);
       return {

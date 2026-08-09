@@ -137,6 +137,16 @@ describe("web_search registration", () => {
     assert.doesNotMatch(guidelines, /max_snippets_per_url/);
   });
 
+  it("discourages redundant scraping of returned sources", () => {
+    const guidelines = (
+      registerWebSearchTool().promptGuidelines as string[]
+    ).join("\n");
+
+    assert.match(guidelines, /already contain extracted page content/);
+    assert.match(guidelines, /Do NOT scrape a returned URL/);
+    assert.match(guidelines, /absent, insufficient, or truncated/);
+  });
+
   it("warns when BRAVE_SEARCH_API_KEY is missing at session start", () => {
     const notifications: Array<[string, string]> = [];
     let handler: any;
@@ -194,6 +204,24 @@ describe("web_search schema", () => {
     assert.deepEqual(bounds("max_urls"), [1, 50]);
     assert.deepEqual(bounds("max_tokens"), [1024, 32768]);
     assert.deepEqual(bounds("max_tokens_per_url"), [512, 8192]);
+    for (const name of [
+      "count",
+      "max_urls",
+      "max_tokens",
+      "max_tokens_per_url",
+    ])
+      assert.equal(properties[name].type, "integer", name);
+  });
+
+  it("enforces Brave's documented query character bounds", () => {
+    assert.equal(properties.query.minLength, 1);
+    assert.equal(properties.query.maxLength, 400);
+  });
+
+  it("documents valid inline Goggles syntax", () => {
+    assert.match(properties.goggles.description, /\$boost=N,site=example\.com/);
+    assert.match(properties.goggles.description, /\$discard,site=example\.com/);
+    assert.doesNotMatch(properties.goggles.description, /\$site=/);
   });
 
   it("does not expose the ineffective per-source snippet control", () => {
@@ -324,6 +352,35 @@ describe("web_search outgoing Brave request", () => {
       await assert.rejects(
         () => tool.execute("call-1", { query: "news", freshness: "last week" }),
         /freshness must be pd, pw, pm, py, or YYYY-MM-DDtoYYYY-MM-DD/,
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    assert.equal(called, false);
+  });
+
+  it("rejects queries over Brave's limits before making a request", async () => {
+    const tool = registerWebSearchTool();
+    const originalFetch = globalThis.fetch;
+    let called = false;
+    process.env.BRAVE_SEARCH_API_KEY = "test-key";
+    globalThis.fetch = (async () => {
+      called = true;
+      throw new Error("should not be called");
+    }) as typeof fetch;
+
+    try {
+      await assert.rejects(
+        () => tool.execute("call-1", { query: "x".repeat(401) }),
+        /query must be at most 400 characters/,
+      );
+      await assert.rejects(
+        () =>
+          tool.execute("call-1", {
+            query: Array.from({ length: 51 }, () => "word").join(" "),
+          }),
+        /query must contain at most 50 words/,
       );
     } finally {
       globalThis.fetch = originalFetch;
@@ -515,7 +572,7 @@ describe("web_search model-visible output", () => {
     );
   });
 
-  it("numbers generic, POI, and map entries in one shared sequence", async () => {
+  it("consolidates duplicate URLs without dropping POI content", async () => {
     const { text, result } = await runTool(
       { query: "mixed grounding" },
       {
@@ -524,10 +581,17 @@ describe("web_search model-visible output", () => {
             generic: [
               { url: "https://g1.example.com", title: "Generic one" },
               { url: "https://g2.example.com", title: "Generic two" },
-              // Duplicate of the POI URL: deduplicated, so numbering cannot skip.
-              { url: "https://poi.example.com", title: "Generic POI dupe" },
+              {
+                url: "https://poi.example.com",
+                title: "Generic POI dupe",
+                snippets: ["Generic context.", "Shared context."],
+              },
             ],
-            poi: { url: "https://poi.example.com", name: "The Place" },
+            poi: {
+              url: "https://poi.example.com",
+              name: "The Place",
+              snippets: ["Local details.", "Shared context."],
+            },
             map: [{ url: "https://m1.example.com", name: "Map one" }],
           },
           sources: {},
@@ -539,9 +603,14 @@ describe("web_search model-visible output", () => {
     assert.deepEqual(headings, [
       "## 1. Generic one",
       "## 2. Generic two",
-      "## 3. Generic POI dupe",
+      "## 3. Point of interest: The Place",
       "## 4. Map result: Map one",
     ]);
+    assert.match(
+      text,
+      /## 3\. Point of interest: The Place[\s\S]*- Generic context\.[\s\S]*- Shared context\.[\s\S]*- Local details\./,
+    );
+    assert.equal(text.match(/- Shared context\./g)?.length, 1);
     assert.deepEqual(
       result.details.sources.map((source: any) => [source.index, source.url]),
       [
