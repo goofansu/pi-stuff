@@ -31,13 +31,14 @@ interface SearchParams {
   max_urls?: number;
   max_tokens?: number;
   max_tokens_per_url?: number;
-  max_snippets_per_url?: number;
   freshness?: string;
   threshold?: "strict" | "balanced" | "lenient";
   goggles?: string;
 }
 
 interface SearchSource {
+  /** 1-based position shared with the numbered result entry for this source. */
+  index: number;
   url: string;
   title?: string;
   hostname?: string;
@@ -52,16 +53,34 @@ interface BraveGroundingItem {
   snippets?: unknown[];
 }
 
+interface BraveSourceMeta {
+  title?: string;
+  hostname?: string;
+  age?: unknown;
+}
+
 interface BraveApiResponse {
   grounding?: {
     generic?: BraveGroundingItem[];
     map?: BraveGroundingItem[];
     poi?: BraveGroundingItem;
   };
-  sources?: Record<
-    string,
-    { title?: string; hostname?: string; age?: unknown }
-  >;
+  sources?: Record<string, BraveSourceMeta>;
+}
+
+type GroundingKind = "generic" | "poi" | "map";
+
+/**
+ * One numbered grounding entry. Collection and rendering both walk this single
+ * ordered, URL-deduplicated list so entry numbers and source numbers cannot
+ * drift apart.
+ */
+interface GroundingEntry {
+  index: number;
+  kind: GroundingKind;
+  item: BraveGroundingItem;
+  meta: BraveSourceMeta;
+  date?: string;
 }
 
 interface SearchDetails {
@@ -70,10 +89,11 @@ interface SearchDetails {
   max_urls?: number;
   max_tokens: number;
   max_tokens_per_url?: number;
-  max_snippets_per_url?: number;
   freshness?: string;
   threshold: string;
   goggles?: string;
+  /** Sources that actually returned content, bounded by min(count, max_urls). */
+  returned_sources: number;
   sources: SearchSource[];
 }
 
@@ -108,10 +128,16 @@ function optionalInt(
 }
 
 /**
- * Brave reports `sources[url].age` as an array of date renderings — e.g.
- * ["Wednesday, January 15, 2025", "2025-01-15", "392 days ago"] — or null.
- * Prefer the ISO-8601 entry so dates read consistently everywhere, and tolerate
- * strings, missing values, and unexpected shapes without dropping the source.
+ * Brave reports `sources[url].age` as an array of renderings of the page's
+ * most relevant date — e.g. ["Wednesday, January 15, 2025", "2025-01-15",
+ * "392 days ago"], sometimes with an extra ISO date-time entry — or null. Brave
+ * documents this as the page's *modification* date, so it is an approximate
+ * publication signal, which is why it is labelled "Page date" downstream.
+ *
+ * Prefer the ISO-8601 entry and normalise it to YYYY-MM-DD so dates read
+ * consistently everywhere regardless of how many renderings Brave sends, and
+ * tolerate bare strings, missing values, and unexpected shapes without dropping
+ * the source.
  */
 function formatAge(age: unknown): string | undefined {
   const candidates = Array.isArray(age) ? age : [age];
@@ -120,54 +146,68 @@ function formatAge(age: unknown): string | undefined {
     .map((entry) => entry.trim())
     .filter(Boolean);
   if (strings.length === 0) return undefined;
-  return (
-    strings.find((entry) => /^\d{4}-\d{2}-\d{2}/.test(entry)) ?? strings[0]
-  );
+  const iso = strings.find((entry) => /^\d{4}-\d{2}-\d{2}/.test(entry));
+  return iso ? iso.slice(0, 10) : strings[0];
 }
 
-function extractSources(data: BraveApiResponse): SearchSource[] {
-  const sources: SearchSource[] = [];
+/**
+ * Flatten Brave's grounding container into one ordered list: generic results,
+ * then the point of interest, then map results. Entries are deduplicated by URL
+ * and numbered once, so the numbers in the result body match the numbers in the
+ * source list. Entries without a URL stay in the body but cannot be cited.
+ */
+function collectEntries(data: BraveApiResponse): GroundingEntry[] {
+  const grounding = data?.grounding;
+  const poi = grounding?.poi;
+  const candidates: Array<{ kind: GroundingKind; item?: BraveGroundingItem }> =
+    [
+      ...(grounding?.generic ?? []).map((item) => ({
+        kind: "generic" as const,
+        item,
+      })),
+      ...(poi ? [{ kind: "poi" as const, item: poi }] : []),
+      ...(grounding?.map ?? []).map((item) => ({ kind: "map" as const, item })),
+    ];
+
+  const entries: GroundingEntry[] = [];
   const seen = new Set<string>();
-
-  for (const item of data?.grounding?.generic ?? []) {
-    if (!item?.url || seen.has(item.url)) continue;
-    seen.add(item.url);
-    const meta = data?.sources?.[item.url] ?? {};
-    sources.push({
-      url: item.url,
-      title: item.title ?? meta.title,
-      hostname: meta.hostname,
-      age: meta.age,
+  for (const { kind, item } of candidates) {
+    if (!item) continue;
+    if (item.url) {
+      if (seen.has(item.url)) continue;
+      seen.add(item.url);
+    }
+    const meta = (item.url ? data?.sources?.[item.url] : undefined) ?? {};
+    entries.push({
+      index: entries.length + 1,
+      kind,
+      item,
+      meta,
       date: formatAge(meta.age),
     });
   }
 
-  for (const item of data?.grounding?.map ?? []) {
-    if (!item?.url || seen.has(item.url)) continue;
-    seen.add(item.url);
-    const meta = data?.sources?.[item.url] ?? {};
-    sources.push({
-      url: item.url,
-      title: item.title ?? item.name ?? meta.title,
-      hostname: meta.hostname,
-      age: meta.age,
-      date: formatAge(meta.age),
-    });
-  }
+  return entries;
+}
 
-  const poi = data?.grounding?.poi;
-  if (poi?.url && !seen.has(poi.url)) {
-    const meta = data?.sources?.[poi.url] ?? {};
-    sources.push({
-      url: poi.url,
-      title: poi.title ?? poi.name ?? meta.title,
-      hostname: meta.hostname,
-      age: meta.age,
-      date: formatAge(meta.age),
-    });
-  }
+function toSources(entries: GroundingEntry[]): SearchSource[] {
+  return entries
+    .filter((entry) => Boolean(entry.item.url))
+    .map((entry) => ({
+      index: entry.index,
+      url: entry.item.url as string,
+      title: entry.item.title ?? entry.item.name ?? entry.meta.title,
+      hostname: entry.meta.hostname,
+      age: entry.meta.age,
+      date: entry.date,
+    }));
+}
 
-  return sources;
+function entryLabel(entry: GroundingEntry): string {
+  const { item, kind, index } = entry;
+  if (kind === "generic") return item.title || item.url || `Result ${index}`;
+  const name = item.name ?? item.title ?? "Result";
+  return kind === "poi" ? `Point of interest: ${name}` : `Map result: ${name}`;
 }
 
 function formatSnippetList(snippets: unknown): string {
@@ -181,64 +221,52 @@ function formatSnippetList(snippets: unknown): string {
     .join("\n");
 }
 
+/**
+ * Render the numbered source list first, then the extracted content. Output is
+ * truncated head-first, so leading with sources keeps citations attributable
+ * even when a large result is cut short.
+ */
 function formatSearchResult(
-  data: BraveApiResponse,
+  entries: GroundingEntry[],
   sources: SearchSource[],
 ): string {
-  const parts: string[] = [];
-  const generic = data?.grounding?.generic ?? [];
-  const dateFor = (url?: string): string | undefined =>
-    url ? formatAge(data?.sources?.[url]?.age) : undefined;
-  const heading = (title: string, url?: string): string => {
-    const date = dateFor(url);
-    return `${title}\n${url ?? ""}${date ? `\nDate: ${date}` : ""}`.trim();
-  };
-
-  for (let i = 0; i < generic.length; i++) {
-    const item = generic[i];
-    if (!item) continue;
-    const title = item.title || item.url || `Result ${i + 1}`;
-    parts.push(heading(`## ${i + 1}. ${title}`, item.url));
-    const snippets = formatSnippetList(item.snippets);
-    if (snippets) parts.push(snippets);
-  }
-
-  const poi = data?.grounding?.poi;
-  if (poi) {
-    parts.push(
-      heading(
-        `## Point of interest: ${poi.name ?? poi.title ?? "Result"}`,
-        poi.url,
-      ),
-    );
-    const snippets = formatSnippetList(poi.snippets);
-    if (snippets) parts.push(snippets);
-  }
-
-  for (const item of data?.grounding?.map ?? []) {
-    parts.push(
-      heading(
-        `## Map result: ${item.name ?? item.title ?? "Result"}`,
-        item.url,
-      ),
-    );
-    const snippets = formatSnippetList(item.snippets);
-    if (snippets) parts.push(snippets);
-  }
-
-  if (parts.length === 0) return "No web-search results found.";
+  if (entries.length === 0) return "No web-search results found.";
 
   const sourceList =
     sources.length > 0
       ? sources
           .map(
-            (source, i) =>
-              `${i + 1}. ${source.title ?? source.hostname ?? source.url}\n   ${source.url}${source.date ? `\n   Date: ${source.date}` : ""}`,
+            (source) =>
+              `${source.index}. ${source.title ?? source.hostname ?? source.url}\n   ${source.url}${source.date ? `\n   Page date: ${source.date}` : ""}`,
           )
           .join("\n")
       : "No sources returned.";
 
-  return `${parts.join("\n\n")}\n\n---\n\n## Sources\n${sourceList}`;
+  const header = [
+    `## Sources (${sources.length} returned)`,
+    sources.some((source) => source.date)
+      ? "Page date is the date Brave reports for the page and may be a modification date rather than first publication."
+      : "",
+    sourceList,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const body = entries
+    .map((entry) => {
+      const heading = [
+        `## ${entry.index}. ${entryLabel(entry)}`,
+        entry.item.url ?? "",
+        entry.date ? `Page date: ${entry.date}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+      const snippets = formatSnippetList(entry.item.snippets);
+      return snippets ? `${heading}\n\n${snippets}` : heading;
+    })
+    .join("\n\n");
+
+  return `${header}\n\n---\n\n${body}`;
 }
 
 async function braveLlmContext(
@@ -259,7 +287,6 @@ async function braveLlmContext(
   // Optional controls stay absent from the request so Brave's own defaults apply.
   const maxUrls = optionalInt(params.max_urls, 1, 50);
   const maxTokensPerUrl = optionalInt(params.max_tokens_per_url, 512, 8192);
-  const maxSnippetsPerUrl = optionalInt(params.max_snippets_per_url, 1, 100);
 
   const freshness = params.freshness?.trim().toLowerCase() || undefined;
   if (freshness && !FRESHNESS_PATTERN.test(freshness)) {
@@ -286,9 +313,6 @@ async function braveLlmContext(
       ...(maxTokensPerUrl === undefined
         ? {}
         : { maximum_number_of_tokens_per_url: maxTokensPerUrl }),
-      ...(maxSnippetsPerUrl === undefined
-        ? {}
-        : { maximum_number_of_snippets_per_url: maxSnippetsPerUrl }),
       ...(freshness ? { freshness } : {}),
       ...(goggles ? { goggles } : {}),
     }),
@@ -302,19 +326,20 @@ async function braveLlmContext(
   }
 
   const data = (await response.json()) as BraveApiResponse;
-  const sources = extractSources(data);
+  const entries = collectEntries(data);
+  const sources = toSources(entries);
   return {
-    text: truncateText(formatSearchResult(data, sources)),
+    text: truncateText(formatSearchResult(entries, sources)),
     details: {
       query,
       count,
       max_urls: maxUrls,
       max_tokens: maxTokens,
       max_tokens_per_url: maxTokensPerUrl,
-      max_snippets_per_url: maxSnippetsPerUrl,
       freshness,
       threshold,
       goggles,
+      returned_sources: sources.length,
       sources,
     },
   };
@@ -339,8 +364,8 @@ export default function (pi: ExtensionAPI) {
       "Search the web with Brave LLM Context and return extracted content plus sources",
     promptGuidelines: [
       "Use web_search as the default for questions you will answer and cite yourself — current information, recent events, external facts, product/docs lookups, or research that needs synthesis across several sources. Rewrite the request into a concise query, then cite the returned sources; pass goggles to boost, downrank, or restrict domains when the user wants specific or authoritative sources.",
-      "Use freshness for 'latest', recent, and news requests (pd/pw/pm/py, or a YYYY-MM-DDtoYYYY-MM-DD range). Results include each source's reported date; use it to assess recency and support citations.",
-      "Use count for how many results Brave ranks and max_urls for how many of those sources actually return content: simple lookup count=5, max_urls=3, max_tokens=2048; standard query count=20, max_tokens=8192; complex research count=50, max_urls=10, max_tokens=16384. Cap a verbose source with max_tokens_per_url / max_snippets_per_url so one page cannot dominate the context.",
+      "Use freshness for 'latest', recent, and news requests (pd/pw/pm/py, or a YYYY-MM-DDtoYYYY-MM-DD range). Each result reports a 'Page date' from Brave — treat it as approximate, because it can be the page's last-modified date rather than its first publication date, and prefer a date stated in the page content when one matters.",
+      "Use count for the candidate pool Brave ranks and max_urls for how many of those candidates may return content: at most min(count, max_urls) sources come back, and often fewer once Brave drops low-relevance pages. Budgets: simple lookup count=5, max_urls=3, max_tokens=2048; standard query count=20, max_tokens=8192; complex research count=50, max_urls=10, max_tokens=16384. Cap a verbose source with max_tokens_per_url so one page cannot dominate the context.",
       "Do NOT repeat the same search or maximize count, max_urls, and token limits by default. Start with the task-sized budgets above; if results are weak, refine query, freshness, threshold, or goggles before broadening the candidate and context limits.",
     ],
     parameters: Type.Object({
@@ -353,7 +378,7 @@ export default function (pi: ExtensionAPI) {
           minimum: 1,
           maximum: 50,
           description:
-            "Candidate breadth: how many search results Brave ranks when selecting context, 1-50. Default: 20. This is NOT the number of sources returned — use max_urls for that. Use 5 for simple factual lookups, 20 for standard queries, and 50 for complex research.",
+            "Candidate pool width: how many search results Brave ranks before selecting context, 1-50. Default: 20. It does not set how many sources are returned — the returned sources are bounded by min(count, max_urls) and are often fewer. Use 5 for simple factual lookups, 20 for standard queries, and 50 for complex research.",
         }),
       ),
       max_urls: Type.Optional(
@@ -361,7 +386,7 @@ export default function (pi: ExtensionAPI) {
           minimum: 1,
           maximum: 50,
           description:
-            "Selected sources: how many of the ranked candidates contribute grounding content, 1-50. Brave's default is 20. Set lower than count (e.g. count=50, max_urls=10) to rank broadly while keeping returned context focused; use 3 for simple lookups. Omit to keep Brave's default.",
+            "Upper bound on how many ranked candidates contribute grounding content, 1-50. Brave's default is 20, so returned sources are bounded by min(count, max_urls) and can still be fewer when Brave drops low-relevance pages. Set below count (e.g. count=50, max_urls=10) to rank broadly while keeping returned context focused; use 3 for simple lookups. Omit to keep Brave's default.",
         }),
       ),
       max_tokens: Type.Optional(
@@ -380,19 +405,11 @@ export default function (pi: ExtensionAPI) {
             "Per-source token budget, 512-8192. Brave's default is 4096. Lower it (e.g. 1024) so one verbose page cannot consume the whole token budget. Omit to keep Brave's default.",
         }),
       ),
-      max_snippets_per_url: Type.Optional(
-        Type.Number({
-          minimum: 1,
-          maximum: 100,
-          description:
-            "Per-source snippet budget, 1-100. Brave's default is 50. Lower it (e.g. 5) to spread context across more sources. Omit to keep Brave's default.",
-        }),
-      ),
       freshness: Type.Optional(
         Type.String({
           pattern: FRESHNESS_PATTERN.source,
           description:
-            "Filter results by page age. Accepts pd (24 hours), pw (7 days), pm (31 days), py (365 days), or a custom range as YYYY-MM-DDtoYYYY-MM-DD (e.g. 2026-01-01to2026-03-31). Recommended for 'latest', recent, and news requests. Omit for timeless questions.",
+            "Filter results by the date Brave reports for a page, which may be its publication or its last-modified date. Accepts pd (24 hours), pw (7 days), pm (31 days), py (365 days), or a custom range as YYYY-MM-DDtoYYYY-MM-DD (e.g. 2026-01-01to2026-03-31). Recommended for 'latest', recent, and news requests. Omit for timeless questions.",
         }),
       ),
       threshold: Type.Optional(
@@ -409,6 +426,10 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
 
+    // No prepareArguments shim is needed for sessions recorded before
+    // max_snippets_per_url was dropped: the schema allows extra properties, so a
+    // stale argument validates, is ignored when building the Brave request, and
+    // is ignored again when rendering stored details.
     async execute(_toolCallId, params, signal) {
       const result = await braveLlmContext(params as SearchParams, signal);
       return {
@@ -459,7 +480,7 @@ export default function (pi: ExtensionAPI) {
             new Text(
               theme.fg(
                 "dim",
-                `${details.sources.length} source(s), count=${details.count}, max_urls=${details.max_urls ?? "default"}, max_tokens=${details.max_tokens}, freshness=${details.freshness ?? "unset"}, goggles=${details.goggles ? "yes" : "no"}`,
+                `${details.sources.length} source(s) returned, count=${details.count}, max_urls=${details.max_urls ?? "default"}, max_tokens=${details.max_tokens}, max_tokens_per_url=${details.max_tokens_per_url ?? "default"}, freshness=${details.freshness ?? "unset"}, goggles=${details.goggles ? "yes" : "no"}`,
               ),
               0,
               0,
@@ -485,7 +506,7 @@ export default function (pi: ExtensionAPI) {
           .map((source) => `→ ${source.hostname ?? source.title ?? source.url}`)
           .join("\n");
         return new Text(
-          `${title} ${theme.fg("dim", `${details.sources.length} source(s)`)}${sourcePreview ? `\n${theme.fg("muted", sourcePreview)}` : ""}\n${theme.fg("muted", `(${keyHint("app.tools.expand", "to expand")})`)}`,
+          `${title} ${theme.fg("dim", `${details.sources.length} source(s) returned`)}${sourcePreview ? `\n${theme.fg("muted", sourcePreview)}` : ""}\n${theme.fg("muted", `(${keyHint("app.tools.expand", "to expand")})`)}`,
           0,
           0,
         );

@@ -87,7 +87,14 @@ const braveResponse = {
     "https://news.example.com/rate-decision": {
       title: "Central bank holds rates",
       hostname: "news.example.com",
-      age: ["Wednesday, January 15, 2026", "2026-01-15", "1 day ago"],
+      // Brave's documented three renderings, plus the ISO date-time rendering
+      // observed in live responses.
+      age: [
+        "Wednesday, January 15, 2026",
+        "2026-01-15T09:30:00",
+        "2026-01-15",
+        "1 day ago",
+      ],
     },
     "https://background.example.com/primer": {
       title: "How rate decisions work",
@@ -116,6 +123,18 @@ describe("web_search registration", () => {
     assert.match(guidelines, /freshness/);
     assert.match(guidelines, /max_urls/);
     assert.match(guidelines, /Do NOT repeat the same search/);
+  });
+
+  it("explains the returned-source bound and the meaning of Page date", () => {
+    const guidelines = (
+      registerWebSearchTool().promptGuidelines as string[]
+    ).join("\n");
+
+    assert.match(guidelines, /min\(count, max_urls\)/);
+    assert.match(guidelines, /Page date/);
+    assert.match(guidelines, /last-modified/);
+    assert.match(guidelines, /max_tokens_per_url/);
+    assert.doesNotMatch(guidelines, /max_snippets_per_url/);
   });
 
   it("warns when BRAVE_SEARCH_API_KEY is missing at session start", () => {
@@ -153,10 +172,16 @@ describe("web_search schema", () => {
   const properties = registerWebSearchTool().parameters
     .properties as Record<string, any>;
 
-  it("documents candidate breadth separately from returned sources", () => {
+  it("documents candidate pool width separately from returned sources", () => {
     assert.match(properties.count.description, /1-50/);
     assert.match(properties.max_urls.description, /1-50/);
-    assert.notEqual(properties.count.description, properties.max_urls.description);
+    assert.notEqual(
+      properties.count.description,
+      properties.max_urls.description,
+    );
+    assert.match(properties.count.description, /candidate pool/i);
+    assert.match(properties.count.description, /min\(count, max_urls\)/);
+    assert.match(properties.max_urls.description, /min\(count, max_urls\)/);
   });
 
   it("enforces Brave's documented numeric bounds", () => {
@@ -169,7 +194,20 @@ describe("web_search schema", () => {
     assert.deepEqual(bounds("max_urls"), [1, 50]);
     assert.deepEqual(bounds("max_tokens"), [1024, 32768]);
     assert.deepEqual(bounds("max_tokens_per_url"), [512, 8192]);
-    assert.deepEqual(bounds("max_snippets_per_url"), [1, 100]);
+  });
+
+  it("does not expose the ineffective per-source snippet control", () => {
+    assert.equal(properties.max_snippets_per_url, undefined);
+    assert.deepEqual(Object.keys(properties), [
+      "query",
+      "count",
+      "max_urls",
+      "max_tokens",
+      "max_tokens_per_url",
+      "freshness",
+      "threshold",
+      "goggles",
+    ]);
   });
 
   it("accepts Brave's freshness syntax", () => {
@@ -214,7 +252,6 @@ describe("web_search outgoing Brave request", () => {
         max_urls: 5,
         max_tokens: 16384,
         max_tokens_per_url: 1024,
-        max_snippets_per_url: 5,
         freshness: " PW ",
         threshold: "strict",
         goggles: " $discard,site=reddit.com ",
@@ -229,7 +266,6 @@ describe("web_search outgoing Brave request", () => {
       context_threshold_mode: "strict",
       maximum_number_of_urls: 5,
       maximum_number_of_tokens_per_url: 1024,
-      maximum_number_of_snippets_per_url: 5,
       freshness: "pw",
       goggles: "$discard,site=reddit.com",
     });
@@ -237,7 +273,23 @@ describe("web_search outgoing Brave request", () => {
     assert.equal(result.details.max_urls, 5);
     assert.equal(result.details.freshness, "pw");
     assert.equal(result.details.max_tokens_per_url, 1024);
-    assert.equal(result.details.max_snippets_per_url, 5);
+    assert.equal(result.details.threshold, "strict");
+    assert.equal(result.details.goggles, "$discard,site=reddit.com");
+  });
+
+  it("ignores a stale max_snippets_per_url argument from an older session", async () => {
+    const { calls, result } = await runTool(
+      { query: "resumed session", max_snippets_per_url: 5 },
+      { json: braveResponse },
+    );
+
+    assert.deepEqual(calls[0].body, {
+      q: "resumed session",
+      count: 20,
+      maximum_number_of_tokens: 8192,
+      context_threshold_mode: "balanced",
+    });
+    assert.equal("max_snippets_per_url" in result.details, false);
   });
 
   it("clamps out-of-range numbers to Brave's limits", async () => {
@@ -248,7 +300,6 @@ describe("web_search outgoing Brave request", () => {
         max_urls: 0,
         max_tokens: 1,
         max_tokens_per_url: 99_999,
-        max_snippets_per_url: 900,
       },
       { json: braveResponse },
     );
@@ -257,7 +308,6 @@ describe("web_search outgoing Brave request", () => {
     assert.equal(calls[0].body.maximum_number_of_urls, 1);
     assert.equal(calls[0].body.maximum_number_of_tokens, 1024);
     assert.equal(calls[0].body.maximum_number_of_tokens_per_url, 8192);
-    assert.equal(calls[0].body.maximum_number_of_snippets_per_url, 100);
   });
 
   it("rejects unsupported freshness before making a request", async () => {
@@ -303,7 +353,7 @@ describe("web_search outgoing Brave request", () => {
 });
 
 describe("web_search model-visible output", () => {
-  it("shows source dates in result entries and the source list", async () => {
+  it("labels page dates in result entries and the source list", async () => {
     const { text, result } = await runTool(
       { query: "rate decision", freshness: "pw" },
       { json: braveResponse },
@@ -311,14 +361,66 @@ describe("web_search model-visible output", () => {
 
     assert.match(
       text,
-      /## 1\. Central bank holds rates\nhttps:\/\/news\.example\.com\/rate-decision\nDate: 2026-01-15/,
+      /## 1\. Central bank holds rates\nhttps:\/\/news\.example\.com\/rate-decision\nPage date: 2026-01-15/,
     );
     assert.match(text, /- Rates were held at 4\.25% on Thursday\./);
     assert.match(
       text,
-      /## Sources\n1\. Central bank holds rates\n {3}https:\/\/news\.example\.com\/rate-decision\n {3}Date: 2026-01-15/,
+      /## Sources \(2 returned\)\n.*\n1\. Central bank holds rates\n {3}https:\/\/news\.example\.com\/rate-decision\n {3}Page date: 2026-01-15/,
     );
+    assert.match(text, /may be a modification date rather than first publication/);
+    assert.doesNotMatch(text, /^Date: /m);
+    assert.doesNotMatch(text, /\n {3}Date: /);
     assert.equal(result.details.sources[0].date, "2026-01-15");
+    assert.equal(result.details.returned_sources, 2);
+  });
+
+  it("normalises Brave's four-element age array to a plain ISO date", async () => {
+    const { text, result } = await runTool(
+      { query: "age shapes" },
+      {
+        json: {
+          grounding: {
+            generic: [
+              { url: "https://a.example.com", title: "Four", snippets: ["a"] },
+              { url: "https://b.example.com", title: "Three", snippets: ["b"] },
+            ],
+          },
+          sources: {
+            "https://a.example.com": {
+              hostname: "a.example.com",
+              age: [
+                "Wednesday, January 15, 2026",
+                "2026-01-15T09:30:00",
+                "2026-01-15",
+                "1 day ago",
+              ],
+            },
+            "https://b.example.com": {
+              hostname: "b.example.com",
+              age: ["Monday, January 5, 2026", "2026-01-05", "11 days ago"],
+            },
+          },
+        },
+      },
+    );
+
+    assert.deepEqual(
+      result.details.sources.map((source: any) => source.date),
+      ["2026-01-15", "2026-01-05"],
+    );
+    assert.doesNotMatch(text, /T09:30:00/);
+  });
+
+  it("puts the numbered source list before the extracted content", async () => {
+    const { text } = await runTool(
+      { query: "ordering" },
+      { json: braveResponse },
+    );
+
+    assert.ok(text.startsWith("## Sources (2 returned)"));
+    assert.ok(text.indexOf("## Sources") < text.indexOf("\n## 1. "));
+    assert.ok(text.indexOf("---") < text.indexOf("\n## 1. "));
   });
 
   it("renders sources without a date and with unexpected age metadata", async () => {
@@ -358,8 +460,11 @@ describe("web_search model-visible output", () => {
 
     assert.match(text, /## 1\. No age\nhttps:\/\/a\.example\.com\n/);
     assert.match(text, /## 2\. Odd age\nhttps:\/\/b\.example\.com\n/);
-    assert.match(text, /## 3\. Relative age\nhttps:\/\/c\.example\.com\nDate: 3 days ago/);
-    assert.doesNotMatch(text, /Date: \[object Object\]/);
+    assert.match(
+      text,
+      /## 3\. Relative age\nhttps:\/\/c\.example\.com\nPage date: 3 days ago/,
+    );
+    assert.doesNotMatch(text, /Page date: \[object Object\]/);
     assert.deepEqual(
       result.details.sources.map((source: any) => source.date),
       [undefined, undefined, "3 days ago"],
@@ -393,20 +498,84 @@ describe("web_search model-visible output", () => {
 
     assert.match(
       text,
-      /## Point of interest: Corner Cafe\nhttps:\/\/cafe\.example\.com\nDate: 2026-02-02/,
+      /## 1\. Point of interest: Corner Cafe\nhttps:\/\/cafe\.example\.com\nPage date: 2026-02-02/,
     );
     assert.match(text, /- Open until 6pm\./);
-    assert.match(text, /## Map result: Cafe Row\nhttps:\/\/map\.example\.com/);
+    assert.match(
+      text,
+      /## 2\. Map result: Cafe Row\nhttps:\/\/map\.example\.com/,
+    );
     assert.deepEqual(
       result.details.sources.map((source: any) => source.url),
-      ["https://map.example.com", "https://cafe.example.com"],
+      ["https://cafe.example.com", "https://map.example.com"],
     );
+    assert.deepEqual(
+      result.details.sources.map((source: any) => source.index),
+      [1, 2],
+    );
+  });
+
+  it("numbers generic, POI, and map entries in one shared sequence", async () => {
+    const { text, result } = await runTool(
+      { query: "mixed grounding" },
+      {
+        json: {
+          grounding: {
+            generic: [
+              { url: "https://g1.example.com", title: "Generic one" },
+              { url: "https://g2.example.com", title: "Generic two" },
+              // Duplicate of the POI URL: deduplicated, so numbering cannot skip.
+              { url: "https://poi.example.com", title: "Generic POI dupe" },
+            ],
+            poi: { url: "https://poi.example.com", name: "The Place" },
+            map: [{ url: "https://m1.example.com", name: "Map one" }],
+          },
+          sources: {},
+        },
+      },
+    );
+
+    const headings = text.match(/^## \d+\..*$/gm) ?? [];
+    assert.deepEqual(headings, [
+      "## 1. Generic one",
+      "## 2. Generic two",
+      "## 3. Generic POI dupe",
+      "## 4. Map result: Map one",
+    ]);
+    assert.deepEqual(
+      result.details.sources.map((source: any) => [source.index, source.url]),
+      [
+        [1, "https://g1.example.com"],
+        [2, "https://g2.example.com"],
+        [3, "https://poi.example.com"],
+        [4, "https://m1.example.com"],
+      ],
+    );
+    assert.match(text, /## Sources \(4 returned\)/);
+    assert.equal(result.details.returned_sources, 4);
   });
 
   it("reports an empty result set", async () => {
     const { text } = await runTool({ query: "nothing" }, { json: {} });
 
     assert.equal(text, "No web-search results found.");
+  });
+
+  it("reports entries that returned no citable source", async () => {
+    const { text, result } = await runTool(
+      { query: "no urls" },
+      {
+        json: {
+          grounding: { generic: [{ title: "Untitled", snippets: ["body"] }] },
+          sources: {},
+        },
+      },
+    );
+
+    assert.match(text, /## Sources \(0 returned\)\nNo sources returned\./);
+    assert.match(text, /## 1\. Untitled\n\n- body/);
+    assert.deepEqual(result.details.sources, []);
+    assert.equal(result.details.returned_sources, 0);
   });
 
   it("bounds large output and explains the truncation", async () => {
@@ -429,5 +598,34 @@ describe("web_search model-visible output", () => {
     assert.ok(Buffer.byteLength(text, "utf8") <= 50 * 1024 + 200);
     assert.match(text, /\[web-search output truncated to 51200 bytes\./);
     assert.match(text, /lower max_tokens, max_urls, or max_tokens_per_url/);
+  });
+
+  it("keeps the whole source list when the content is truncated away", async () => {
+    const { text } = await runTool(
+      { query: "huge" },
+      {
+        json: {
+          grounding: {
+            generic: Array.from({ length: 200 }, (_, i) => ({
+              url: `https://example.com/${i}`,
+              title: `Result ${i}`,
+              snippets: ["x".repeat(1000)],
+            })),
+          },
+          sources: {},
+        },
+      },
+    );
+
+    assert.match(text, /\[web-search output truncated to 51200 bytes\./);
+    assert.ok(text.startsWith("## Sources (200 returned)"));
+    // Every citation survives head truncation, including the last one.
+    for (const index of [1, 100, 200])
+      assert.ok(
+        text.includes(`${index}. Result ${index - 1}\n   https://example.com/${index - 1}`),
+        `source ${index} missing`,
+      );
+    // ...while the tail of the extracted content is dropped.
+    assert.doesNotMatch(text, /^## 200\. Result 199$/m);
   });
 });
