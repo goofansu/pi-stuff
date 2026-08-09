@@ -22,10 +22,17 @@ import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 const BRAVE_LLM_CONTEXT_ENDPOINT =
   "https://api.search.brave.com/res/v1/llm/context";
 
+const FRESHNESS_PATTERN =
+  /^(pd|pw|pm|py|\d{4}-\d{2}-\d{2}to\d{4}-\d{2}-\d{2})$/;
+
 interface SearchParams {
   query: string;
   count?: number;
+  max_urls?: number;
   max_tokens?: number;
+  max_tokens_per_url?: number;
+  max_snippets_per_url?: number;
+  freshness?: string;
   threshold?: "strict" | "balanced" | "lenient";
   goggles?: string;
 }
@@ -35,6 +42,7 @@ interface SearchSource {
   title?: string;
   hostname?: string;
   age?: unknown;
+  date?: string;
 }
 
 interface BraveGroundingItem {
@@ -59,7 +67,11 @@ interface BraveApiResponse {
 interface SearchDetails {
   query: string;
   count: number;
+  max_urls?: number;
   max_tokens: number;
+  max_tokens_per_url?: number;
+  max_snippets_per_url?: number;
+  freshness?: string;
   threshold: string;
   goggles?: string;
   sources: SearchSource[];
@@ -70,7 +82,7 @@ function truncateText(text: string, maxBytes = 50 * 1024): string {
   let truncated = text.slice(0, maxBytes);
   while (Buffer.byteLength(truncated, "utf8") > maxBytes)
     truncated = truncated.slice(0, -1);
-  return `${truncated}\n\n[web-search output truncated to ${maxBytes} bytes. Refine the query or lower max_tokens for a smaller result.]`;
+  return `${truncated}\n\n[web-search output truncated to ${maxBytes} bytes. Refine the query, or lower max_tokens, max_urls, or max_tokens_per_url for a smaller result.]`;
 }
 
 function clampInt(
@@ -86,6 +98,33 @@ function clampInt(
   return Math.max(min, Math.min(max, n));
 }
 
+function optionalInt(
+  value: unknown,
+  min: number,
+  max: number,
+): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return clampInt(value, min, min, max);
+}
+
+/**
+ * Brave reports `sources[url].age` as an array of date renderings — e.g.
+ * ["Wednesday, January 15, 2025", "2025-01-15", "392 days ago"] — or null.
+ * Prefer the ISO-8601 entry so dates read consistently everywhere, and tolerate
+ * strings, missing values, and unexpected shapes without dropping the source.
+ */
+function formatAge(age: unknown): string | undefined {
+  const candidates = Array.isArray(age) ? age : [age];
+  const strings = candidates
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  if (strings.length === 0) return undefined;
+  return (
+    strings.find((entry) => /^\d{4}-\d{2}-\d{2}/.test(entry)) ?? strings[0]
+  );
+}
+
 function extractSources(data: BraveApiResponse): SearchSource[] {
   const sources: SearchSource[] = [];
   const seen = new Set<string>();
@@ -99,6 +138,7 @@ function extractSources(data: BraveApiResponse): SearchSource[] {
       title: item.title ?? meta.title,
       hostname: meta.hostname,
       age: meta.age,
+      date: formatAge(meta.age),
     });
   }
 
@@ -111,6 +151,7 @@ function extractSources(data: BraveApiResponse): SearchSource[] {
       title: item.title ?? item.name ?? meta.title,
       hostname: meta.hostname,
       age: meta.age,
+      date: formatAge(meta.age),
     });
   }
 
@@ -122,6 +163,7 @@ function extractSources(data: BraveApiResponse): SearchSource[] {
       title: poi.title ?? poi.name ?? meta.title,
       hostname: meta.hostname,
       age: meta.age,
+      date: formatAge(meta.age),
     });
   }
 
@@ -145,12 +187,18 @@ function formatSearchResult(
 ): string {
   const parts: string[] = [];
   const generic = data?.grounding?.generic ?? [];
+  const dateFor = (url?: string): string | undefined =>
+    url ? formatAge(data?.sources?.[url]?.age) : undefined;
+  const heading = (title: string, url?: string): string => {
+    const date = dateFor(url);
+    return `${title}\n${url ?? ""}${date ? `\nDate: ${date}` : ""}`.trim();
+  };
 
   for (let i = 0; i < generic.length; i++) {
     const item = generic[i];
     if (!item) continue;
     const title = item.title || item.url || `Result ${i + 1}`;
-    parts.push(`## ${i + 1}. ${title}\n${item.url ?? ""}`.trim());
+    parts.push(heading(`## ${i + 1}. ${title}`, item.url));
     const snippets = formatSnippetList(item.snippets);
     if (snippets) parts.push(snippets);
   }
@@ -158,7 +206,10 @@ function formatSearchResult(
   const poi = data?.grounding?.poi;
   if (poi) {
     parts.push(
-      `## Point of interest: ${poi.name ?? poi.title ?? "Result"}\n${poi.url ?? ""}`.trim(),
+      heading(
+        `## Point of interest: ${poi.name ?? poi.title ?? "Result"}`,
+        poi.url,
+      ),
     );
     const snippets = formatSnippetList(poi.snippets);
     if (snippets) parts.push(snippets);
@@ -166,7 +217,10 @@ function formatSearchResult(
 
   for (const item of data?.grounding?.map ?? []) {
     parts.push(
-      `## Map result: ${item.name ?? item.title ?? "Result"}\n${item.url ?? ""}`.trim(),
+      heading(
+        `## Map result: ${item.name ?? item.title ?? "Result"}`,
+        item.url,
+      ),
     );
     const snippets = formatSnippetList(item.snippets);
     if (snippets) parts.push(snippets);
@@ -179,7 +233,7 @@ function formatSearchResult(
       ? sources
           .map(
             (source, i) =>
-              `${i + 1}. ${source.title ?? source.hostname ?? source.url}\n   ${source.url}`,
+              `${i + 1}. ${source.title ?? source.hostname ?? source.url}\n   ${source.url}${source.date ? `\n   Date: ${source.date}` : ""}`,
           )
           .join("\n")
       : "No sources returned.";
@@ -202,6 +256,18 @@ async function braveLlmContext(
   const threshold = params.threshold ?? "balanced";
   const goggles = params.goggles?.trim() || undefined;
 
+  // Optional controls stay absent from the request so Brave's own defaults apply.
+  const maxUrls = optionalInt(params.max_urls, 1, 50);
+  const maxTokensPerUrl = optionalInt(params.max_tokens_per_url, 512, 8192);
+  const maxSnippetsPerUrl = optionalInt(params.max_snippets_per_url, 1, 100);
+
+  const freshness = params.freshness?.trim().toLowerCase() || undefined;
+  if (freshness && !FRESHNESS_PATTERN.test(freshness)) {
+    throw new Error(
+      `freshness must be pd, pw, pm, py, or YYYY-MM-DDtoYYYY-MM-DD (got "${params.freshness}")`,
+    );
+  }
+
   const response = await fetch(BRAVE_LLM_CONTEXT_ENDPOINT, {
     method: "POST",
     signal,
@@ -214,9 +280,16 @@ async function braveLlmContext(
     body: JSON.stringify({
       q: query,
       count,
-      maximum_number_of_urls: count,
       maximum_number_of_tokens: maxTokens,
       context_threshold_mode: threshold,
+      ...(maxUrls === undefined ? {} : { maximum_number_of_urls: maxUrls }),
+      ...(maxTokensPerUrl === undefined
+        ? {}
+        : { maximum_number_of_tokens_per_url: maxTokensPerUrl }),
+      ...(maxSnippetsPerUrl === undefined
+        ? {}
+        : { maximum_number_of_snippets_per_url: maxSnippetsPerUrl }),
+      ...(freshness ? { freshness } : {}),
       ...(goggles ? { goggles } : {}),
     }),
   });
@@ -235,7 +308,11 @@ async function braveLlmContext(
     details: {
       query,
       count,
+      max_urls: maxUrls,
       max_tokens: maxTokens,
+      max_tokens_per_url: maxTokensPerUrl,
+      max_snippets_per_url: maxSnippetsPerUrl,
+      freshness,
       threshold,
       goggles,
       sources,
@@ -257,12 +334,14 @@ export default function (pi: ExtensionAPI) {
     name: "web_search",
     label: "Web Search",
     description:
-      "Search the web with Brave LLM Context. Use when the user asks for current information, recent events, external facts, product/docs lookups, or web-grounded research.",
+      "Search the web with Brave LLM Context and return extracted page content, snippets, and a ranked source list. Answers broad, current-fact, news, and research questions directly, with citable sources.",
     promptSnippet:
       "Search the web with Brave LLM Context and return extracted content plus sources",
     promptGuidelines: [
-      "Use web_search for current information, recent events, external facts, or product/docs lookups. Do NOT use it when the user provides a specific URL to read or inspect — web_search is for queries, not fetching known URLs.",
-      "Rewrite the user's request into a concise search query before calling web_search, then cite the returned sources in your answer.",
+      "Use web_search as the default for questions you will answer and cite yourself — current information, recent events, external facts, product/docs lookups, or research that needs synthesis across several sources. Rewrite the request into a concise query, then cite the returned sources; pass goggles to boost, downrank, or restrict domains when the user wants specific or authoritative sources.",
+      "Use freshness for 'latest', recent, and news requests (pd/pw/pm/py, or a YYYY-MM-DDtoYYYY-MM-DD range). Results include each source's reported date; use it to assess recency and support citations.",
+      "Use count for how many results Brave ranks and max_urls for how many of those sources actually return content: simple lookup count=5, max_urls=3, max_tokens=2048; standard query count=20, max_tokens=8192; complex research count=50, max_urls=10, max_tokens=16384. Cap a verbose source with max_tokens_per_url / max_snippets_per_url so one page cannot dominate the context.",
+      "Do NOT repeat the same search or maximize count, max_urls, and token limits by default. Start with the task-sized budgets above; if results are weak, refine query, freshness, threshold, or goggles before broadening the candidate and context limits.",
     ],
     parameters: Type.Object({
       query: Type.String({
@@ -271,14 +350,49 @@ export default function (pi: ExtensionAPI) {
       }),
       count: Type.Optional(
         Type.Number({
+          minimum: 1,
+          maximum: 50,
           description:
-            "Search results to consider, 1-50. Default: 20. Use 5 for simple factual lookups, 20 for standard queries, and 50 for complex research.",
+            "Candidate breadth: how many search results Brave ranks when selecting context, 1-50. Default: 20. This is NOT the number of sources returned — use max_urls for that. Use 5 for simple factual lookups, 20 for standard queries, and 50 for complex research.",
+        }),
+      ),
+      max_urls: Type.Optional(
+        Type.Number({
+          minimum: 1,
+          maximum: 50,
+          description:
+            "Selected sources: how many of the ranked candidates contribute grounding content, 1-50. Brave's default is 20. Set lower than count (e.g. count=50, max_urls=10) to rank broadly while keeping returned context focused; use 3 for simple lookups. Omit to keep Brave's default.",
         }),
       ),
       max_tokens: Type.Optional(
         Type.Number({
+          minimum: 1024,
+          maximum: 32768,
           description:
-            "Approximate maximum context tokens, 1024-32768. Default: 8192. Use 2048 for simple factual lookups, 8192 for standard queries, and 16384 for complex research.",
+            "Total token budget across all returned sources, 1024-32768. Default: 8192. Use 2048 for simple factual lookups, 8192 for standard queries, and 16384 for complex research.",
+        }),
+      ),
+      max_tokens_per_url: Type.Optional(
+        Type.Number({
+          minimum: 512,
+          maximum: 8192,
+          description:
+            "Per-source token budget, 512-8192. Brave's default is 4096. Lower it (e.g. 1024) so one verbose page cannot consume the whole token budget. Omit to keep Brave's default.",
+        }),
+      ),
+      max_snippets_per_url: Type.Optional(
+        Type.Number({
+          minimum: 1,
+          maximum: 100,
+          description:
+            "Per-source snippet budget, 1-100. Brave's default is 50. Lower it (e.g. 5) to spread context across more sources. Omit to keep Brave's default.",
+        }),
+      ),
+      freshness: Type.Optional(
+        Type.String({
+          pattern: FRESHNESS_PATTERN.source,
+          description:
+            "Filter results by page age. Accepts pd (24 hours), pw (7 days), pm (31 days), py (365 days), or a custom range as YYYY-MM-DDtoYYYY-MM-DD (e.g. 2026-01-01to2026-03-31). Recommended for 'latest', recent, and news requests. Omit for timeless questions.",
         }),
       ),
       threshold: Type.Optional(
@@ -345,7 +459,7 @@ export default function (pi: ExtensionAPI) {
             new Text(
               theme.fg(
                 "dim",
-                `${details.sources.length} source(s), count=${details.count}, max_tokens=${details.max_tokens}, goggles=${details.goggles ? "yes" : "no"}`,
+                `${details.sources.length} source(s), count=${details.count}, max_urls=${details.max_urls ?? "default"}, max_tokens=${details.max_tokens}, freshness=${details.freshness ?? "unset"}, goggles=${details.goggles ? "yes" : "no"}`,
               ),
               0,
               0,
