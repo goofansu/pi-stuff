@@ -1275,7 +1275,7 @@ async function renameModeUI(
 
 async function pickModelForModeUI(
   ctx: ExtensionContext,
-  spec: ModeSpec,
+  _spec: ModeSpec,
 ): Promise<{ provider: string; modelId: string } | undefined> {
   if (!ctx.hasUI) return undefined;
 
