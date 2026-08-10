@@ -16,5 +16,5 @@ agents:
 
 skills:
 	npx skills add goofansu/skills -s commit -a pi -g -y
-	npx skills add mattpocock/skills -s setup-matt-pocock-skills -s to-spec -a pi -g -y
-	npx skills add herdrdev/herdr -s herdr -a pi -a claude-code -a codex -g -y
+	npx skills add mattpocock/skills -s setup-matt-pocock-skills -s to-spec -s to-tickets -a pi -g -y
+	npx skills add herdrdev/herdr -s herdr -a pi -g -y
