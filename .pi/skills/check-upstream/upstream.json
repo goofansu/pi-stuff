@@ -5,11 +5,23 @@
     "reviewed": "67bfb288446351cfd6ae4293bb217e4fe9ed9fe2",
     "remark": "diverged: local adds markdown rendering for question text and context (Markdown component + getMarkdownTheme). Upstream renders questions as plain wrapped text. Also: config (model ID, provider), keybinding system (keyHint vs hardcoded), visual (editor theme, confirmation dialog style)"
   },
+  "extensions/btw.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/btw.ts",
+    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
+    "remark": "functionally_same through a3f8ab1: local adapts message/session types to current APIs, uses keyHint labels, exports BtwOverlay for testing, and fixes overlay sizing by honoring allocated width and TUI terminal rows; local also conditionally uses follow-up delivery only while the main session is busy"
+  },
   "extensions/control.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/control.ts",
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
     "remark": "functionally_same: backported result.isError check. Rest is config (provider), keybinding, visual, code style"
+  },
+  "extensions/draw.ts": {
+    "repo": "mitsuhiko/pi-draw",
+    "path": "draw.ts",
+    "reviewed": "6e3d4b17fa881f5835fd6b45e7793783f685bf38",
+    "remark": "functionally_same through 6e3d4b1: local uses the @earendil-works package, themed draw:on status text, Biome formatting, and a local const instead of non-null assertions; upstream behavior is otherwise preserved"
   },
   "extensions/files.ts": {
     "repo": "mitsuhiko/agent-stuff",
