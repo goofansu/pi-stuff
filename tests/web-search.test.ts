@@ -210,14 +210,15 @@ describe("web_search registration", () => {
     assert.doesNotMatch(guidelines, /max_snippets_per_url/);
   });
 
-  it("discourages redundant scraping of returned sources", () => {
+  it("routes valuable search results to selective web fetching", () => {
     const guidelines = (
       registerWebSearchTool().promptGuidelines as string[]
     ).join("\n");
 
-    assert.match(guidelines, /already contain extracted page content/);
-    assert.match(guidelines, /Do NOT scrape a returned URL/);
-    assert.match(guidelines, /absent, insufficient, or truncated/);
+    assert.match(guidelines, /Use web_fetch after web_search/);
+    assert.match(guidelines, /most valuable results/);
+    assert.match(guidelines, /not every returned URL/);
+    assert.match(guidelines, /already returned enough context/);
   });
 
   it("treats returned web content as untrusted data", () => {
