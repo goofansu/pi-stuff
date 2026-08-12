@@ -26,7 +26,6 @@ function registerWebSearchTool() {
     registerTool(registered: any) {
       tool = registered;
     },
-    registerCommand() {},
   } as any);
   return tool;
 }
@@ -240,7 +239,6 @@ describe("web_search registration", () => {
         if (event === "session_start") handler = fn;
       },
       registerTool() {},
-      registerCommand() {},
     } as any);
 
     const previous = process.env.BRAVE_SEARCH_API_KEY;
@@ -1572,91 +1570,5 @@ describe("web_search renderResult", () => {
     assert.match(output, /1 source\(s\) returned, count=20/);
     assert.match(output, /max_urls=default/);
     assert.match(output, /Sources \(1 returned\)/);
-  });
-});
-
-function registerWebSearchCommand() {
-  const messages: Array<[string, unknown]> = [];
-  let handler: any;
-  webSearchExtension({
-    on() {},
-    registerTool() {},
-    registerCommand(name: string, command: any) {
-      assert.equal(name, "web-search");
-      handler = command.handler;
-    },
-    sendUserMessage(content: string, options: unknown) {
-      messages.push([content, options]);
-    },
-  } as any);
-  return { handler, messages };
-}
-
-describe("/web-search command", () => {
-  it("asks the agent to research an inline query", async () => {
-    const { handler, messages } = registerWebSearchCommand();
-
-    await handler("  latest rate decision  ", { hasUI: true } as any);
-
-    assert.deepEqual(messages, [
-      [
-        "Use the web_search tool to research: latest rate decision",
-        { deliverAs: "followUp" },
-      ],
-    ]);
-  });
-
-  it("prints usage instead of prompting when there is no UI", async () => {
-    const { handler, messages } = registerWebSearchCommand();
-    const notifications: Array<[string, string]> = [];
-
-    await handler("", {
-      hasUI: false,
-      ui: {
-        notify(message: string, level: string) {
-          notifications.push([message, level]);
-        },
-      },
-    } as any);
-
-    assert.deepEqual(notifications, [["Usage: /web-search <query>", "error"]]);
-    assert.deepEqual(messages, []);
-  });
-
-  it("prompts for a query when invoked bare", async () => {
-    const { handler, messages } = registerWebSearchCommand();
-
-    await handler("", {
-      hasUI: true,
-      ui: {
-        notify() {},
-        editor: async () => "  who won the match  ",
-      },
-    } as any);
-
-    assert.deepEqual(messages, [
-      [
-        "Use the web_search tool to research: who won the match",
-        { deliverAs: "followUp" },
-      ],
-    ]);
-  });
-
-  it("cancels when the prompt comes back empty", async () => {
-    const { handler, messages } = registerWebSearchCommand();
-    const notifications: Array<[string, string]> = [];
-
-    await handler("", {
-      hasUI: true,
-      ui: {
-        notify(message: string, level: string) {
-          notifications.push([message, level]);
-        },
-        editor: async () => "   ",
-      },
-    } as any);
-
-    assert.deepEqual(notifications, [["Cancelled", "info"]]);
-    assert.deepEqual(messages, []);
   });
 });

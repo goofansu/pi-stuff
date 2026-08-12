@@ -26,7 +26,6 @@ function registerWebFetchTool() {
     registerTool(registered: any) {
       tool = registered;
     },
-    registerCommand() {},
   } as any);
   return tool;
 }
@@ -651,60 +650,5 @@ describe("web_fetch rendering", () => {
     assert.match(failed.text, /✗ web_fetch \[error\]/);
     assert.match(failed.text, /Firecrawl scrape failed/);
     assert.doesNotMatch(failed.text, new RegExp(`[${ESC}${BEL}]`));
-  });
-});
-
-function registerWebFetchCommand() {
-  let handler: any;
-  const messages: Array<[string, unknown]> = [];
-  webFetchExtension({
-    registerTool() {},
-    registerCommand(name: string, command: any) {
-      assert.equal(name, "web-fetch");
-      handler = command.handler;
-    },
-    sendUserMessage(content: string, options: unknown) {
-      messages.push([content, options]);
-    },
-  } as any);
-  return { handler, messages };
-}
-
-describe("/web-fetch command", () => {
-  it("asks the agent to fetch an inline URL", async () => {
-    const { handler, messages } = registerWebFetchCommand();
-    await handler(" https://example.com/docs ", { hasUI: true } as any);
-
-    assert.deepEqual(messages, [
-      [
-        "Use the web_fetch tool to fetch and read: https://example.com/docs",
-        { deliverAs: "followUp" },
-      ],
-    ]);
-  });
-
-  it("prompts with UI and prints usage without UI", async () => {
-    const prompted = registerWebFetchCommand();
-    await prompted.handler("", {
-      hasUI: true,
-      ui: {
-        input: async () => " https://example.com ",
-        notify() {},
-      },
-    } as any);
-    assert.equal(prompted.messages.length, 1);
-
-    const headless = registerWebFetchCommand();
-    const notifications: Array<[string, string]> = [];
-    await headless.handler("", {
-      hasUI: false,
-      ui: {
-        notify(message: string, level: string) {
-          notifications.push([message, level]);
-        },
-      },
-    } as any);
-    assert.deepEqual(notifications, [["Usage: /web-fetch <url>", "error"]]);
-    assert.deepEqual(headless.messages, []);
   });
 });

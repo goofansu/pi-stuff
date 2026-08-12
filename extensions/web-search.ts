@@ -5,17 +5,14 @@
  * returns extracted page content, snippets, structured data, and sources for
  * grounded answers. The main agent should use it for current information,
  * recent events, external facts, product/docs lookups, or anything that benefits
- * from web grounding. Also provides a /web-search command for direct use.
+ * from web grounding.
  *
  * Requires:
  *   BRAVE_SEARCH_API_KEY — API key from https://api.search.brave.com
  */
 
 import { StringEnum, Type } from "@earendil-works/pi-ai";
-import type {
-  ExtensionAPI,
-  ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
@@ -766,32 +763,6 @@ export default function (pi: ExtensionAPI) {
       }
 
       return new Text(`${title}\n${resultText}`, 0, 0);
-    },
-  });
-
-  pi.registerCommand("web-search", {
-    description:
-      "Search the web with Brave LLM Context; the main agent rewrites the query and calls the web_search tool",
-    handler: async (args, ctx: ExtensionContext) => {
-      let request = args?.trim() || "";
-
-      if (!request) {
-        if (!ctx.hasUI) {
-          ctx.ui.notify("Usage: /web-search <query>", "error");
-          return;
-        }
-
-        const input = await ctx.ui.editor("What do you want to search?");
-        if (!input?.trim()) {
-          ctx.ui.notify("Cancelled", "info");
-          return;
-        }
-        request = input.trim();
-      }
-
-      pi.sendUserMessage(`Use the web_search tool to research: ${request}`, {
-        deliverAs: "followUp",
-      });
     },
   });
 }

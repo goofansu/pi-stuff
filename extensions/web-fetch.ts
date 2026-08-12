@@ -14,10 +14,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Type } from "@earendil-works/pi-ai";
-import type {
-  ExtensionAPI,
-  ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
@@ -591,35 +588,6 @@ export default function (pi: ExtensionAPI) {
       }
 
       return new Text(`${title}\n${resultText}`, 0, 0);
-    },
-  });
-
-  pi.registerCommand("web-fetch", {
-    description:
-      "Fetch a public URL with Firecrawl; the main agent calls the web_fetch tool",
-    handler: async (args, ctx: ExtensionContext) => {
-      let request = args?.trim() || "";
-
-      if (!request) {
-        if (!ctx.hasUI) {
-          ctx.ui.notify("Usage: /web-fetch <url>", "error");
-          return;
-        }
-
-        const input = await ctx.ui.input("Public URL to fetch:");
-        if (!input?.trim()) {
-          ctx.ui.notify("Cancelled", "info");
-          return;
-        }
-        request = input.trim();
-      }
-
-      pi.sendUserMessage(
-        `Use the web_fetch tool to fetch and read: ${request}`,
-        {
-          deliverAs: "followUp",
-        },
-      );
     },
   });
 }
