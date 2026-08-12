@@ -162,6 +162,36 @@ describe("validateGhInvocation", () => {
     assert.match(result.reason, /gh api graphql is blocked/);
   });
 
+  it("rejects api graphql spelled as a path or absolute URL", () => {
+    for (const endpoint of [
+      "/graphql",
+      "https://api.github.com/graphql",
+      "https://github.example.com/api/graphql",
+    ]) {
+      const result = validateGhInvocation({
+        command: "api",
+        args: [endpoint],
+      });
+
+      assert.equal(result.ok, false, endpoint);
+      assert.match(result.reason, /gh api graphql is blocked/);
+    }
+  });
+
+  it("allows endpoints that merely contain graphql", () => {
+    for (const endpoint of [
+      "repos/owner/graphql",
+      "repos/owner/repo/contents/graphql.ts",
+    ]) {
+      const result = validateGhInvocation({
+        command: "api",
+        args: [endpoint],
+      });
+
+      assert.equal(result.ok, true, endpoint);
+    }
+  });
+
   it("rejects flags that open a browser", () => {
     for (const args of [
       ["owner/repo", "--web"],

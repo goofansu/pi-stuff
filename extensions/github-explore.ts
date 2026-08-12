@@ -111,6 +111,16 @@ function findApiEndpoint(args: string[]): string | undefined {
   return undefined;
 }
 
+// gh accepts `graphql`, `/graphql`, and absolute URLs such as
+// `https://api.github.com/graphql` (or `https://ghe.example.com/api/graphql`)
+// as the same endpoint, so compare against the bare path, not the raw token.
+function normalizeApiEndpoint(endpoint: string): string {
+  return endpoint
+    .replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/i, "")
+    .replace(/^\/+/, "")
+    .replace(/^api\//, "");
+}
+
 function validateApiArgs(args: string[]): GhValidationResult | null {
   const invalidMethod = findApiMethods(args).find(
     (method) => !READ_ONLY_API_METHODS.has(method),
@@ -123,7 +133,7 @@ function validateApiArgs(args: string[]): GhValidationResult | null {
   }
 
   const endpoint = findApiEndpoint(args);
-  if (endpoint === "graphql") {
+  if (normalizeApiEndpoint(endpoint ?? "") === "graphql") {
     return {
       ok: false,
       reason:
@@ -140,7 +150,7 @@ function validateApiArgs(args: string[]): GhValidationResult | null {
     ) {
       return {
         ok: false,
-        reason: `gh api argument ${arg} is blocked because request body fields can mutate data`,
+        reason: `gh api argument ${arg} is blocked because request body fields can mutate data. Put read-only parameters in the endpoint path instead, e.g. 'search/code?q=streaming+parser+language:ts&per_page=100', or use the 'search code' command.`,
       };
     }
   }
