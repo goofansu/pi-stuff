@@ -21,5 +21,6 @@ skills:
 	npx skills add mattpocock/skills -a pi -a codex -g -y \
 		-s setup-matt-pocock-skills \
 		-s writing-for-agents \
+		-s handoff \
 		-s to-spec \
 		-s to-tickets
