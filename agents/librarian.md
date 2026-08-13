@@ -1,6 +1,6 @@
 ---
 description: Researches code across GitHub repositories and explains how implementations, APIs, and usages work.
-model: opencode/claude-haiku-4-5
+model: openai-codex/gpt-5.6-luna
 tools: read, grep, find, ls, github_explore
 ---
 

@@ -161,8 +161,7 @@ interface SocketState {
 // Summarization
 // ============================================================================
 
-const CODEX_MODEL_ID = "gpt-5.4-mini";
-const HAIKU_MODEL_ID = "claude-haiku-4-5";
+const SUMMARIZATION_MODEL_ID = "gpt-5.6-luna";
 
 const SUMMARIZATION_SYSTEM_PROMPT =
   "You are a conversation summarizer. Create concise, accurate summaries that preserve key information, decisions, and outcomes.";
@@ -177,22 +176,13 @@ const TURN_SUMMARY_PROMPT = `Summarize what happened in this conversation since 
 Be concise but comprehensive. Preserve exact file paths, function names, and error messages.`;
 
 async function selectSummarizationModel(
-  currentModel: Model<Api> | undefined,
   modelRegistry: ModelRegistry,
 ): Promise<Model<Api> | undefined> {
-  const codexModel = modelRegistry.find("opencode", CODEX_MODEL_ID);
-  if (codexModel) {
-    const auth = await modelRegistry.getApiKeyAndHeaders(codexModel);
-    if (auth.ok) return codexModel;
-  }
+  const model = modelRegistry.find("openai-codex", SUMMARIZATION_MODEL_ID);
+  if (!model) return undefined;
 
-  const haikuModel = modelRegistry.find("opencode", HAIKU_MODEL_ID);
-  if (haikuModel) {
-    const auth = await modelRegistry.getApiKeyAndHeaders(haikuModel);
-    if (auth.ok) return haikuModel;
-  }
-
-  return currentModel;
+  const auth = await modelRegistry.getApiKeyAndHeaders(model);
+  return auth.ok ? model : undefined;
 }
 
 // ============================================================================
@@ -726,7 +716,7 @@ async function handleCommand(
       return;
     }
 
-    const model = await selectSummarizationModel(ctx.model, ctx.modelRegistry);
+    const model = await selectSummarizationModel(ctx.modelRegistry);
     if (!model) {
       respond(
         false,
