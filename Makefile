@@ -17,12 +17,8 @@ agents:
 skills:
 	npx skills add goofansu/skills -s commit -a pi -g -y
 	npx skills add mitsuhiko/agent-stuff -s pi-share -a pi -g -y
+	npx skills add mattpocock/skills/skills/engineering -a pi -g -y
+	npx skills add mattpocock/skills/skills/productivity -a pi -g -y
 	npx skills add herdrdev/herdr -s herdr -a pi -a claude-code -g -y
 	npx skills add modem-dev/hunk -s hunk-review -a pi -a claude-code -g -y
 	npx skills add humanlayer/skills -s show-me -a pi -a claude-code -g -y
-	npx skills add mattpocock/skills -a pi -a codex -g -y \
-		-s setup-matt-pocock-skills \
-		-s writing-for-agents \
-		-s handoff \
-		-s to-spec \
-		-s to-tickets
