@@ -218,6 +218,7 @@ type ModeSpecPatch = {
 type ModesPatch = {
   currentMode?: ModeName;
   modes?: Record<ModeName, ModeSpecPatch | null>;
+  modeOrder?: ModeName[];
 };
 
 function setModeSpecPatchField(
@@ -294,7 +295,17 @@ function computeModesPatch(
     patch.modes = modesPatch;
   }
 
-  if (!patch.modes && patch.currentMode === undefined) return null;
+  const baseOrder = Object.keys(base.modes);
+  const nextOrder = Object.keys(next.modes);
+  if (
+    baseOrder.length !== nextOrder.length ||
+    baseOrder.some((name, index) => name !== nextOrder[index])
+  ) {
+    patch.modeOrder = nextOrder;
+  }
+
+  if (!patch.modes && !patch.modeOrder && patch.currentMode === undefined)
+    return null;
   return patch;
 }
 
@@ -303,26 +314,53 @@ function applyModesPatch(target: ModesFile, patch: ModesPatch): void {
     target.currentMode = patch.currentMode;
   }
 
-  if (!patch.modes) return;
-  for (const [mode, specPatch] of Object.entries(patch.modes)) {
-    if (specPatch === null) {
-      delete target.modes[mode];
-      continue;
-    }
+  if (patch.modes) {
+    for (const [mode, specPatch] of Object.entries(patch.modes)) {
+      if (specPatch === null) {
+        delete target.modes[mode];
+        continue;
+      }
 
-    target.modes[mode] ??= {};
-    const targetSpec = target.modes[mode] as Record<string, unknown>;
-    for (const [k, v] of Object.entries(specPatch)) {
-      if (v === null || v === undefined) {
-        delete targetSpec[k];
-      } else {
-        targetSpec[k] = v;
+      target.modes[mode] ??= {};
+      const targetSpec = target.modes[mode] as Record<string, unknown>;
+      for (const [k, v] of Object.entries(specPatch)) {
+        if (v === null || v === undefined) {
+          delete targetSpec[k];
+        } else {
+          targetSpec[k] = v;
+        }
       }
     }
   }
+
+  if (patch.modeOrder) {
+    const reordered: Record<ModeName, ModeSpec> = {};
+    for (const mode of patch.modeOrder) {
+      const spec = target.modes[mode];
+      if (spec) reordered[mode] = spec;
+    }
+    // Preserve entries added concurrently by another process.
+    for (const [mode, spec] of Object.entries(target.modes)) {
+      if (!(mode in reordered)) reordered[mode] = spec;
+    }
+    target.modes = reordered;
+  }
 }
 
-function normalizeThinkingLevel(level: unknown): ThinkingLevel | undefined {
+export function mergeModesFileChanges(
+  baseline: ModesFile,
+  edited: ModesFile,
+  latest: ModesFile,
+): ModesFile {
+  const merged = cloneModesFile(latest);
+  const patch = computeModesPatch(baseline, edited, false);
+  if (patch) applyModesPatch(merged, patch);
+  return merged;
+}
+
+export function parseModesFileThinkingLevel(
+  level: unknown,
+): ThinkingLevel | undefined {
   if (typeof level !== "string") return undefined;
   const v = level as ThinkingLevel;
   // Keep the list local to avoid importing internal enums.
@@ -333,6 +371,7 @@ function normalizeThinkingLevel(level: unknown): ThinkingLevel | undefined {
     "medium",
     "high",
     "xhigh",
+    "max",
   ];
   return allowed.includes(v) ? v : undefined;
 }
@@ -345,7 +384,7 @@ function sanitizeModeSpec(spec: unknown): ModeSpec {
   return {
     provider: typeof obj.provider === "string" ? obj.provider : undefined,
     modelId: typeof obj.modelId === "string" ? obj.modelId : undefined,
-    thinkingLevel: normalizeThinkingLevel(obj.thinkingLevel),
+    thinkingLevel: parseModesFileThinkingLevel(obj.thinkingLevel),
     color: typeof obj.color === "string" ? obj.color : undefined,
   };
 }
@@ -628,8 +667,12 @@ async function persistRuntime(
 
   await withFileLock(runtime.filePath, async () => {
     // Merge our local patch into the latest on disk to avoid clobbering other agents.
-    const latest = await loadModesFile(runtime.filePath, ctx, pi);
-    applyModesPatch(latest, patch);
+    const diskFile = await loadModesFile(runtime.filePath, ctx, pi);
+    const latest = mergeModesFileChanges(
+      runtime.baseline ?? runtime.data,
+      runtime.data,
+      diskFile,
+    );
     ensureDefaultModeEntries(latest, ctx, pi);
     await saveModesFile(runtime.filePath, latest);
 
@@ -964,6 +1007,7 @@ const ALL_THINKING_LEVELS: ThinkingLevel[] = [
   "medium",
   "high",
   "xhigh",
+  "max",
 ];
 const THINKING_UNSET_LABEL = "(don't change)";
 

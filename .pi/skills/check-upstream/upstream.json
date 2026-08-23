@@ -33,7 +33,7 @@
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/prompt-editor.ts",
     "reviewed": "a71bed215fb67005bdb23916110decff3dceeecb",
-    "remark": "diverged: local adds mode persistence/config UI, prompt history, typed wrappers, and prompt border labels; latest local addition displays the current pi session name as a right-side editor-border segment after bash. Upstream-reviewed functional fixes applied through a71bed2; remaining diffs are intentional local behavior plus code style."
+    "remark": "diverged: local adds mode persistence/config UI, prompt history, typed wrappers, and prompt border labels; local also preserves renamed mode order and supports max thinking effort. Upstream-reviewed functional fixes applied through a71bed2; remaining diffs are intentional local behavior plus code style."
   },
   "extensions/review.ts": {
     "repo": "mitsuhiko/agent-stuff",
