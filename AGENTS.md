@@ -1,15 +1,5 @@
 # AGENTS.md
 
-## Agent skills
-
-### Issue tracker
-
-Issues are tracked as local Markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
-
-### Domain docs
-
-This repository uses a single-context domain documentation layout. See `docs/agents/domain.md`.
-
 ## Extensions
 
 - Work in the `extensions/` directory when creating or modifying a pi extension.
