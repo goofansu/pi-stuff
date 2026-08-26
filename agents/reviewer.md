@@ -3,6 +3,7 @@ description: Use when the user wants an independent review of existing changes w
 harness: claude
 model: opus
 effort: high 
+tools: Read, Grep, Glob, Bash, Skill
 ---
 
-Use the code-review skill to review the changes.
+Use /mattpocock-skills:code-review to review the changes.

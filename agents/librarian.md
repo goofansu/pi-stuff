@@ -1,5 +1,5 @@
 ---
-description: Use when investigating or comparing implementations, APIs, usages, architecture, or behavior across external GitHub repositories.
+description: Use when the user wants to investigate or compare implementations, APIs, usage patterns, architecture, or behavior across external GitHub repositories.
 model: openai-codex/gpt-5.6-luna
 effort: low
 tools: github_explore
