@@ -1,7 +1,7 @@
 ---
 description: Use when the user wants to investigate or compare implementations, APIs, usage patterns, architecture, or behavior across external GitHub repositories.
-model: openai-codex/gpt-5.6-luna
-effort: low
+model: opencode/claude-haiku-4-5
+effort: medium
 tools: github_explore
 ---
 
