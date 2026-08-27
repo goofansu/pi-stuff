@@ -1,5 +1,5 @@
 ---
-description: Use when the user wants well-specified, bounded work implemented with established codebase patterns, then tested, reviewed, and committed.
+description: Use when implementing well-specified, bounded work using established codebase patterns.
 harness: codex
 model: gpt-5.6-luna
 effort: medium

@@ -1,5 +1,5 @@
 ---
-description: Use when the user wants to investigate or compare implementations, APIs, usage patterns, architecture, or behavior across external GitHub repositories.
+description: Use when investigating or comparing source code across external GitHub repositories, including implementations, APIs, usage patterns, architecture, and behavior.
 model: opencode/claude-haiku-4-5
 effort: medium
 tools: github_explore

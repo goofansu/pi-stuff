@@ -1,5 +1,5 @@
 ---
-description: Use when the user wants difficult implementation involving unresolved design decisions, cross-cutting changes, unfamiliar subsystems, concurrency, migrations, security-sensitive code, or recovery after a failed attempt.
+description: Use when implementing work with unresolved design decisions, cross-subsystem changes, unfamiliar subsystems, concurrency, migrations, security risk, or a failed prior attempt.
 harness: codex
 model: gpt-5.6-sol
 effort: high
