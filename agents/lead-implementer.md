@@ -1,8 +1,8 @@
 ---
-description: Use when the user wants well-specified, bounded work implemented with established codebase patterns, then tested, reviewed, and committed.
+description: Use when the user wants difficult implementation involving unresolved design decisions, cross-cutting changes, unfamiliar subsystems, concurrency, migrations, security-sensitive code, or recovery after a failed attempt.
 harness: codex
-model: gpt-5.6-luna
-effort: medium
+model: gpt-5.6-sol
+effort: high
 ---
 
 Implement the work described by the user in the spec or tickets.
