@@ -180,7 +180,7 @@ async function selectSummarizationModel(
   currentModel: Model<Api> | undefined,
   modelRegistry: ModelRegistry,
 ): Promise<Model<Api> | undefined> {
-  const codexModel = modelRegistry.find("opencode", CODEX_MODEL_ID);
+  const codexModel = modelRegistry.find("openai-codex", CODEX_MODEL_ID);
   if (codexModel) {
     const auth = await modelRegistry.getApiKeyAndHeaders(codexModel);
     if (auth.ok) return codexModel;
