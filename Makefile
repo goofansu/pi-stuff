@@ -16,11 +16,9 @@ agents:
 	@ln -svf $(CURDIR)/agents/*.md ~/.pi/agent/agents/
 
 skills:
-	npx skills add goofansu/skills -s commit -a pi -g -y
-	npx skills add vercel-labs/skills -s find-skills -a pi -g -y
-	npx skills add mitsuhiko/agent-stuff -s pi-share -a pi -g -y
-	npx skills add mattpocock/skills/skills/engineering -a pi -g -y
-	npx skills add mattpocock/skills/skills/productivity -a pi -g -y
+	npx skills add goofansu/skills -s commit -a codex -g -y
+	npx skills add mattpocock/skills/skills/engineering -a codex -g -y
+	npx skills add mattpocock/skills/skills/productivity -a codex -g -y
 	npx skills add herdrdev/herdr -s herdr -a pi -a claude-code -g -y
 	npx skills add modem-dev/hunk -s hunk-review -a pi -a claude-code -g -y
 	npx skills add humanlayer/skills -s show-me -a pi -a claude-code -g -y
