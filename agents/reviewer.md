@@ -2,7 +2,7 @@
 description: Use when independently reviewing existing changes and reporting findings only.
 harness: claude
 model: opus
-effort: high 
+effort: high
 tools: Read, Grep, Glob, Bash, Skill
 ---
 

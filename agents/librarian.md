@@ -1,6 +1,6 @@
 ---
 description: Use when investigating or comparing source code across external GitHub repositories, including implementations, APIs, usage patterns, architecture, and behavior.
-model: opencode/claude-haiku-4-5
+model: opencode/claude-sonnet-5
 effort: medium
 tools: github_explore
 ---

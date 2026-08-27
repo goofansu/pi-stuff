@@ -1,7 +1,7 @@
 ---
 description: Use when implementing well-specified, bounded work using established codebase patterns.
 harness: codex
-model: gpt-5.6-luna
+model: gpt-5.6-terra
 effort: medium
 ---
 
