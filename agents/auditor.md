@@ -39,6 +39,6 @@ Sort blocking findings first. Say plainly when the plan is sound rather than man
 
 ## Re-audits
 
-`planner` will come back with a revision. Audit the current files, not your memory of them. Say for each previously blocking finding whether the revision resolves it, and take a reasoned disagreement as an answer when the plan now argues its case — you are not owed the last word.
+`planner` comes back with a revision, and its handoff is everything you know about the last round — what it changed, what was blocking, where it disagreed. Say whether each previously blocking finding is resolved, and take a reasoned disagreement as an answer when the plan now argues its case.
 
-Raise something new only when it genuinely blocks or when the revision introduced it. A fresh crop of minor findings every round is how this loop fails to end.
+Raise something new only when it genuinely blocks or when the revision introduced it. A fresh crop of minor findings every round is what keeps the loop from ending.
