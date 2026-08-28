@@ -90,42 +90,16 @@ Example output:
   ]
 }`;
 
-const CODEX_MODEL_IDS = [
-  "gpt-5.4-mini",
-  "gpt-5.3-codex-spark",
-  "gpt-5.4",
-  "gpt-5.3-codex",
-];
-const HAIKU_MODEL_ID = "claude-haiku-4-5";
+const EXTRACTION_MODEL_ID = "gpt-5.6-luna";
 
-/**
- * Prefer a fast configured Codex model for extraction, then haiku, then the current model.
- */
 async function selectExtractionModel(
-  currentModel: Model<Api>,
   modelRegistry: ModelRegistry,
-): Promise<Model<Api>> {
-  for (const modelId of CODEX_MODEL_IDS) {
-    const codexModel = modelRegistry.find("openai-codex", modelId);
-    if (codexModel) {
-      const auth = await modelRegistry.getApiKeyAndHeaders(codexModel);
-      if (auth.ok) {
-        return codexModel;
-      }
-    }
-  }
+): Promise<Model<Api> | undefined> {
+  const model = modelRegistry.find("openai-codex", EXTRACTION_MODEL_ID);
+  if (!model) return undefined;
 
-  const haikuModel = modelRegistry.find("opencode", HAIKU_MODEL_ID);
-  if (!haikuModel) {
-    return currentModel;
-  }
-
-  const auth = await modelRegistry.getApiKeyAndHeaders(haikuModel);
-  if (!auth.ok) {
-    return currentModel;
-  }
-
-  return haikuModel;
+  const auth = await modelRegistry.getApiKeyAndHeaders(model);
+  return auth.ok ? model : undefined;
 }
 
 function toExtractedQuestion(value: unknown): ExtractedQuestion | null {
@@ -552,11 +526,15 @@ export default function (pi: ExtensionAPI) {
 
     const assistantText = lastAssistantText;
 
-    // Select the best model for extraction.
-    const extractionModel = await selectExtractionModel(
-      ctx.model,
-      ctx.modelRegistry,
-    );
+    // Select the configured extraction model.
+    const extractionModel = await selectExtractionModel(ctx.modelRegistry);
+    if (!extractionModel) {
+      ctx.ui.notify(
+        `Model openai-codex/${EXTRACTION_MODEL_ID} is unavailable or not authenticated`,
+        "error",
+      );
+      return;
+    }
 
     // Run extraction with loader UI
     const extractionOutcome = await ctx.ui.custom<ExtractionOutcome>(
