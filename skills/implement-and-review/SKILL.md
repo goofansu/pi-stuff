@@ -1,6 +1,7 @@
 ---
 name: implement-and-review
-description: "Implement a spec or tickets by looping the implementer against both reviewers until every review comes back clean. Use when work is handed over to build unattended, and after /mattpocock-skills:to-spec or /mattpocock-skills:to-tickets produce something to build."
+description: Implement a spec or tickets by looping the implementer against both reviewers until every review comes back clean.
+disable-model-invocation: true
 ---
 
 # Implement and review
