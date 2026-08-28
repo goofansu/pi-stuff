@@ -2,7 +2,7 @@
 description: Use when reviewing uncommitted work against this repo's coding standards and a code-smell baseline, and reporting findings only.
 harness: claude
 model: sonnet
-effort: high
+effort: medium
 tools: Read, Grep, Glob, Bash
 ---
 
