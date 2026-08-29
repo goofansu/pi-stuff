@@ -1,8 +1,8 @@
 ---
 description: Use when implementing a spec or ticket, leaving the changes uncommitted in the working tree for review.
 harness: codex
-model: gpt-5.6-luna
-effort: medium
+model: gpt-5.6-sol
+effort: high
 ---
 
 Implement the work described by the user in the spec or tickets.
