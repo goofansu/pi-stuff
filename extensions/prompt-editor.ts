@@ -6,6 +6,7 @@ import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type {
   ExtensionAPI,
   ExtensionContext,
+  ModelRuntime,
   SessionEntry,
   Theme,
   ThemeColor,
@@ -14,6 +15,7 @@ import {
   CustomEditor,
   DynamicBorder,
   keyHint,
+  ModelSelectorComponent,
 } from "@earendil-works/pi-coding-agent";
 import {
   Container,
@@ -1319,20 +1321,30 @@ async function renameModeUI(
 
 async function pickModelForModeUI(
   ctx: ExtensionContext,
-  _spec: ModeSpec,
+  spec: ModeSpec,
 ): Promise<{ provider: string; modelId: string } | undefined> {
   if (!ctx.hasUI) return undefined;
 
-  const models =
-    ctx.scopedModels.length > 0
-      ? ctx.scopedModels.map(({ model }) => model)
-      : ctx.modelRegistry.getAvailable();
-  const choices = models.map((model) => `${model.provider}/${model.id}`);
-  const selected = await ctx.ui.select("Select model", choices);
-  if (!selected) return undefined;
+  // ModelSelectorComponent wants ModelRuntime; extensions only get ModelRegistry.
+  const modelRuntime = (
+    ctx.modelRegistry as unknown as { runtime: ModelRuntime }
+  ).runtime;
+  const currentModel =
+    spec.provider && spec.modelId
+      ? ctx.modelRegistry.find(spec.provider, spec.modelId)
+      : ctx.model;
 
-  const model = models[choices.indexOf(selected)];
-  return model ? { provider: model.provider, modelId: model.id } : undefined;
+  return ctx.ui.custom<{ provider: string; modelId: string } | undefined>(
+    (tui, _theme, _keybindings, done) =>
+      new ModelSelectorComponent(
+        tui,
+        currentModel,
+        modelRuntime,
+        ctx.scopedModels,
+        (model) => done({ provider: model.provider, modelId: model.id }),
+        () => done(undefined),
+      ),
+  );
 }
 
 async function pickThinkingLevelForModeUI(
