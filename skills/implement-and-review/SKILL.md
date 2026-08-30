@@ -1,75 +1,77 @@
 ---
 name: implement-and-review
-description: Implement a spec or tickets by looping the implementer against both reviewers until every review comes back clean.
+description: Implement a spec or tickets with one resumable implementer and fresh spec and standards reviews.
 disable-model-invocation: true
 ---
 
 # Implement and review
 
-Three agents, one loop:
+Three roles, one loop:
 
 ```text
-user's spec → implementer ⇄ spec-reviewer + standards-reviewer → user
+user's spec → persistent implementer ⇄ fresh spec-reviewer + standards-reviewer → user
 ```
 
-The spec is a contract, written before this starts. Run it as written; where it
-turns out to be silent or wrong, that goes in your report rather than into a
-decision of your own.
+The spec is the contract. Run it as written. Carry spec gaps, contradictions,
+and stalemates to the final report rather than deciding them for the user.
 
-Runs are one-shot and the agents cannot delegate, so every arrow is a turn of
-yours: you carry the implementer's changes to both reviewers and their findings
-back to the next implementer run. Each prompt starts from nothing the last one
-knew.
+Run the loop unattended until the work is clean or reaches a stop condition
+below.
 
-The user is out of the room until you report, so nothing an agent surfaces is a
-reason to stall.
+## Prepare
 
-## Before the loop
+Read the spec or tickets. Preparation is complete when you can name the work
+units in dependency order and account for every acceptance criterion in the
+current unit.
 
-Read the spec or tickets yourself. You need enough to brief each run and to
-recognize a finding that contradicts what was asked.
+Process multiple tickets one at a time in dependency order. Treat a single
+unsliced spec as one unit.
 
-More than one ticket: one at a time, blockers first. A single spec with no
-tickets: one unit — slicing it is the user's call.
+## Run each unit
 
-## The loop
+1. **Implement.** For the first unit, start `implementer` with the inline spec,
+   file path, or issue reference. Save the stable Subagent ID returned by
+   `agent_start`; use that ID with `agent_resume` for every revision and later
+   unit. Use each Run ID for that Run's lifecycle and result calls. Keep one
+   implementation Run active at a time because every Run shares the same
+   uncommitted tree.
 
-Brief the implementer with the ticket or spec — a file path or an issue
-reference — and what earlier tickets landed.
+   Resume later units with the new ticket. This step is complete when the Run
+   reports its changes, verification results, and gaps. A spec gap that prevents
+   implementation is a stop condition; carry it to the final report.
 
-Then both reviewers at once, each given the same ticket or spec and what the
-implementer reported changing. Each already carries its own axis, so brief
-neither on the other's:
+2. **Review.** Start fresh Runs of `spec-reviewer` and `standards-reviewer` in
+   parallel. Give both the current spec or ticket and the implementer's report.
+   On a re-review, give each reviewer its own prior findings plus the
+   implementer's response to them. Each reviewer already owns its axis:
 
-- `spec-reviewer` — does the code do what was asked?
-- `standards-reviewer` — does the code fit this repo?
+   - `spec-reviewer` — does the code do what was asked?
+   - `standards-reviewer` — does the code fit this repo?
 
-They only read, so they are safe to run together; a second implementer is not,
-because nothing is committed between runs and it would overwrite the first's
-edits.
+   Keep their reports separate and collect both before deciding the round. This
+   step is complete only when both verdicts arrive.
 
-Keep the two reports apart, unmerged and unranked against each other: code can
-pass one axis and fail the other, and merging them lets one mask the other.
+3. **Decide.** The unit is clean when both verdicts are `clean` and the required
+   repository checks pass. Require both reviews regardless of your own reading
+   of the diff.
 
-Blocking findings from either axis go back to a new implementer run carrying the
-findings and your judgement on each, including which you think are wrong and
-why. Then re-review both axes with what changed and what is contested.
+   If either axis has blocking findings, resume the saved implementer with the
+   review delta: each blocking finding, its axis, and your judgement and
+   rationale where it is disputed. Its retained conversation supplies the
+   original brief and implementation history. Then return to review.
 
-## Leaving the loop
+   If the same finding is blocking in two consecutive review rounds, declare a
+   stalemate and stop the loop. Carry the disagreement to the final report.
 
-A ticket is done when both axes come back clean and the tree is green. Your own
-reading of the diff is not a substitute for any of it.
+## Complete the session
 
-When a finding survives two rounds, call it a stalemate: leave the loop and
-carry the disagreement to your report. A third round only produces a third
-opinion.
+The session is clean only when every unit has completed both review axes and the
+required checks pass. A spec gap the implementer cannot cross or a stalemate is
+a stop condition, not clean completion.
 
-The session is done when every ticket has been through a clean review, not when
-the last implementer run finishes.
+The work remains uncommitted. Report:
 
-## Your report
-
-The user sees widget lines and collapsed notifications, not reports, and the
-work is sitting uncommitted in their tree. Say what is in it: what changed,
-which parts of the spec are satisfied, what each round resolved, what is left
-contested, and where the spec did not say what the work needed.
+- what changed and which acceptance criteria are met;
+- the checks run and their results;
+- what each review round resolved;
+- unmet criteria, spec gaps, risks, and stalemates.
