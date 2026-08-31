@@ -24,6 +24,11 @@ Read the spec or tickets. Preparation is complete when you can name the work
 units in dependency order and account for every acceptance criterion in the
 current unit.
 
+Require a clean working tree before the first unit: reviewers scope to
+`git diff HEAD`, so anything already uncommitted would be reviewed as the
+unit's own work. A dirty tree at the start is a stop condition; carry it to
+the final report.
+
 Process multiple tickets one at a time in dependency order. Treat a single
 unsliced spec as one unit.
 
@@ -55,6 +60,14 @@ unsliced spec as one unit.
    repository checks pass. Require both reviews regardless of your own reading
    of the diff.
 
+   Commit each clean unit before starting the next: one commit per unit,
+   following the repo's commit conventions and naming the ticket. The
+   implementer leaves its work uncommitted; the commit is yours. Committing is
+   what keeps the next unit's reviews scoped to `git diff HEAD` alone, so a
+   later reviewer never mistakes an earlier ticket's work for scope creep. A
+   failing commit hook is a blocking finding to resume the implementer with,
+   never a reason to bypass hooks.
+
    If either axis has blocking findings, resume the saved implementer with the
    review delta: each blocking finding, its axis, and your judgement and
    rationale where it is disputed. Its retained conversation supplies the
@@ -69,9 +82,11 @@ The session is clean only when every unit has completed both review axes and the
 required checks pass. A spec gap the implementer cannot cross or a stalemate is
 a stop condition, not clean completion.
 
-The work remains uncommitted. Report:
+Every finished unit is committed, one commit per ticket; work halted by a stop
+condition remains uncommitted in the tree. Report:
 
-- what changed and which acceptance criteria are met;
+- what changed, which acceptance criteria are met, and the commit for each
+  finished unit;
 - the checks run and their results;
 - what each review round resolved;
 - unmet criteria, spec gaps, risks, and stalemates.
