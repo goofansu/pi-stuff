@@ -41,6 +41,12 @@
     "reviewed": "ab1e7f3414e4c8aa54a3eda0a3c634c32d3794f0",
     "remark": "functionally_same through ab1e7f3: intentional local differences are the keybindings manager with keyHint-based close/cancel help, faux-provider filtering, visibleWidth/truncateToWidth correctness for ANSI and wide text, and formatting/style"
   },
+  "extensions/todos.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/todos.ts",
+    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
+    "remark": "functionally_same: upstream listTodosSync() is dead code (defined but never called) — local uses async listTodos() throughout. Rest is keybinding, import path, code style (stricter typing)"
+  },
   "extensions/goal.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/goal.ts",
