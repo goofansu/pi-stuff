@@ -1,116 +1,112 @@
 ---
 name: implement-and-review
-description: Implement-and-review loop — stable implementers along declared ticket dependency chains plus fresh spec and standards reviews. Use when a prompt says "implement-and-review", or asks to implement a spec, tickets, or issues with the work reviewed.
+description: Implement a spec or tickets through an implementer and fresh spec and standards reviews. Use for "implement-and-review" or implementation requiring independent review against both the request and repository standards.
 ---
 
 # Implement and review
 
-The spec is the contract. Run it as written. Carry spec gaps, contradictions,
-and stalemates to the final report rather than deciding them for the user.
+```text
+unit → implementer ⇄ fresh spec-reviewer + standards-reviewer → commit → next unit
+```
 
-You drive the loop through reports alone: the implementer's report and the two
-verdicts are your entire view of the code. While a Run is active, waiting on
-it is the whole job — the subagents own all reading of the tree.
+The spec is the contract. Execute it as written. Where it is silent, contradictory,
+or wrong in a way that requires an implementation choice, stop and report the
+gap rather than choosing for the user.
 
-Run the loop unattended until the work is clean or reaches a stop condition
-below.
+Use the implementer's report and the two reviewer verdicts to decide the loop;
+do not form a third code-review opinion. Once a subagent Run is active, wait for
+it rather than reading the tree in parallel.
+
+Run unattended until every unit is clean and committed or the session reaches a
+stop condition.
 
 ## Prepare
 
-Read the spec or tickets. Preparation is complete when you can name the work
-units in dependency order, record each ticket's declared dependencies, and
-account for every acceptance criterion in the current unit.
+Read the full spec or ticket set. Preparation is complete when the units are in
+dependency order, every acceptance criterion is accounted for by the relevant
+unit or units, and the required repository checks are identified.
 
-Declared ticket dependencies are the sole source of implementer continuity
-between units. A unit continues the current implementer when it explicitly
-declares the immediately preceding completed unit as a dependency; otherwise
-it starts a fresh implementer. A ticket without declared dependencies starts fresh. Treat
-a single unsliced spec as one unit.
+Treat a single unsliced spec as one unit. Process multiple tickets one at a time
+in dependency order.
 
-Require a clean working tree before the first unit: reviewers scope to
-`git diff HEAD`, so anything already uncommitted would be reviewed as the
-unit's own work. A dirty tree at the start is a stop condition; carry it to
-the final report.
-
-Process multiple tickets one at a time in dependency order.
+Require `git status --short` to be empty before the first unit. Existing tracked
+or untracked work would contaminate the reviewers' `git diff HEAD` scope, so a
+dirty initial tree stops the session.
 
 ## Run each unit
 
-Select the unit's implementer before entering the loop. The committed tree is
-the handoff source of truth for a fresh implementer. Starting fresh resets only
-conversation state; `agent_start("implementer", ...)` retains the configured
-agent, harness, model, and effort.
+### 1. Implement
 
-```text
-previous_unit = none
-current_implementer = none
+Keep the same implementer throughout a unit and all of its review revisions.
+Between committed units, resume that implementer by default. Start fresh only
+when the next unit is self-contained and prior implementation context does not
+contribute to it. The committed tree and the new unit brief are the handoff
+source of truth.
 
-for each unit in dependency order
-  if previous_unit != none and declares_dependency(unit, previous_unit)
-    run = agent_resume(current_implementer, unit)
-  else
-    current_implementer, run = agent_start(
-      "implementer",
-      spec + unit + prerequisite_commits + relevant_prior_decisions,
-    )
+Brief a new or resumed implementer with the exact unit contract, required shared
+spec context, completed prerequisite commits, and prior reported decisions that
+constrain the unit. Save the stable Subagent ID selected for the unit and resume
+that ID for revisions.
 
-  run the implementation-review loop below through a clean commit
-  previous_unit = unit
-```
+Keep only one implementation Run active because all Runs share the same working
+tree. The implementation step is complete when its report accounts for:
 
-1. **Implement.** Use the selected implementation Run. Save the stable Subagent
-   ID returned by `agent_start` as `current_implementer`; use that ID with
-   `agent_resume` for every review revision and whenever the declared-dependency
-   branch selects it for the next unit. Use each Run ID for that Run's lifecycle
-   and result calls.
+- changes made and acceptance criteria met or unmet;
+- required checks and their results; and
+- spec gaps, deviations, and remaining risks.
 
-   Keep one implementation Run active at a time because every Run shares the
-   same uncommitted tree. This step is complete when the Run reports its
-   changes, verification results, and gaps. A spec gap that prevents
-   implementation is a stop condition; carry it to the final report.
+Return an incomplete report or failing check to the same implementer with the
+missing item or exact failure. A spec gap that requires a choice stops the
+session with the unit uncommitted.
 
-2. **Review.** Start fresh Runs of `spec-reviewer` and `standards-reviewer` in
-   parallel. Give both the current spec or ticket and the implementer's report.
-   On a re-review, give each reviewer its own prior findings plus the
-   implementer's response to them. Each reviewer already owns its axis:
+### 2. Review
 
-   - `spec-reviewer` — does the code do what was asked?
-   - `standards-reviewer` — does the code fit this repo?
+For every review round, start new `spec-reviewer` and `standards-reviewer`
+Subagents in parallel. Fresh reviewers always use `agent_start`, including on
+re-review.
 
-   Keep their reports separate and collect both before deciding the round. This
-   step is complete only when both verdicts arrive.
+Give both reviewers the scope (`git diff HEAD` plus untracked files) and the
+latest implementer report. Give `spec-reviewer` the exact unit contract and
+required shared spec context. Let `standards-reviewer` discover the applicable
+repository standards and keep requested behavior outside its axis.
 
-3. **Decide.** The unit is clean when both verdicts are `clean` and the required
-   repository checks pass. Require both reviews even when the implementer's
-   report looks clean.
+On re-review, give each reviewer only that axis's prior findings and the
+implementer's responses. Keep the reports separate, wait for both, and decide
+the round only after both verdicts arrive.
 
-   Commit each clean unit before starting the next: one commit per unit,
-   following the repo's commit conventions and identifying the unit. The
-   implementer leaves its work uncommitted; the commit is yours. Committing is
-   what keeps the next unit's reviews scoped to `git diff HEAD` alone, so a
-   later reviewer never mistakes an earlier unit's work for scope creep.
+### 3. Decide, revise, or commit
 
-   If either axis has blocking findings, resume `current_implementer` with the
-   review delta: each blocking finding, its axis, and your judgement and
-   rationale where it is disputed. Its retained conversation supplies the
-   original brief and implementation history. If a required check or commit
-   hook fails, resume it with the exact failure. Return to review after either
-   revision; commit hooks remain enabled.
+The unit is clean only when both verdicts are `clean` and all required checks
+pass. Non-blocking findings remain risks for the final report but do not prevent
+a clean verdict.
 
-   If the same finding is blocking in two consecutive review rounds, declare a
-   stalemate and stop the loop. Carry the disagreement to the final report.
+If either axis has blocking findings, resume the unit's implementer with every
+finding, its axis and resolution condition, and your rationale for any dispute
+based on the contract and reports. After the revision reports passing checks,
+start a fresh review round on both axes.
+
+If the same underlying finding remains blocking on the same axis in two
+consecutive rounds, declare a stalemate and stop. A changed wording or line
+anchor does not make it a new finding.
+
+Commit each clean unit before starting the next. Follow repository commit
+conventions, identify the unit, and keep hooks enabled. Correct commit-metadata
+failures yourself; return code or check failures to the implementer, then run
+both review axes again after any implementation revision. Do not bypass a
+failing hook.
+
+A unit is complete only when the commit succeeds, its hash is recorded, and
+`git status --short` is empty. Each completed unit has exactly one commit.
 
 ## Complete the session
 
-The session is clean only when every unit has completed both review axes and the
-required checks pass. A spec gap the implementer cannot cross or a stalemate is
-a stop condition, not clean completion.
+A stop condition ends the session; do not start later units. The session is
+clean only when every unit has passed both review axes and required checks,
+every unit has one recorded commit, and the final working tree is clean.
 
-Every finished unit is committed once; work halted by a stop condition remains
-uncommitted in the tree. Report:
+Report:
 
-- what changed, which acceptance criteria are met, and the commit for each
-  finished unit;
-- the checks run and their results;
-- what each review round resolved;
-- unmet criteria, spec gaps, risks, and stalemates.
+- each completed unit, its changes, satisfied criteria, and commit hash;
+- checks run and their results;
+- what each review round resolved; and
+- unmet criteria, gaps, risks, and stalemates.
