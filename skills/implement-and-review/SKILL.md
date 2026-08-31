@@ -1,6 +1,6 @@
 ---
 name: implement-and-review
-description: Implement-and-review loop — stable implementers by context thread plus fresh spec and standards reviews. Use when a prompt says "implement-and-review", or asks to implement a spec, tickets, or issues with the work reviewed.
+description: Implement-and-review loop — stable implementers along declared ticket dependency chains plus fresh spec and standards reviews. Use when a prompt says "implement-and-review", or asks to implement a spec, tickets, or issues with the work reviewed.
 ---
 
 # Implement and review
@@ -18,52 +18,51 @@ below.
 ## Prepare
 
 Read the spec or tickets. Preparation is complete when you can name the work
-units in dependency order, assign each unit to a context thread, and account
-for every acceptance criterion in the current unit.
+units in dependency order, record each ticket's declared dependencies, and
+account for every acceptance criterion in the current unit.
 
-A **context thread** is a consecutive sequence of units that deepens or revises
-the same provider, subsystem, module seam, or implementation. Dependency
-through an already committed contract does not by itself join two units into
-one context thread. A different provider, subsystem, or self-contained
-implementation surface begins a fresh context thread.
+Declared ticket dependencies are the sole source of implementer continuity
+between units. A unit continues the current implementer when it explicitly
+declares the immediately preceding completed unit as a dependency; otherwise
+it starts a fresh implementer. A ticket without declared dependencies starts fresh. Treat
+a single unsliced spec as one unit.
 
 Require a clean working tree before the first unit: reviewers scope to
 `git diff HEAD`, so anything already uncommitted would be reviewed as the
 unit's own work. A dirty tree at the start is a stop condition; carry it to
 the final report.
 
-Process multiple tickets one at a time in dependency order. Treat a single
-unsliced spec as one unit.
+Process multiple tickets one at a time in dependency order.
 
 ## Run each unit
 
 Select the unit's implementer before entering the loop. The committed tree is
-the handoff source of truth; retained conversation is an optimization for a
-continuous implementation context.
+the handoff source of truth for a fresh implementer. Starting fresh resets only
+conversation state; `agent_start("implementer", ...)` retains the configured
+agent, harness, model, and effort.
 
 ```text
-current_thread = none
+previous_unit = none
 current_implementer = none
 
 for each unit in dependency order
-  thread = context_thread(unit)
-
-  if thread == current_thread
+  if previous_unit != none and declares_dependency(unit, previous_unit)
     run = agent_resume(current_implementer, unit)
   else
     current_implementer, run = agent_start(
       "implementer",
       spec + unit + prerequisite_commits + relevant_prior_decisions,
     )
-    current_thread = thread
 
-  run the implementation-review loop below
+  run the implementation-review loop below through a clean commit
+  previous_unit = unit
 ```
 
 1. **Implement.** Use the selected implementation Run. Save the stable Subagent
    ID returned by `agent_start` as `current_implementer`; use that ID with
-   `agent_resume` for every review revision and later unit in the same context
-   thread. Use each Run ID for that Run's lifecycle and result calls.
+   `agent_resume` for every review revision and whenever the declared-dependency
+   branch selects it for the next unit. Use each Run ID for that Run's lifecycle
+   and result calls.
 
    Keep one implementation Run active at a time because every Run shares the
    same uncommitted tree. This step is complete when the Run reports its
