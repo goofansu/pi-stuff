@@ -15,6 +15,10 @@ user's spec → persistent implementer ⇄ fresh spec-reviewer + standards-revie
 The spec is the contract. Run it as written. Carry spec gaps, contradictions,
 and stalemates to the final report rather than deciding them for the user.
 
+You drive the loop through reports alone: the implementer's report and the two
+verdicts are your entire view of the code. While a Run is active, waiting on
+it is the whole job — the subagents own all reading of the tree.
+
 Run the loop unattended until the work is clean or reaches a stop condition
 below.
 
@@ -57,8 +61,8 @@ unsliced spec as one unit.
    step is complete only when both verdicts arrive.
 
 3. **Decide.** The unit is clean when both verdicts are `clean` and the required
-   repository checks pass. Require both reviews regardless of your own reading
-   of the diff.
+   repository checks pass. Require both reviews even when the implementer's
+   report looks clean.
 
    Commit each clean unit before starting the next: one commit per unit,
    following the repo's commit conventions and naming the ticket. The
