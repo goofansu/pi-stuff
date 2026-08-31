@@ -11,6 +11,12 @@
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
     "remark": "functionally_same through a3f8ab1: local adapts message/session types to current APIs, uses keyHint labels, exports BtwOverlay for testing, and fixes overlay sizing by honoring allocated width and TUI terminal rows; local also conditionally uses follow-up delivery only while the main session is busy"
   },
+  "extensions/continue.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/continue.ts",
+    "reviewed": "4bce45560fa55ace2f5dc8634a63a2af464ddc8b",
+    "remark": "functionally_same: formatting only"
+  },
   "extensions/control.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/control.ts",

@@ -11,6 +11,7 @@ Files:
   - extensions/answer.ts
   - extensions/btw.ts
   - extensions/context.ts
+  - extensions/continue.ts
   - extensions/control.ts
   - extensions/files.ts
   - extensions/goal.ts
