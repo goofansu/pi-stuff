@@ -1,15 +1,9 @@
 ---
 name: implement-and-review
-description: Implement-and-review loop — one resumable implementer plus fresh spec and standards reviews. Use when a prompt says "implement-and-review", or asks to implement a spec, tickets, or issues with the work reviewed.
+description: Implement-and-review loop — stable implementers by context thread plus fresh spec and standards reviews. Use when a prompt says "implement-and-review", or asks to implement a spec, tickets, or issues with the work reviewed.
 ---
 
 # Implement and review
-
-Three roles, one loop:
-
-```text
-user's spec → persistent implementer ⇄ fresh spec-reviewer + standards-reviewer → user
-```
 
 The spec is the contract. Run it as written. Carry spec gaps, contradictions,
 and stalemates to the final report rather than deciding them for the user.
@@ -24,8 +18,14 @@ below.
 ## Prepare
 
 Read the spec or tickets. Preparation is complete when you can name the work
-units in dependency order and account for every acceptance criterion in the
-current unit.
+units in dependency order, assign each unit to a context thread, and account
+for every acceptance criterion in the current unit.
+
+A **context thread** is a consecutive sequence of units that deepens or revises
+the same provider, subsystem, module seam, or implementation. Dependency
+through an already committed contract does not by itself join two units into
+one context thread. A different provider, subsystem, or self-contained
+implementation surface begins a fresh context thread.
 
 Require a clean working tree before the first unit: reviewers scope to
 `git diff HEAD`, so anything already uncommitted would be reviewed as the
@@ -37,15 +37,37 @@ unsliced spec as one unit.
 
 ## Run each unit
 
-1. **Implement.** For the first unit, start `implementer` with the inline spec,
-   file path, or issue reference. Save the stable Subagent ID returned by
-   `agent_start`; use that ID with `agent_resume` for every revision and later
-   unit. Use each Run ID for that Run's lifecycle and result calls. Keep one
-   implementation Run active at a time because every Run shares the same
-   uncommitted tree.
+Select the unit's implementer before entering the loop. The committed tree is
+the handoff source of truth; retained conversation is an optimization for a
+continuous implementation context.
 
-   Resume later units with the new ticket. This step is complete when the Run
-   reports its changes, verification results, and gaps. A spec gap that prevents
+```text
+current_thread = none
+current_implementer = none
+
+for each unit in dependency order
+  thread = context_thread(unit)
+
+  if thread == current_thread
+    run = agent_resume(current_implementer, unit)
+  else
+    current_implementer, run = agent_start(
+      "implementer",
+      spec + unit + prerequisite_commits + relevant_prior_decisions,
+    )
+    current_thread = thread
+
+  run the implementation-review loop below
+```
+
+1. **Implement.** Use the selected implementation Run. Save the stable Subagent
+   ID returned by `agent_start` as `current_implementer`; use that ID with
+   `agent_resume` for every review revision and later unit in the same context
+   thread. Use each Run ID for that Run's lifecycle and result calls.
+
+   Keep one implementation Run active at a time because every Run shares the
+   same uncommitted tree. This step is complete when the Run reports its
+   changes, verification results, and gaps. A spec gap that prevents
    implementation is a stop condition; carry it to the final report.
 
 2. **Review.** Start fresh Runs of `spec-reviewer` and `standards-reviewer` in
@@ -64,17 +86,17 @@ unsliced spec as one unit.
    report looks clean.
 
    Commit each clean unit before starting the next: one commit per unit,
-   following the repo's commit conventions and naming the ticket. The
+   following the repo's commit conventions and identifying the unit. The
    implementer leaves its work uncommitted; the commit is yours. Committing is
    what keeps the next unit's reviews scoped to `git diff HEAD` alone, so a
-   later reviewer never mistakes an earlier ticket's work for scope creep. A
-   failing commit hook is a blocking finding to resume the implementer with,
-   never a reason to bypass hooks.
+   later reviewer never mistakes an earlier unit's work for scope creep.
 
-   If either axis has blocking findings, resume the saved implementer with the
+   If either axis has blocking findings, resume `current_implementer` with the
    review delta: each blocking finding, its axis, and your judgement and
    rationale where it is disputed. Its retained conversation supplies the
-   original brief and implementation history. Then return to review.
+   original brief and implementation history. If a required check or commit
+   hook fails, resume it with the exact failure. Return to review after either
+   revision; commit hooks remain enabled.
 
    If the same finding is blocking in two consecutive review rounds, declare a
    stalemate and stop the loop. Carry the disagreement to the final report.
@@ -85,8 +107,8 @@ The session is clean only when every unit has completed both review axes and the
 required checks pass. A spec gap the implementer cannot cross or a stalemate is
 a stop condition, not clean completion.
 
-Every finished unit is committed, one commit per ticket; work halted by a stop
-condition remains uncommitted in the tree. Report:
+Every finished unit is committed once; work halted by a stop condition remains
+uncommitted in the tree. Report:
 
 - what changed, which acceptance criteria are met, and the commit for each
   finished unit;
