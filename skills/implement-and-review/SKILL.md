@@ -1,7 +1,6 @@
 ---
 name: implement-and-review
-description: Implement a spec or tickets with one resumable implementer and fresh spec and standards reviews.
-disable-model-invocation: true
+description: Implement-and-review loop — one resumable implementer plus fresh spec and standards reviews. Use when a prompt says "implement-and-review", or asks to implement a spec, tickets, or issues with the work reviewed.
 ---
 
 # Implement and review
