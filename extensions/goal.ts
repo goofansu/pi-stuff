@@ -50,7 +50,7 @@ const CreateGoalParams = Type.Object({
     description:
       "Required. The concrete objective to start pursuing. This starts a new active goal when no unfinished goal exists. If the previous goal is complete, it is replaced.",
   }),
-  token_budget: Type.Optional(
+  tokenBudget: Type.Optional(
     Type.Number({
       description:
         "Optional positive integer token budget for the new goal. Omit unless explicitly requested.",
@@ -919,7 +919,7 @@ export default function goalExtension(pi: ExtensionAPI) {
     name: "create_goal",
     label: "Create Goal",
     description:
-      "Create a goal only when explicitly requested by the user or system/developer instructions; do not infer goals from ordinary tasks. Set token_budget only when an explicit token budget is requested. Fails if an unfinished goal exists; if the previous goal is complete, it is replaced.",
+      "Create a goal only when explicitly requested by the user or system/developer instructions; do not infer goals from ordinary tasks. Set tokenBudget only when an explicit token budget is requested. Fails if an unfinished goal exists; if the previous goal is complete, it is replaced.",
     promptSnippet:
       "Create a new active long-running thread goal when explicitly requested",
     promptGuidelines: [
@@ -934,7 +934,7 @@ export default function goalExtension(pi: ExtensionAPI) {
           "cannot create a new goal because this thread already has an unfinished goal; complete it with update_goal or ask the user to clear or replace it",
         );
       }
-      setGoal(params.objective, params.token_budget);
+      setGoal(params.objective, params.tokenBudget);
       persist("set");
       updateStatus(ctx);
       const response = goalResponse(

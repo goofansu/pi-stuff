@@ -1252,8 +1252,8 @@ Target selection:
 - sessionName: session name (alias from /name).
 
 Wait behavior (only for action=send):
-- wait_until=turn_end: Wait for the turn to complete, returns last assistant message.
-- wait_until=message_processed: Returns immediately after message is queued.
+- waitUntil=turn_end: Wait for the turn to complete, returns last assistant message.
+- waitUntil=message_processed: Returns immediately after message is queued.
 
 CLI bridge (for shell scripts/background jobs):
 - Current session id is available in shell/bash as $PI_SESSION_ID (set when --session-control is enabled).
@@ -1273,7 +1273,7 @@ CLI bridge (for shell scripts/background jobs):
 - Example request/response usage:
   pi -p --session-control --control-session "$PI_SESSION_ID" --send-session-message "What is the current time?" --send-session-wait turn_end
 
-Note: If you ask the target session to reply back via sender_info, do not use wait_until; waiting is redundant and can duplicate responses.
+Note: If you ask the target session to reply back via sender_info, do not use waitUntil; waiting is redundant and can duplicate responses.
 
 Messages automatically include sender session info for replies. When you want a response, instruct the target session to reply directly to the sender by calling send_to_session with the sender_info reference (do not poll get_message).`,
     parameters: Type.Object({
@@ -1301,7 +1301,7 @@ Messages automatically include sender session info for replies. When you want a 
           default: "steer",
         }),
       ),
-      wait_until: Type.Optional(
+      waitUntil: Type.Optional(
         StringEnum(["turn_end", "message_processed"] as const, {
           description: "Wait behavior for send action",
         }),
@@ -1489,7 +1489,7 @@ Messages automatically include sender session info for replies. When you want a 
         };
 
         // Determine wait behavior
-        if (params.wait_until === "message_processed") {
+        if (params.waitUntil === "message_processed") {
           // Just send and confirm delivery
           const result = await sendRpcCommand(socketPath, sendCommand);
           if (!result.response.success) {
@@ -1510,7 +1510,7 @@ Messages automatically include sender session info for replies. When you want a 
           };
         }
 
-        if (params.wait_until === "turn_end") {
+        if (params.waitUntil === "turn_end") {
           // Send and wait for turn to complete
           const result = await sendRpcCommand(socketPath, sendCommand, {
             timeout: 300000, // 5 minutes
@@ -1600,7 +1600,7 @@ Messages automatically include sender session info for replies. When you want a 
       // Add action-specific info
       if (action === "send") {
         const mode = args.mode ?? "steer";
-        const wait = args.wait_until;
+        const wait = args.waitUntil;
         let info = theme.fg("muted", ` (${mode}`);
         if (wait) info += theme.fg("dim", `, wait: ${wait}`);
         info += theme.fg("muted", ")");

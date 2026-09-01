@@ -21,7 +21,7 @@
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/control.ts",
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
-    "remark": "functionally_same: backported result.isError check. Local summarization is pinned to authenticated openai-codex/gpt-5.6-luna with no current-model fallback. Rest is keybinding, visual, and code style"
+    "remark": "functionally_same: backported result.isError check. Local summarization is pinned to authenticated openai-codex/gpt-5.6-luna with no current-model fallback. Local registerTool parameter waitUntil uses TypeScript-style camelCase instead of upstream wait_until. Rest is keybinding, visual, and code style"
   },
   "extensions/files.ts": {
     "repo": "mitsuhiko/agent-stuff",
@@ -51,6 +51,6 @@
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/goal.ts",
     "reviewed": "ac79012425c315ce545a8b2564f866c803d619c8",
-    "remark": "functionally_same: biome formatting (tabs to spaces, line wrapping), replaced non-null assertions with return values from setGoalStatus/setGoal to satisfy noNonNullAssertion lint rule"
+    "remark": "functionally_same: biome formatting (tabs to spaces, line wrapping), replaced non-null assertions with return values from setGoalStatus/setGoal to satisfy noNonNullAssertion lint rule. Local registerTool parameter tokenBudget uses TypeScript-style camelCase instead of upstream token_budget"
   }
 }

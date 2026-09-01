@@ -193,7 +193,7 @@ describe("web_search registration", () => {
     ).join("\n");
 
     assert.match(guidelines, /freshness/);
-    assert.match(guidelines, /max_urls/);
+    assert.match(guidelines, /maxUrls/);
     assert.match(guidelines, /Do NOT repeat the same search/);
   });
 
@@ -202,10 +202,10 @@ describe("web_search registration", () => {
       registerWebSearchTool().promptGuidelines as string[]
     ).join("\n");
 
-    assert.match(guidelines, /min\(count, max_urls\)/);
+    assert.match(guidelines, /min\(count, maxUrls\)/);
     assert.match(guidelines, /Page date/);
     assert.match(guidelines, /last-modified/);
-    assert.match(guidelines, /max_tokens_per_url/);
+    assert.match(guidelines, /maxTokensPerUrl/);
     assert.doesNotMatch(guidelines, /max_snippets_per_url/);
   });
 
@@ -278,14 +278,14 @@ describe("web_search schema", () => {
 
   it("documents candidate pool width separately from returned sources", () => {
     assert.match(properties.count.description, /1-50/);
-    assert.match(properties.max_urls.description, /1-50/);
+    assert.match(properties.maxUrls.description, /1-50/);
     assert.notEqual(
       properties.count.description,
-      properties.max_urls.description,
+      properties.maxUrls.description,
     );
     assert.match(properties.count.description, /candidate pool/i);
-    assert.match(properties.count.description, /min\(count, max_urls\)/);
-    assert.match(properties.max_urls.description, /min\(count, max_urls\)/);
+    assert.match(properties.count.description, /min\(count, maxUrls\)/);
+    assert.match(properties.maxUrls.description, /min\(count, maxUrls\)/);
   });
 
   it("enforces Brave's documented numeric bounds", () => {
@@ -295,14 +295,14 @@ describe("web_search schema", () => {
     ];
 
     assert.deepEqual(bounds("count"), [1, 50]);
-    assert.deepEqual(bounds("max_urls"), [1, 50]);
-    assert.deepEqual(bounds("max_tokens"), [1024, 32768]);
-    assert.deepEqual(bounds("max_tokens_per_url"), [512, 8192]);
+    assert.deepEqual(bounds("maxUrls"), [1, 50]);
+    assert.deepEqual(bounds("maxTokens"), [1024, 32768]);
+    assert.deepEqual(bounds("maxTokensPerUrl"), [512, 8192]);
     for (const name of [
       "count",
-      "max_urls",
-      "max_tokens",
-      "max_tokens_per_url",
+      "maxUrls",
+      "maxTokens",
+      "maxTokensPerUrl",
     ])
       assert.equal(properties[name].type, "integer", name);
   });
@@ -323,9 +323,9 @@ describe("web_search schema", () => {
     assert.deepEqual(Object.keys(properties), [
       "query",
       "count",
-      "max_urls",
-      "max_tokens",
-      "max_tokens_per_url",
+      "maxUrls",
+      "maxTokens",
+      "maxTokensPerUrl",
       "freshness",
       "threshold",
       "goggles",
@@ -389,9 +389,9 @@ describe("web_search outgoing Brave request", () => {
       {
         query: "latest rate decision",
         count: 50,
-        max_urls: 5,
-        max_tokens: 16384,
-        max_tokens_per_url: 1024,
+        maxUrls: 5,
+        maxTokens: 16384,
+        maxTokensPerUrl: 1024,
         freshness: " PW ",
         threshold: "strict",
         goggles: " $discard,site=reddit.com ",
@@ -437,9 +437,9 @@ describe("web_search outgoing Brave request", () => {
       {
         query: "clamping",
         count: 500,
-        max_urls: 0,
-        max_tokens: 1,
-        max_tokens_per_url: 99_999,
+        maxUrls: 0,
+        maxTokens: 1,
+        maxTokensPerUrl: 99_999,
       },
       { json: braveResponse },
     );
@@ -977,7 +977,7 @@ describe("web_search model-visible output", () => {
       text,
       /\[web-search output truncated: kept the first \d+ of \d+ lines \([\d.]+KB of [\d.]+KB\)\./,
     );
-    assert.match(text, /lower max_tokens, max_urls, or max_tokens_per_url/);
+    assert.match(text, /lower maxTokens, maxUrls, or maxTokensPerUrl/);
   });
 
   it("keeps the whole source list when the content is truncated away", async () => {

@@ -103,7 +103,7 @@ export default function imageGenExtension(pi: ExtensionAPI) {
           description: `Image model to use. Defaults to ${DEFAULT_MODEL}.`,
         }),
       ),
-      save_path: Type.Optional(
+      savePath: Type.Optional(
         Type.String({
           description:
             "File path to save the image. Accepts absolute or relative paths. " +
@@ -147,7 +147,7 @@ export default function imageGenExtension(pi: ExtensionAPI) {
 
       const ext = imageBlock.mimeType.split("/")[1] ?? "png";
       const defaultFilename = `image-${Date.now()}.${ext}`;
-      const rawPath = params.save_path ?? defaultFilename;
+      const rawPath = params.savePath ?? defaultFilename;
       const filePath = isAbsolute(rawPath)
         ? rawPath
         : join(process.cwd(), rawPath);

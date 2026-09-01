@@ -158,25 +158,25 @@ describe("web_fetch registration and schema", () => {
 
     assert.deepEqual(Object.keys(properties), [
       "url",
-      "only_main_content",
-      "include_tags",
-      "exclude_tags",
-      "max_age",
-      "wait_for",
+      "onlyMainContent",
+      "includeTags",
+      "excludeTags",
+      "maxAge",
+      "waitFor",
       "mobile",
     ]);
     assert.deepEqual(
       [properties.url.minLength, properties.url.maxLength],
       [1, 2048],
     );
-    assert.equal(properties.include_tags.maxItems, 50);
-    assert.equal(properties.exclude_tags.maxItems, 50);
+    assert.equal(properties.includeTags.maxItems, 50);
+    assert.equal(properties.excludeTags.maxItems, 50);
     assert.deepEqual(
-      [properties.max_age.minimum, properties.max_age.maximum],
+      [properties.maxAge.minimum, properties.maxAge.maximum],
       [0, 604_800_000],
     );
     assert.deepEqual(
-      [properties.wait_for.minimum, properties.wait_for.maximum],
+      [properties.waitFor.minimum, properties.waitFor.maximum],
       [0, 10_000],
     );
     assert.equal(properties.headers, undefined);
@@ -216,11 +216,11 @@ describe("web_fetch Firecrawl request", () => {
   it("maps every supported scrape control to Firecrawl field names", async () => {
     const { calls, result } = await runTool({
       url: "https://example.com/docs",
-      only_main_content: false,
-      include_tags: [" main ", "article", "article", ""],
-      exclude_tags: ["nav", " footer "],
-      max_age: 0,
-      wait_for: 2500,
+      onlyMainContent: false,
+      includeTags: [" main ", "article", "article", ""],
+      excludeTags: ["nav", " footer "],
+      maxAge: 0,
+      waitFor: 2500,
       mobile: true,
     });
 
@@ -243,8 +243,8 @@ describe("web_fetch Firecrawl request", () => {
   it("clamps stale numeric arguments at runtime", async () => {
     const { calls } = await runTool({
       url: "https://example.com",
-      max_age: Number.MAX_SAFE_INTEGER,
-      wait_for: -100,
+      maxAge: Number.MAX_SAFE_INTEGER,
+      waitFor: -100,
     });
 
     assert.equal(calls[0].body.maxAge, 604_800_000);
