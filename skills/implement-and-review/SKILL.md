@@ -1,6 +1,6 @@
 ---
 name: implement-and-review
-description: Implement a spec or tickets through an implementer and fresh spec and standards reviews. Use for "implement-and-review" or implementation requiring independent review against both the request and repository standards.
+description: Implement a spec or tickets through an implementer and fresh spec and standards reviews. Use when user asks to implement-and-review a spec or tickets explicitly.
 ---
 
 # Implement and review
