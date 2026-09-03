@@ -1,5 +1,6 @@
 ---
 description: Use when investigating or comparing source code across external GitHub repositories, including implementations, APIs, usage patterns, architecture, and behavior.
+backend: pi
 model: openai-codex/gpt-5.6-luna
 effort: medium
 tools: github_explore

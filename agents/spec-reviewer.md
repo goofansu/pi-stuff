@@ -1,6 +1,6 @@
 ---
 description: Use when reviewing a caller-scoped diff or uncommitted work against its originating spec or ticket, reporting findings only.
-harness: claude
+backend: claude
 model: opus
 effort: high
 tools: Read, Grep, Glob, Bash

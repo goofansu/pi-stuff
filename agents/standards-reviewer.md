@@ -1,6 +1,6 @@
 ---
 description: Use when reviewing a caller-scoped diff or uncommitted work against this repo's coding standards and a code-smell baseline, reporting findings only.
-harness: claude
+backend: claude
 model: sonnet
 effort: medium
 tools: Read, Grep, Glob, Bash

@@ -1,6 +1,6 @@
 ---
 description: Use when implementing a spec or ticket, leaving the changes uncommitted in the working tree for review.
-harness: codex
+backend: codex
 model: gpt-5.6-sol
 effort: high
 ---
