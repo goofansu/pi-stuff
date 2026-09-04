@@ -1,27 +1,9 @@
 {
-  "extensions/answer.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/answer.ts",
-    "reviewed": "67bfb288446351cfd6ae4293bb217e4fe9ed9fe2",
-    "remark": "diverged: local adds markdown rendering for question text and context (Markdown component + getMarkdownTheme). Upstream renders questions as plain wrapped text. Local extraction is pinned to authenticated openai-codex/gpt-5.6-luna and aborts with a UI error when unavailable instead of falling back across upstream models/current model. Also: keybinding system (keyHint vs hardcoded), visual (editor theme, confirmation dialog style)"
-  },
-  "extensions/btw.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/btw.ts",
-    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
-    "remark": "functionally_same through a3f8ab1: local adapts message/session types to current APIs, uses keyHint labels, exports BtwOverlay for testing, and fixes overlay sizing by honoring allocated width and TUI terminal rows; local also conditionally uses follow-up delivery only while the main session is busy"
-  },
   "extensions/continue.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/continue.ts",
     "reviewed": "4bce45560fa55ace2f5dc8634a63a2af464ddc8b",
     "remark": "functionally_same: formatting only"
-  },
-  "extensions/control.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/control.ts",
-    "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
-    "remark": "functionally_same: backported result.isError check. Local summarization is pinned to authenticated openai-codex/gpt-5.6-luna with no current-model fallback. Local registerTool parameter waitUntil uses TypeScript-style camelCase instead of upstream wait_until. Rest is keybinding, visual, and code style"
   },
   "extensions/files.ts": {
     "repo": "mitsuhiko/agent-stuff",
@@ -40,12 +22,6 @@
     "path": "extensions/review.ts",
     "reviewed": "a3f8ab1108a48fec9e175f6cd5d9aaa4694ce29d",
     "remark": "functionally_same: deliverAs:followUp is an intentional local addition (upstream sends plain), keybinding, visual, code style"
-  },
-  "extensions/session-breakdown.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/session-breakdown.ts",
-    "reviewed": "ab1e7f3414e4c8aa54a3eda0a3c634c32d3794f0",
-    "remark": "functionally_same through ab1e7f3: intentional local differences are the keybindings manager with keyHint-based close/cancel help, faux-provider filtering, visibleWidth/truncateToWidth correctness for ANSI and wide text, and formatting/style"
   },
   "extensions/goal.ts": {
     "repo": "mitsuhiko/agent-stuff",
