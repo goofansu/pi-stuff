@@ -1,8 +1,8 @@
 ---
 description: Use when exploring existing code to locate implementations, trace behavior, or explain relationships. Wait for its result rather than exploring the code yourself.
-backend: pi
-model: openai-codex/gpt-5.6-luna
-effort: high
+backend: claude
+model: sonnet
+effort: medium
 tools: read, grep, find, ls, bash
 ---
 
