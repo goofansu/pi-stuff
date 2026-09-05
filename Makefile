@@ -18,12 +18,11 @@ agents:
 skills:
 	# .agents/skills 
 	npx skills add goofansu/skills -s commit -a codex -g -y
+	npx skills add mitsuhiko/agent-stuff -s pi-share -a codex -g -y
 	npx skills add mattpocock/skills/skills/engineering -a codex -g -y
 	npx skills add mattpocock/skills/skills/productivity -a codex -g -y
-	# .claude/skills
-	npx skills add humanlayer/skills -s show-me -a claude-code -g -y
-	npx skills add mitsuhiko/agent-stuff -s pi-share -a claude-code -g -y
+	npx skills add humanlayer/skills -s show-me -a codex -g -y
 	# .agents/skills + .claude/skills
+	npx skills add cli/cli -s gh -a codex -a claude-code -g -y
 	npx skills add herdrdev/herdr -s herdr -a codex -a claude-code -g -y
 	npx skills add modem-dev/hunk -s hunk-review -a codex -a claude-code -g -y
-	npx skills add cli/cli -s gh -a codex -a claude-code -g -y
