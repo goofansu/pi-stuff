@@ -1,7 +1,7 @@
 ---
 description: Use when implementing a spec or ticket, leaving the changes uncommitted in the working tree for review.
-backend: codex
-model: gpt-5.6-sol
+backend: pi 
+model: openai-codex/gpt-5.6-sol
 effort: medium
 ---
 
