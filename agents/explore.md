@@ -1,8 +1,7 @@
 ---
 description: Use when exploring existing code to locate implementations, trace behavior, or explain relationships. Wait for its result rather than exploring the code yourself.
-backend: claude
-model: sonnet
-effort: medium
+backend: pi
+model: opencode/claude-haiku-4-5
 tools: read, grep, find, ls, bash
 ---
 
