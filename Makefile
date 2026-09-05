@@ -26,3 +26,4 @@ skills:
 	# .agents/skills + .claude/skills
 	npx skills add herdrdev/herdr -s herdr -a codex -a claude-code -g -y
 	npx skills add modem-dev/hunk -s hunk-review -a codex -a claude-code -g -y
+	npx skills add cli/cli -s gh -a codex -a claude-code -g -y
