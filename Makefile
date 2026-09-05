@@ -17,8 +17,7 @@ agents:
 
 skills:
 	# .agents/skills 
-	npx skills add goofansu/skills -s commit -a codex -g -y
-	npx skills add mitsuhiko/agent-stuff -s pi-share -a codex -g -y
+	npx skills add goofansu/skills/skills/engineering -a codex -g -y
 	npx skills add mattpocock/skills/skills/engineering -a codex -g -y
 	npx skills add mattpocock/skills/skills/productivity -a codex -g -y
 	npx skills add humanlayer/skills -s show-me -a codex -g -y
