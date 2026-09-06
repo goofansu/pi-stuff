@@ -26,6 +26,8 @@ import {
   Spacer,
   Text,
   type TUI,
+  truncateToWidth,
+  visibleWidth,
 } from "@earendil-works/pi-tui";
 
 // =============================================================================
@@ -353,9 +355,10 @@ export function mergeModesFileChanges(
   baseline: ModesFile,
   edited: ModesFile,
   latest: ModesFile,
+  includeCurrentMode = false,
 ): ModesFile {
   const merged = cloneModesFile(latest);
-  const patch = computeModesPatch(baseline, edited, false);
+  const patch = computeModesPatch(baseline, edited, includeCurrentMode);
   if (patch) applyModesPatch(merged, patch);
   return merged;
 }
@@ -658,13 +661,18 @@ async function ensureRuntime(
 async function persistRuntime(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
+  includeCurrentMode = false,
 ): Promise<void> {
   if (!runtime.filePath) return;
 
-  // Do not persist currentMode; multiple running pi sessions would fight over it.
-  // Instead we infer the mode on startup from the active model + thinking level.
+  // Configuration edits normally leave currentMode alone. Explicit mode selections
+  // include it so a fresh session can start in the last selected mode.
   runtime.baseline ??= cloneModesFile(runtime.data);
-  const patch = computeModesPatch(runtime.baseline, runtime.data, false);
+  const patch = computeModesPatch(
+    runtime.baseline,
+    runtime.data,
+    includeCurrentMode,
+  );
   if (!patch) return;
 
   await withFileLock(runtime.filePath, async () => {
@@ -674,6 +682,7 @@ async function persistRuntime(
       runtime.baseline ?? runtime.data,
       runtime.data,
       diskFile,
+      includeCurrentMode,
     );
     ensureDefaultModeEntries(latest, ctx, pi);
     await saveModesFile(runtime.filePath, latest);
@@ -792,6 +801,11 @@ async function applyMode(
   if (!modelAppliedOk) {
     runtime.currentMode = CUSTOM_MODE_NAME;
     customOverlay = getCurrentSelectionSpec(pi, ctx);
+  } else {
+    // Persist only real, successfully applied modes. The shared modes file carries
+    // this selection across brand-new sessions without coupling it to session entries.
+    runtime.data.currentMode = mode;
+    await persistRuntime(pi, ctx, true);
   }
 
   if (ctx.hasUI) {
@@ -1308,7 +1322,9 @@ async function renameModeUI(
       oldName,
       newName,
     );
-    await persistRuntime(pi, ctx);
+    const renamedPersistedMode = runtime.data.currentMode === oldName;
+    if (renamedPersistedMode) runtime.data.currentMode = newName;
+    await persistRuntime(pi, ctx, renamedPersistedMode);
 
     if (runtime.currentMode === oldName) runtime.currentMode = newName;
     if (runtime.lastRealMode === oldName) runtime.lastRealMode = newName;
@@ -1414,7 +1430,7 @@ class PromptEditor extends CustomEditor {
     theme: ConstructorParameters<typeof CustomEditor>[1],
     keybindings: ConstructorParameters<typeof CustomEditor>[2],
   ) {
-    super(tui, theme, keybindings);
+    super(tui, theme, keybindings, { embedWorkingStatus: true });
     delete (this as { borderColor?: (text: string) => string }).borderColor;
     Object.defineProperty(this, "borderColor", {
       get: () => this._borderColor ?? ((text: string) => text),
@@ -1433,6 +1449,7 @@ class PromptEditor extends CustomEditor {
 
   render(width: number): string[] {
     const lines = super.render(width);
+    const topBorder = lines[0] ?? "";
     const mode = this.modeLabelProvider?.();
     if (!mode) return lines;
 
@@ -1441,75 +1458,66 @@ class PromptEditor extends CustomEditor {
       "g",
     );
     const stripAnsi = (s: string) => s.replace(ansiPattern, "");
-    const topPlain = stripAnsi(lines[0] ?? "");
+    const topPlain = stripAnsi(topBorder);
+    const isBashMode = this.getText().trimStart().startsWith("!");
 
-    // If the editor is scrolled, the built-in editor renders a scroll indicator on the top border.
-    // Preserve it, but still show the mode label.
-    const scrollPrefixMatch = topPlain.match(/^(─── ↑ \d+ more )/);
-    const prefix = scrollPrefixMatch?.[1] ?? "──";
+    // Preserve everything the built-in editor placed before the trailing border,
+    // including the embedded working spinner and any scroll indicator. An idle
+    // bash editor keeps the same two-cell border prefix before its label.
+    const trailingBorderStart = topPlain.search(/─+$/);
+    const semanticPrefix =
+      trailingBorderStart > 0 ? topPlain.slice(0, trailingBorderStart) : "";
+    const prefixWidth = Math.min(
+      width,
+      semanticPrefix ? visibleWidth(semanticPrefix) : isBashMode ? 2 : 0,
+    );
+    let left = truncateToWidth(topBorder, prefixWidth, "");
+    let leftWidth = prefixWidth;
 
     const labelColor =
       this.modeLabelColor ?? ((text: string) => this.borderColor(text));
-    const isBashMode = this.getText().trimStart().startsWith("!");
-    const labelParts: Array<{
-      text: string;
-      color: (text: string) => string;
-    }> = [{ text: formatModeLabel(mode), color: labelColor }];
     if (isBashMode) {
-      labelParts.push(
-        { text: " ", color: labelColor },
-        { text: "──", color: (text: string) => this.borderColor(text) },
-        { text: " bash", color: labelColor },
-      );
+      const bashPrefix = semanticPrefix
+        ? this.borderColor("── ")
+        : labelColor(" ");
+      const bashLabel = labelColor("bash ");
+      left += bashPrefix + bashLabel;
+      leftWidth += visibleWidth(bashPrefix) + visibleWidth(bashLabel);
     }
 
-    // Compute how much room we have for the label core (without truncating the prefix).
-    const labelLeftSpace = prefix.endsWith(" ") ? "" : " ";
-    const labelRightSpace = " ";
-    const minRightBorder = 1; // keep at least one border cell on the right
-    const maxLabelLen = Math.max(
+    const modeLeftSpace = " ";
+    const modeRightSpace = " ";
+    const rightBorderWidth = 2;
+    const minGapWidth = 1;
+    const maxModeWidth = Math.max(
       0,
       width -
-        prefix.length -
-        labelLeftSpace.length -
-        labelRightSpace.length -
-        minRightBorder,
+        leftWidth -
+        visibleWidth(modeLeftSpace) -
+        visibleWidth(modeRightSpace) -
+        rightBorderWidth -
+        minGapWidth,
     );
-    if (maxLabelLen <= 0) return lines;
+    if (maxModeWidth <= 0) return lines;
 
-    let labelLen = labelParts.reduce((sum, part) => sum + part.text.length, 0);
-    if (labelLen > maxLabelLen) {
-      let remainingLen = maxLabelLen;
-      for (const part of labelParts) {
-        if (remainingLen <= 0) {
-          part.text = "";
-          continue;
-        }
-        if (part.text.length > remainingLen) {
-          part.text = part.text.slice(0, remainingLen);
-          remainingLen = 0;
-        } else {
-          remainingLen -= part.text.length;
-        }
-      }
-      labelLen = maxLabelLen;
-    }
+    const modeLabel = truncateToWidth(formatModeLabel(mode), maxModeWidth, "");
+    const modeWidth = visibleWidth(modeLabel);
+    const gapWidth =
+      width -
+      leftWidth -
+      visibleWidth(modeLeftSpace) -
+      modeWidth -
+      visibleWidth(modeRightSpace) -
+      rightBorderWidth;
+    if (gapWidth < minGapWidth) return lines;
 
-    const labelChunkLen =
-      labelLeftSpace.length + labelLen + labelRightSpace.length;
-    const remaining = width - prefix.length - labelChunkLen;
-    if (remaining < 0) return lines;
-
-    const right = "─".repeat(Math.max(0, remaining));
-    const coloredLabel = labelParts
-      .map((part) => (part.text ? part.color(part.text) : ""))
-      .join("");
     lines[0] =
-      this.borderColor(prefix) +
-      (labelLeftSpace ? labelColor(labelLeftSpace) : "") +
-      coloredLabel +
-      (labelRightSpace ? labelColor(labelRightSpace) : "") +
-      this.borderColor(right);
+      left +
+      this.borderColor("─".repeat(gapWidth)) +
+      labelColor(modeLeftSpace) +
+      labelColor(modeLabel) +
+      labelColor(modeRightSpace) +
+      this.borderColor("─".repeat(rightBorderWidth));
     return lines;
   }
 
@@ -1823,14 +1831,25 @@ export default function (pi: ExtensionAPI) {
     await ensureRuntime(pi, ctx);
     customOverlay = null;
 
-    const inferred = inferModeFromSelection(ctx, pi, runtime.data);
-    if (inferred) {
-      runtime.currentMode = inferred;
-      runtime.lastRealMode = inferred;
+    const branch = ctx.sessionManager.getBranch();
+    const isFreshSession = branch.every(
+      (entry) =>
+        entry.type === "model_change" || entry.type === "thinking_level_change",
+    );
+    if (isFreshSession) {
+      // Pi records the default model/thinking level before session_start, even for a
+      // fresh session. Ignore those initialization entries and apply the last mode.
+      await applyMode(pi, ctx, runtime.data.currentMode);
     } else {
-      // No exact match → treat as overlay.
-      runtime.currentMode = CUSTOM_MODE_NAME;
-      customOverlay = getCurrentSelectionSpec(pi, ctx);
+      const inferred = inferModeFromSelection(ctx, pi, runtime.data);
+      if (inferred) {
+        runtime.currentMode = inferred;
+        runtime.lastRealMode = inferred;
+      } else {
+        // No exact match → treat as overlay.
+        runtime.currentMode = CUSTOM_MODE_NAME;
+        customOverlay = getCurrentSelectionSpec(pi, ctx);
+      }
     }
 
     applyEditor(pi, ctx);

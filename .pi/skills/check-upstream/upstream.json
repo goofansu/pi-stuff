@@ -14,8 +14,8 @@
   "extensions/prompt-editor.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/prompt-editor.ts",
-    "reviewed": "a71bed215fb67005bdb23916110decff3dceeecb",
-    "remark": "diverged: local adds mode persistence/config UI, prompt history, typed wrappers, and prompt border labels; local also preserves renamed mode order and supports max thinking effort. Upstream-reviewed functional fixes applied through a71bed2; remaining diffs are intentional local behavior plus code style."
+    "reviewed": "4fb0c7d68c87c3612af6289f72b5d90a11a726b8",
+    "remark": "diverged: upstream fixes through 4fb0c7d are applied. Remaining intentional local differences are comma/period cycle shortcuts instead of Ctrl+Space, stronger typing/defensive guards, preservation of mode order and concurrent edits during persistence, support for max thinking effort, and code style."
   },
   "extensions/review.ts": {
     "repo": "mitsuhiko/agent-stuff",

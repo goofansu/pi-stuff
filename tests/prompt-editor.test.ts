@@ -43,6 +43,37 @@ describe("prompt-editor modes file", () => {
 
     assert.deepEqual(Object.keys(merged.modes), ["default", "planning", "fast"]);
   });
+
+  it("persists explicit mode selections without clobbering concurrent edits", () => {
+    const baseline = {
+      version: 1 as const,
+      currentMode: "default",
+      modes: { default: {}, fast: {} },
+    };
+    const edited = { ...baseline, currentMode: "fast" };
+    const latest = {
+      ...baseline,
+      modes: { default: {}, fast: {}, review: {} },
+    };
+
+    const merged = mergeModesFileChanges(baseline, edited, latest, true);
+
+    assert.equal(merged.currentMode, "fast");
+    assert.deepEqual(Object.keys(merged.modes), ["default", "fast", "review"]);
+  });
+
+  it("does not persist mode selections during configuration-only merges", () => {
+    const baseline = {
+      version: 1 as const,
+      currentMode: "default",
+      modes: { default: {}, fast: {} },
+    };
+    const edited = { ...baseline, currentMode: "fast" };
+
+    const merged = mergeModesFileChanges(baseline, edited, baseline);
+
+    assert.equal(merged.currentMode, "default");
+  });
 });
 
 describe("prompt-editor shortcuts", () => {
