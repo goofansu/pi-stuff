@@ -1,6 +1,6 @@
-.PHONY: install packages keybindings skills
+.PHONY: install packages keybindings agents skills
 
-install: packages keybindings skills
+install: packages keybindings agents skills
 
 packages:
 	pi install .
@@ -10,6 +10,10 @@ packages:
 
 keybindings:
 	@ln -svf $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
+
+agents:
+	@mkdir -p ~/.pi/agent/agents
+	@ln -svf $(CURDIR)/agents/*.md ~/.pi/agent/agents/
 
 skills:
 	# .agents/skills 
