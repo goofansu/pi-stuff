@@ -9,11 +9,9 @@ agent-stuff
 Source: https://github.com/mitsuhiko/agent-stuff
 Files:
   - extensions/answer.ts
-  - extensions/continue.ts
   - extensions/files.ts
   - extensions/goal.ts
   - extensions/prompt-editor.ts
-  - extensions/review.ts
   - extensions/session-breakdown.ts
 License: Apache License 2.0
 Upstream license file: https://github.com/mitsuhiko/agent-stuff/blob/main/LICENSE
