@@ -1,4 +1,10 @@
 {
+  "extensions/answer.ts": {
+    "repo": "mitsuhiko/agent-stuff",
+    "path": "extensions/answer.ts",
+    "reviewed": "67bfb288446351cfd6ae4293bb217e4fe9ed9fe2",
+    "remark": "diverged: local adds markdown rendering for question text and context (Markdown component + getMarkdownTheme). Upstream renders questions as plain wrapped text. Local extraction is pinned to authenticated openai-codex/gpt-5.6-luna and aborts with a UI error when unavailable instead of falling back across upstream models/current model. Also: keybinding system (keyHint vs hardcoded), visual (editor theme, confirmation dialog style)"
+  },
   "extensions/continue.ts": {
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/continue.ts",

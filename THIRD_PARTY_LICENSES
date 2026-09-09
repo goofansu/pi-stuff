@@ -8,6 +8,7 @@ agent-stuff
 
 Source: https://github.com/mitsuhiko/agent-stuff
 Files:
+  - extensions/answer.ts
   - extensions/continue.ts
   - extensions/files.ts
   - extensions/goal.ts
