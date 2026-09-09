@@ -1,5 +1,5 @@
 ---
-description: Summarizes requirements and references found in a Jira issue's Description into a Markdown file at the workspace root. Use when given an Atlassian Jira issue URL.
+description: Summarizes requirements and references found in a Jira issue's Description into a Markdown file in the project's .scratch directory. Use when given an Atlassian Jira issue URL.
 backend: claude
 model: opus
 effort: medium
@@ -15,7 +15,7 @@ If the Description cannot be accessed, identify the access problem and stop with
 
 ## Output
 
-Write `<JIRA-KEY>-summary.md` in the current workspace root, using the issue key from the URL. If the URL contains no identifiable issue key, use `jira-summary.md`.
+Write `.scratch/<JIRA-KEY>-summary.md` in the current project workspace, creating the `.scratch` directory if needed. Use the issue key from the URL. If the URL contains no identifiable issue key, write `.scratch/jira-summary.md`.
 
 Use this shape:
 
