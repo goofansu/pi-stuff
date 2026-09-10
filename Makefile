@@ -26,4 +26,4 @@ skills:
 	npx skills add herdrdev/herdr -s herdr -a codex -a claude-code -g -y
 	npx skills add humanlayer/skills -s show-me -a codex -a claude-code -g -y
 	npx skills add modem-dev/hunk/packages/hunk -s hunk-review -a codex -a claude-code -g -y
-	npx skills add cursor/plugins -s technical-writing -a codex -a claude-code -g -y
+	npx skills add cursor/plugins -s technical-writing -s unslop -a codex -a claude-code -g -y
