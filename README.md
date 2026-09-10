@@ -1,6 +1,6 @@
 # pi-stuff
 
-This repository stores my customizations for the [Pi coding agent](https://github.com/earendil-works/pi/tree/main/packages/coding-agent).
+This repository stores my customizations for the [Pi](https://github.com/earendil-works/pi/tree/main/packages/coding-agent).
 
 ## Install
 
