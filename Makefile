@@ -21,7 +21,6 @@ skills:
 	npx skills add mattpocock/skills/skills/productivity -a codex -g -y
 	# .claude/skills
 	npx skills add goofansu/pi-subagent -s herdr-implement-spec -a claude-code -g -y
-	npx skills add mitsuhiko/agent-stuff -s pi-share -a claude-code -g -y
 	# .agents/skills + .claude/skills
 	npx skills add cli/cli -s gh -a codex -a claude-code -g -y
 	npx skills add herdrdev/herdr -s herdr -a codex -a claude-code -g -y
