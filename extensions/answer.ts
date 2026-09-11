@@ -11,9 +11,6 @@
  */
 
 import {
-  type Api,
-  complete,
-  type Model,
   parseJsonWithRepair,
   type UserMessage,
 } from "@earendil-works/pi-ai/compat";
@@ -95,20 +92,6 @@ const EXTRACTION_MODELS = [
   { provider: "exe-dev-openai", id: "gpt-5.6-luna@llm" },
 ] as const;
 
-async function selectExtractionModel(
-  modelRegistry: ModelRegistry,
-): Promise<Model<Api> | undefined> {
-  for (const candidate of EXTRACTION_MODELS) {
-    const model = modelRegistry.find(candidate.provider, candidate.id);
-    if (!model) continue;
-
-    const auth = await modelRegistry.getApiKeyAndHeaders(model);
-    if (auth.ok) return model;
-  }
-
-  return undefined;
-}
-
 function toExtractedQuestion(value: unknown): ExtractedQuestion | null {
   if (typeof value !== "object" || value === null) {
     return null;
@@ -183,6 +166,66 @@ function parseExtractionResult(text: string): ExtractionResult | null {
   }
 
   return null;
+}
+
+export async function extractQuestions(
+  modelRegistry: ModelRegistry,
+  assistantText: string,
+  signal?: AbortSignal,
+): Promise<ExtractionOutcome> {
+  const userMessage: UserMessage = {
+    role: "user",
+    content: [{ type: "text", text: assistantText }],
+    timestamp: Date.now(),
+  };
+  const failures: string[] = [];
+
+  for (const candidate of EXTRACTION_MODELS) {
+    const reference = `${candidate.provider}/${candidate.id}`;
+    const model = modelRegistry.find(candidate.provider, candidate.id);
+    if (!model) {
+      failures.push(`${reference}: unavailable`);
+      continue;
+    }
+
+    try {
+      const response = await modelRegistry.complete(
+        model,
+        { systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
+        { signal },
+      );
+
+      if (response.stopReason === "aborted") {
+        return { status: "cancelled" };
+      }
+      if (response.stopReason === "error") {
+        failures.push(
+          `${reference}: ${response.errorMessage ?? "question extraction failed"}`,
+        );
+        continue;
+      }
+
+      const responseText = response.content
+        .filter((c): c is { type: "text"; text: string } => c.type === "text")
+        .map((c) => c.text)
+        .join("\n");
+      const result = parseExtractionResult(responseText);
+      if (!result) {
+        failures.push(`${reference}: returned invalid JSON`);
+        continue;
+      }
+
+      return { status: "ok", result };
+    } catch (error: unknown) {
+      if (signal?.aborted) {
+        return { status: "cancelled" };
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push(`${reference}: ${message}`);
+    }
+  }
+
+  return { status: "error", message: failures.join("; ") };
 }
 
 /**
@@ -535,75 +578,16 @@ export default function (pi: ExtensionAPI) {
 
     // Resolve from the live session registry inside the handler. By this point,
     // other extension factories have registered any extension-defined models.
-    const extractionModel = await selectExtractionModel(ctx.modelRegistry);
-    if (!extractionModel) {
-      ctx.ui.notify(
-        `Models ${EXTRACTION_MODELS.map(({ provider, id }) => `${provider}/${id}`).join(" and ")} are unavailable or not authenticated`,
-        "error",
-      );
-      return;
-    }
-
-    // Run extraction with loader UI
     const extractionOutcome = await ctx.ui.custom<ExtractionOutcome>(
       (tui, theme, _kb, done) => {
         const loader = new BorderedLoader(
           tui,
           theme,
-          `Extracting questions using ${extractionModel.provider}/${extractionModel.id}...`,
+          "Extracting questions...",
         );
         loader.onAbort = () => done({ status: "cancelled" });
 
-        const doExtract = async (): Promise<ExtractionOutcome> => {
-          const auth =
-            await ctx.modelRegistry.getApiKeyAndHeaders(extractionModel);
-          if (!auth.ok) {
-            return { status: "error", message: auth.error };
-          }
-          const userMessage: UserMessage = {
-            role: "user",
-            content: [{ type: "text", text: assistantText }],
-            timestamp: Date.now(),
-          };
-
-          const response = await complete(
-            extractionModel,
-            { systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
-            {
-              apiKey: auth.apiKey,
-              headers: auth.headers,
-              signal: loader.signal,
-            },
-          );
-
-          if (response.stopReason === "aborted") {
-            return { status: "cancelled" };
-          }
-          if (response.stopReason === "error") {
-            return {
-              status: "error",
-              message: response.errorMessage ?? "question extraction failed",
-            };
-          }
-
-          const responseText = response.content
-            .filter(
-              (c): c is { type: "text"; text: string } => c.type === "text",
-            )
-            .map((c) => c.text)
-            .join("\n");
-          const result = parseExtractionResult(responseText);
-          if (!result) {
-            return {
-              status: "error",
-              message: "question extraction returned invalid JSON",
-            };
-          }
-
-          return { status: "ok", result };
-        };
-
-        doExtract()
+        extractQuestions(ctx.modelRegistry, assistantText, loader.signal)
           .then(done)
           .catch((error: unknown) => {
             const message =
