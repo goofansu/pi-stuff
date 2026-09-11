@@ -90,16 +90,23 @@ Example output:
   ]
 }`;
 
-const EXTRACTION_MODEL_ID = "gpt-5.6-luna";
+const EXTRACTION_MODELS = [
+  { provider: "openai-codex", id: "gpt-5.6-luna" },
+  { provider: "exe-dev-openai", id: "gpt-5.6-luna@llm" },
+] as const;
 
 async function selectExtractionModel(
   modelRegistry: ModelRegistry,
 ): Promise<Model<Api> | undefined> {
-  const model = modelRegistry.find("openai-codex", EXTRACTION_MODEL_ID);
-  if (!model) return undefined;
+  for (const candidate of EXTRACTION_MODELS) {
+    const model = modelRegistry.find(candidate.provider, candidate.id);
+    if (!model) continue;
 
-  const auth = await modelRegistry.getApiKeyAndHeaders(model);
-  return auth.ok ? model : undefined;
+    const auth = await modelRegistry.getApiKeyAndHeaders(model);
+    if (auth.ok) return model;
+  }
+
+  return undefined;
 }
 
 function toExtractedQuestion(value: unknown): ExtractedQuestion | null {
@@ -526,11 +533,12 @@ export default function (pi: ExtensionAPI) {
 
     const assistantText = lastAssistantText;
 
-    // Select the configured extraction model.
+    // Resolve from the live session registry inside the handler. By this point,
+    // other extension factories have registered any extension-defined models.
     const extractionModel = await selectExtractionModel(ctx.modelRegistry);
     if (!extractionModel) {
       ctx.ui.notify(
-        `Model openai-codex/${EXTRACTION_MODEL_ID} is unavailable or not authenticated`,
+        `Models ${EXTRACTION_MODELS.map(({ provider, id }) => `${provider}/${id}`).join(" and ")} are unavailable or not authenticated`,
         "error",
       );
       return;
@@ -542,7 +550,7 @@ export default function (pi: ExtensionAPI) {
         const loader = new BorderedLoader(
           tui,
           theme,
-          `Extracting questions using ${extractionModel.id}...`,
+          `Extracting questions using ${extractionModel.provider}/${extractionModel.id}...`,
         );
         loader.onAbort = () => done({ status: "cancelled" });
 
