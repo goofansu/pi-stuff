@@ -3,7 +3,7 @@
     "repo": "mitsuhiko/agent-stuff",
     "path": "extensions/answer.ts",
     "reviewed": "67bfb288446351cfd6ae4293bb217e4fe9ed9fe2",
-    "remark": "diverged: local adds markdown rendering for question text and context (Markdown component + getMarkdownTheme). Upstream renders questions as plain wrapped text. Local extraction is pinned to authenticated openai-codex/gpt-5.6-luna and aborts with a UI error when unavailable instead of falling back across upstream models/current model. Also: keybinding system (keyHint vs hardcoded), visual (editor theme, confirmation dialog style)"
+    "remark": "diverged: local adds markdown rendering for question text and context (Markdown component + getMarkdownTheme). Upstream renders questions as plain wrapped text. Local extraction tries openai-codex/gpt-5.6-luna, then the extension-defined exe-dev-openai/gpt-5.6-luna@llm model; the exe.dev catalog ID is normalized to the gateway-native gpt-5.6-luna request ID. Local retries after request or JSON failures and reports all failures instead of falling back across upstream's Codex models, Haiku, and current model. Also: keybinding system (keyHint vs hardcoded), visual (editor theme, confirmation dialog style)"
   },
   "extensions/files.ts": {
     "repo": "mitsuhiko/agent-stuff",

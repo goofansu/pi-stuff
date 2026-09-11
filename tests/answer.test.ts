@@ -55,7 +55,7 @@ test("question extraction falls back after the first model request fails", async
 
   assert.deepEqual(attempts, [
     "openai-codex/gpt-5.6-luna",
-    "exe-dev-openai/gpt-5.6-luna@llm",
+    "exe-dev-openai/gpt-5.6-luna",
   ]);
   assert.deepEqual(outcome, {
     status: "ok",

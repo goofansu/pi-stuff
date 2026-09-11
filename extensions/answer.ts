@@ -88,8 +88,16 @@ Example output:
 }`;
 
 const EXTRACTION_MODELS = [
-  { provider: "openai-codex", id: "gpt-5.6-luna" },
-  { provider: "exe-dev-openai", id: "gpt-5.6-luna@llm" },
+  {
+    provider: "openai-codex",
+    catalogId: "gpt-5.6-luna",
+    requestId: "gpt-5.6-luna",
+  },
+  {
+    provider: "exe-dev-openai",
+    catalogId: "gpt-5.6-luna@llm",
+    requestId: "gpt-5.6-luna",
+  },
 ] as const;
 
 function toExtractedQuestion(value: unknown): ExtractedQuestion | null {
@@ -181,16 +189,23 @@ export async function extractQuestions(
   const failures: string[] = [];
 
   for (const candidate of EXTRACTION_MODELS) {
-    const reference = `${candidate.provider}/${candidate.id}`;
-    const model = modelRegistry.find(candidate.provider, candidate.id);
+    const reference = `${candidate.provider}/${candidate.catalogId}`;
+    const model = modelRegistry.find(candidate.provider, candidate.catalogId);
     if (!model) {
       failures.push(`${reference}: unavailable`);
       continue;
     }
 
+    // exe.dev exposes an @llm-suffixed model to Pi for local routing, but its
+    // OpenAI-compatible gateway accepts only the native model ID.
+    const requestModel =
+      model.id === candidate.requestId
+        ? model
+        : { ...model, id: candidate.requestId };
+
     try {
       const response = await modelRegistry.complete(
-        model,
+        requestModel,
         { systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
         { signal },
       );
