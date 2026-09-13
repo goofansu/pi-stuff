@@ -11,6 +11,8 @@
  */
 
 import {
+  type Api,
+  type Model,
   parseJsonWithRepair,
   type UserMessage,
 } from "@earendil-works/pi-ai/compat";
@@ -90,15 +92,54 @@ Example output:
 const EXTRACTION_MODELS = [
   {
     provider: "openai-codex",
-    catalogId: "gpt-5.6-luna",
-    requestId: "gpt-5.6-luna",
+    id: "gpt-5.6-luna",
   },
   {
     provider: "exe-dev-openai",
-    catalogId: "gpt-5.6-luna@llm",
+    id: "gpt-5.6-luna@llm",
     requestId: "gpt-5.6-luna",
   },
 ] as const;
+
+type ResolvedExtractionModel = {
+  reference: string;
+  model: Model<Api>;
+};
+
+function toRequestModel(model: Model<Api>, requestId?: string): Model<Api> {
+  let id = requestId;
+  if (!id && model.provider.startsWith("exe-dev-")) {
+    const integrationSuffix = model.id.lastIndexOf("@");
+    if (integrationSuffix > 0) id = model.id.slice(0, integrationSuffix);
+  }
+  return id && id !== model.id ? { ...model, id } : model;
+}
+
+async function resolveExtractionModel(
+  modelRegistry: ModelRegistry,
+  currentModel: Model<Api>,
+): Promise<ResolvedExtractionModel> {
+  for (const candidate of EXTRACTION_MODELS) {
+    const model = modelRegistry.find(candidate.provider, candidate.id);
+    if (!model) continue;
+
+    const auth = await modelRegistry.getApiKeyAndHeaders(model);
+    if (auth.ok) {
+      return {
+        reference: `${candidate.provider}/${candidate.id}`,
+        model: toRequestModel(
+          model,
+          "requestId" in candidate ? candidate.requestId : undefined,
+        ),
+      };
+    }
+  }
+
+  return {
+    reference: `${currentModel.provider}/${currentModel.id}`,
+    model: toRequestModel(currentModel),
+  };
+}
 
 function toExtractedQuestion(value: unknown): ExtractedQuestion | null {
   if (typeof value !== "object" || value === null) {
@@ -178,6 +219,7 @@ function parseExtractionResult(text: string): ExtractionResult | null {
 
 export async function extractQuestions(
   modelRegistry: ModelRegistry,
+  currentModel: Model<Api>,
   assistantText: string,
   signal?: AbortSignal,
 ): Promise<ExtractionOutcome> {
@@ -186,61 +228,51 @@ export async function extractQuestions(
     content: [{ type: "text", text: assistantText }],
     timestamp: Date.now(),
   };
-  const failures: string[] = [];
+  const extractionModel = await resolveExtractionModel(
+    modelRegistry,
+    currentModel,
+  );
 
-  for (const candidate of EXTRACTION_MODELS) {
-    const reference = `${candidate.provider}/${candidate.catalogId}`;
-    const model = modelRegistry.find(candidate.provider, candidate.catalogId);
-    if (!model) {
-      failures.push(`${reference}: unavailable`);
-      continue;
+  try {
+    const response = await modelRegistry.complete(
+      extractionModel.model,
+      { systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
+      { signal },
+    );
+
+    if (response.stopReason === "aborted") {
+      return { status: "cancelled" };
+    }
+    if (response.stopReason === "error") {
+      return {
+        status: "error",
+        message: `${extractionModel.reference}: ${response.errorMessage ?? "question extraction failed"}`,
+      };
     }
 
-    // exe.dev exposes an @llm-suffixed model to Pi for local routing, but its
-    // OpenAI-compatible gateway accepts only the native model ID.
-    const requestModel =
-      model.id === candidate.requestId
-        ? model
-        : { ...model, id: candidate.requestId };
-
-    try {
-      const response = await modelRegistry.complete(
-        requestModel,
-        { systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
-        { signal },
-      );
-
-      if (response.stopReason === "aborted") {
-        return { status: "cancelled" };
-      }
-      if (response.stopReason === "error") {
-        failures.push(
-          `${reference}: ${response.errorMessage ?? "question extraction failed"}`,
-        );
-        continue;
-      }
-
-      const responseText = response.content
-        .filter((c): c is { type: "text"; text: string } => c.type === "text")
-        .map((c) => c.text)
-        .join("\n");
-      const result = parseExtractionResult(responseText);
-      if (!result) {
-        failures.push(`${reference}: returned invalid JSON`);
-        continue;
-      }
-
-      return { status: "ok", result };
-    } catch (error: unknown) {
-      if (signal?.aborted) {
-        return { status: "cancelled" };
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      failures.push(`${reference}: ${message}`);
+    const responseText = response.content
+      .filter((c): c is { type: "text"; text: string } => c.type === "text")
+      .map((c) => c.text)
+      .join("\n");
+    const result = parseExtractionResult(responseText);
+    if (!result) {
+      return {
+        status: "error",
+        message: `${extractionModel.reference}: returned invalid JSON`,
+      };
     }
+
+    return { status: "ok", result };
+  } catch (error: unknown) {
+    if (signal?.aborted) {
+      return { status: "cancelled" };
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      status: "error",
+      message: `${extractionModel.reference}: ${message}`,
+    };
   }
-
-  return { status: "error", message: failures.join("; ") };
 }
 
 /**
@@ -590,6 +622,7 @@ export default function (pi: ExtensionAPI) {
     }
 
     const assistantText = lastAssistantText;
+    const currentModel = ctx.model;
 
     // Resolve from the live session registry inside the handler. By this point,
     // other extension factories have registered any extension-defined models.
@@ -602,7 +635,12 @@ export default function (pi: ExtensionAPI) {
         );
         loader.onAbort = () => done({ status: "cancelled" });
 
-        extractQuestions(ctx.modelRegistry, assistantText, loader.signal)
+        extractQuestions(
+          ctx.modelRegistry,
+          currentModel,
+          assistantText,
+          loader.signal,
+        )
           .then(done)
           .catch((error: unknown) => {
             const message =
