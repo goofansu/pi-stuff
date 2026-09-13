@@ -1,5 +1,35 @@
 {
+  "name": "@goofansu/pi-stuff",
+  "version": "1.0.0",
+  "description": "A collection of personal Pi extensions and themes.",
   "type": "module",
+  "files": [
+    "extensions",
+    "themes"
+  ],
+  "keywords": [
+    "pi-package"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ],
+    "themes": [
+      "./themes"
+    ]
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/goofansu/pi-stuff.git"
+  },
+  "homepage": "https://github.com/goofansu/pi-stuff#readme",
+  "bugs": {
+    "url": "https://github.com/goofansu/pi-stuff/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "lint": "biome check .",
     "lint:fix": "biome check --write .",

@@ -5,7 +5,5 @@ This repository stores my [Pi](https://github.com/earendil-works/pi/tree/main/pa
 ## Install
 
 ```shell
-gh repo clone goofansu/pi-stuff ~/code/pi-stuff
-cd ~/code/pi-stuff
-make install
+pi install npm:@goofansu/pi-stuff
 ```

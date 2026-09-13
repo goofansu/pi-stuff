@@ -27,7 +27,7 @@ packages:
 install-exe-dev: keybindings skills exe-dev-packages
 
 exe-dev-packages:
-	pi install https://github.com/goofansu/pi-stuff
+	pi install npm:@goofansu/pi-stuff
 	pi install npm:@goofansu/pi-subagent
 	pi install npm:@goofansu/pi-web
 	pi install npm:pi-autoresearch
