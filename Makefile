@@ -1,10 +1,17 @@
-.PHONY: install keybindings skills packages
+.PHONY: install keybindings packages skills
 
-install: keybindings skills packages
+install: keybindings packages skills 
 
 keybindings:
 	mkdir -p ~/.pi/agent
 	cp $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
+
+packages:
+	pi install .
+	pi install https://github.com/goofansu/pi-subagent
+	pi install https://github.com/goofansu/pi-remote-control
+	pi install https://github.com/earendil-works/pi-transcribe
+	pi install npm:@earendil-works/pi-radius
 
 skills:
 	npx skills add goofansu/skills/skills/engineering -a pi -g -y
@@ -15,10 +22,3 @@ skills:
 	npx skills add herdrdev/herdr -s herdr -a pi -g -y
 	npx skills add modem-dev/hunk/packages/hunk -s hunk-review -a pi -g -y
 	npx skills add boldsoftware/exe.dev -s using-exe-dev -a pi -g -y
-
-packages:
-	pi install .
-	pi install https://github.com/goofansu/pi-subagent
-	pi install https://github.com/goofansu/pi-remote-control
-	pi install https://github.com/earendil-works/pi-transcribe
-	pi install npm:@earendil-works/pi-radius
