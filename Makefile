@@ -9,11 +9,10 @@ skills:
 	npx skills add goofansu/skills/skills/engineering -a pi -g -y
 	npx skills add mattpocock/skills/skills/engineering -a pi -g -y
 	npx skills add mattpocock/skills/skills/productivity -a pi -g -y
-	npx skills add herdrdev/herdr -s herdr -a pi -g -y
-	npx skills add modem-dev/hunk/packages/hunk -s hunk-review -a pi -g -y
 	npx skills add humanlayer/skills -s show-me -a pi -g -y
 	npx skills add cli/cli -s gh -a pi -g -y
-	npx skills add cursor/plugins -s technical-writing -s unslop -a pi -g -y
+	npx skills add herdrdev/herdr -s herdr -a pi -g -y
+	npx skills add modem-dev/hunk/packages/hunk -s hunk-review -a pi -g -y
 	npx skills add boldsoftware/exe.dev -s using-exe-dev -a pi -g -y
 
 packages:
