@@ -22,12 +22,3 @@ packages:
 	pi install ../pi-remote-control
 	pi install https://github.com/earendil-works/pi-transcribe
 	pi install npm:@earendil-works/pi-radius
-
-.PHONY: install-exe-dev exe-dev-packages
-install-exe-dev: keybindings skills exe-dev-packages
-
-exe-dev-packages:
-	pi install npm:@goofansu/pi-stuff
-	pi install npm:@goofansu/pi-subagent
-	pi install npm:@goofansu/pi-web
-	pi install npm:pi-autoresearch
