@@ -1,4 +1,5 @@
 .PHONY: install keybindings skills packages
+
 install: keybindings skills packages
 
 keybindings:
@@ -17,7 +18,7 @@ skills:
 
 packages:
 	pi install .
-	pi install ../pi-subagent
-	pi install ../pi-remote-control
+	pi install https://github.com/goofansu/pi-subagent
+	pi install https://github.com/goofansu/pi-remote-control
 	pi install https://github.com/earendil-works/pi-transcribe
 	pi install npm:@earendil-works/pi-radius
