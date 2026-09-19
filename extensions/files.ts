@@ -1006,6 +1006,7 @@ const showFileSelector = async (
 
       const listContainer = new Container();
       container.addChild(listContainer);
+      container.addChild(new Spacer(1));
       container.addChild(
         new Text(
           theme.fg("dim", "Type to search • ") +
