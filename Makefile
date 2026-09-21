@@ -23,3 +23,4 @@ skills:
 	npx skills add herdrdev/herdr -s herdr -a pi -g -y
 	npx skills add modem-dev/hunk/packages/hunk -s hunk-review -a pi -g -y
 	npx skills add boldsoftware/exe.dev -s using-exe-dev -a pi -g -y
+	npx skills add typesafe-ai/skills -s typesafe-ai -a pi -g -y
