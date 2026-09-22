@@ -10,7 +10,6 @@ packages:
 	pi install .
 	pi install ../pi-subagent
 	pi install ../pi-remote-control
-	pi install ../pi-web
 	pi install https://github.com/earendil-works/pi-transcribe
 	pi install npm:@earendil-works/pi-radius
 
