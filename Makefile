@@ -16,6 +16,7 @@ packages:
 
 skills:
 	npx skills add goofansu/skills/skills/engineering -a pi -g -y
+	npx skills add mitsuhiko/agent-stuff -s librarian -a pi -g -y
 	npx skills add mattpocock/skills/skills/engineering -a pi -g -y
 	npx skills add mattpocock/skills/skills/productivity -a pi -g -y
 	npx skills add humanlayer/skills -s show-me -s visual-pr -a pi -g -y
