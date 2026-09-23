@@ -10,7 +10,7 @@ import {
   Text,
 } from "@earendil-works/pi-tui";
 
-const REPLIES = ["continue", "approved", "recommended"] as const;
+const REPLIES = ["continue", "approved", "go ahead"] as const;
 
 export default function (pi: ExtensionAPI) {
   pi.registerShortcut("alt+shift+enter", {
