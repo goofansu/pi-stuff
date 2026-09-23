@@ -10,8 +10,8 @@ packages:
 	pi install .
 	pi install ../pi-subagent
 	pi install ../pi-remote-control
-	pi install https://github.com/earendil-works/pi-transcribe
 	pi install npm:@earendil-works/pi-radius
+	pi install npm:@earendil-works/pi-voice
 
 skills:
 	npx skills add goofansu/skills/skills/engineering -a pi -g -y
