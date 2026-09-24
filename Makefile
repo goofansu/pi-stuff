@@ -1,10 +1,6 @@
-.PHONY: install keybindings packages skills
+.PHONY: install packages skills
 
-install: keybindings packages skills 
-
-keybindings:
-	mkdir -p ~/.pi/agent
-	cp $(CURDIR)/keybindings.json ~/.pi/agent/keybindings.json
+install: packages skills
 
 packages:
 	pi install .
