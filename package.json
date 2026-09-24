@@ -1,11 +1,10 @@
 {
   "name": "@goofansu/pi-stuff",
   "version": "1.0.1",
-  "description": "A collection of personal Pi extensions and themes.",
+  "description": "A collection of personal Pi extensions.",
   "type": "module",
   "files": [
-    "extensions",
-    "themes"
+    "extensions"
   ],
   "keywords": [
     "pi-package"
@@ -13,9 +12,6 @@
   "pi": {
     "extensions": [
       "./extensions"
-    ],
-    "themes": [
-      "./themes"
     ]
   },
   "license": "MIT",
