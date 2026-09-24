@@ -1,6 +1,6 @@
 {
   "name": "@goofansu/pi-stuff",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A collection of personal Pi extensions and themes.",
   "type": "module",
   "files": [
