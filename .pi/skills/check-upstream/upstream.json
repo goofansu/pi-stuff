@@ -10,23 +10,5 @@
     "path": "extensions/files.ts",
     "reviewed": "13bc8f87970bec8830aab0f1c0487d35aa7c0917",
     "remark": "functionally_same through 13bc8f8: upstream's Ctrl+Shift+F removal was already present locally. Remaining intentional removals are 2 keyboard shortcuts, quick-diff, and findLatestFileReference; local also adds a defensive content guard and differs in editor config (zed vs code), keybindings, and visuals"
-  },
-  "extensions/prompt-editor.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/prompt-editor.ts",
-    "reviewed": "4fb0c7d68c87c3612af6289f72b5d90a11a726b8",
-    "remark": "diverged: upstream fixes through 4fb0c7d are applied. Remaining intentional local differences are comma/period cycle shortcuts instead of Ctrl+Space, stronger typing/defensive guards, preservation of mode order and concurrent edits during persistence, support for max thinking effort, and code style."
-  },
-  "extensions/session-breakdown.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/session-breakdown.ts",
-    "reviewed": "ab1e7f3414e4c8aa54a3eda0a3c634c32d3794f0",
-    "remark": "functionally_same through ab1e7f3: intentional local differences are the keybindings manager with keyHint-based close/cancel help, faux-provider filtering, visibleWidth/truncateToWidth correctness for ANSI and wide text, and formatting/style"
-  },
-  "extensions/goal.ts": {
-    "repo": "mitsuhiko/agent-stuff",
-    "path": "extensions/goal.ts",
-    "reviewed": "ac79012425c315ce545a8b2564f866c803d619c8",
-    "remark": "functionally_same: biome formatting (tabs to spaces, line wrapping), replaced non-null assertions with return values from setGoalStatus/setGoal to satisfy noNonNullAssertion lint rule. Local registerTool parameter tokenBudget uses TypeScript-style camelCase instead of upstream token_budget"
   }
 }
