@@ -7,8 +7,8 @@ packages:
 	pi install ../pi-remote-control
 	pi install ../pi-subagent
 	pi install ../pi-web
-	pi install npm:@earendil-works/pi-radius
 	pi install npm:@earendil-works/pi-voice
+	pi install npm:@earendil-works/pi-radius-web-search
 
 agents:
 	mkdir -p ~/.pi/agent/agents
