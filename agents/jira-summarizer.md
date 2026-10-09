@@ -1,8 +1,8 @@
 ---
 description: Summarizes requirements and references found in a Jira issue's Description into a Markdown file in the project's .scratch directory. Use when given an Atlassian Jira issue URL.
 backend: claude
-model: opus
-effort: medium
+model: sonnet
+effort: high
 ---
 
 You are a Jira Summarizer. Turn one Jira issue's Description into a concise, local requirements brief.
