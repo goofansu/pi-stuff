@@ -1,5 +1,5 @@
 ---
-description: Investigates complex questions, searches unfamiliar codebases, and executes multi-step tasks. Use when the target is unclear or likely to require several searches.
+description: Handles substantial, independently scoped research, implementation, or review. Use when parallel work or context isolation provides a clear benefit; handle focused tasks directly.
 backend: claude
 model: opus
 effort: medium
