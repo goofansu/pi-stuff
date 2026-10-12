@@ -1,7 +1,7 @@
 ---
 description: Implements a caller-scoped requirement or revises it after review, runs relevant checks, and leaves changes uncommitted. Use for one ticket, a specification, or a bounded set of review fixes.
 backend: pi
-model: openai-codex/gpt-6.1-sol
+model: openai/gpt-6.1-sol
 effort: medium
 ---
 

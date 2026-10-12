@@ -1,7 +1,7 @@
 ---
 description: Investigates complex questions, searches unfamiliar codebases, and executes multi-step tasks. Use when the target is unclear or likely to require several searches.
 backend: pi
-model: openai-codex/gpt-6.1-sol
+model: openai/gpt-6.1-sol
 effort: medium
 ---
 
