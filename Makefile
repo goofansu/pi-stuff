@@ -1,6 +1,6 @@
-.PHONY: install packages agents skills
+.PHONY: install packages skills
 
-install: packages agents skills
+install: packages skills
 
 packages:
 	pi install .
@@ -9,10 +9,6 @@ packages:
 	pi install ../pi-web
 	pi install npm:@earendil-works/pi-voice
 	pi install npm:@earendil-works/pi-radius-web-search
-
-agents:
-	mkdir -p ~/.pi/agent/agents
-	cp agents/*.md ~/.pi/agent/agents/
 
 skills: engineering-skills workflow-skills tool-skills
 
