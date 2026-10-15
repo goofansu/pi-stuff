@@ -4,7 +4,6 @@ install: packages skills
 
 packages:
 	pi install .
-	pi install ../pi-remote-control
 	pi install ../pi-subagent
 	pi install ../pi-web
 	pi install npm:@earendil-works/pi-voice
