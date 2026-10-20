@@ -8,6 +8,7 @@ agent-stuff
 
 Source: https://github.com/mitsuhiko/agent-stuff
 Files:
+  - .github/workflows/npm-publish.yml
   - extensions/answer.ts
   - extensions/files.ts
   - extensions/trust-github-repos.ts
