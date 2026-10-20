@@ -14,6 +14,12 @@
     - Include structured-input rules when the tool expects a specific command/parameter shape.
     - Include explicit `Do NOT ...` guardrails for unsupported or risky uses.
 
+## Upstream files
+
+- Preserve upstream code, structure, comments, and behavior. Make only explicitly requested changes and formatting required by this repo; avoid unsolicited refactoring or validation changes.
+- Record attribution in `THIRD_PARTY_LICENSES` using its existing convention, rather than adding duplicate attribution comments to the imported file.
+- Do not add local tests for imported third-party files.
+
 ## Skills
 
 - Work in the `skills/` directory when creating or modifying a pi skill.
