@@ -1,11 +1,10 @@
 /**
- * Automatically trust and remember projects whose origin URLs all point to
- * github.com/goofansu repositories, before project-local resources load.
- * Install personally (or load with -e) to participate in project_trust.
+ * Automatically trust checked-out repositories owned by trusted GitHub owners.
  *
- * Adapted from mitsuhiko/agent-stuff's extensions/trust-github-repos.ts;
- * restricted to goofansu, HTTPS/SSH, and exactly two non-empty path segments.
- * See THIRD_PARTY_LICENSES for the Apache-2.0 attribution.
+ * This handles pi's project_trust event before project-local resources are
+ * loaded. If the current directory is inside a git checkout whose origin remote
+ * points at github.com/goofansu/*, trust is
+ * granted and remembered so future sessions do not prompt.
  */
 
 import type {
