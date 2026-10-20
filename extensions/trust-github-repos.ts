@@ -3,7 +3,7 @@
  *
  * This handles pi's project_trust event before project-local resources are
  * loaded. If the current directory is inside a git checkout whose origin remote
- * points at github.com/goofansu/*, trust is
+ * points at github.com/goofansu/* or github.int.exe.xyz/goofansu/*, trust is
  * granted and remembered so future sessions do not prompt.
  */
 
@@ -45,7 +45,11 @@ function parseGitHubRemoteUrl(remoteUrl: string): GitHubRepo | null {
     const parsed = new URL(value);
     if (
       (parsed.protocol !== "https:" && parsed.protocol !== "ssh:") ||
-      parsed.hostname.toLowerCase() !== "github.com"
+      (parsed.hostname.toLowerCase() !== "github.com" &&
+        !(
+          parsed.protocol === "https:" &&
+          parsed.hostname.toLowerCase() === "github.int.exe.xyz"
+        ))
     ) {
       return null;
     }
