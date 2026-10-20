@@ -64,6 +64,23 @@ for (const remote of remoteForms) {
   });
 }
 
+test("preserves upstream percent-decoding for URL remotes", () => {
+  for (const prefix of ["https://", "ssh://git@"]) {
+    assert.equal(
+      isTrustedGitHubRemote(`${prefix}github.com/%67OOFANSU/pi%2Dstuff.git`),
+      true,
+    );
+    for (const path of [
+      "goofansu%2Devil/repo",
+      "%6Fther/repo",
+      "goofansu/repo%",
+      "goofansu%/repo",
+    ]) {
+      assert.equal(isTrustedGitHubRemote(`${prefix}github.com/${path}`), false);
+    }
+  }
+});
+
 test("rejects malformed remotes and unsupported protocols", () => {
   for (const url of [
     "",

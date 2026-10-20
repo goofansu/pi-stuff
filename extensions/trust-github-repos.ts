@@ -13,15 +13,33 @@ import type {
   ProjectTrustEventResult,
 } from "@earendil-works/pi-coding-agent";
 
-export function isTrustedGitHubRemote(remoteUrl: string): boolean {
+const TRUSTED_GITHUB_OWNERS = new Set(["goofansu"]);
+const GIT_TIMEOUT_MS = 5_000;
+
+type GitHubRepo = {
+  owner: string;
+  repo: string;
+};
+
+function trimGitSuffix(repo: string): string {
+  return repo.replace(/\.git$/i, "");
+}
+
+function parseGitHubRemoteUrl(remoteUrl: string): GitHubRepo | null {
   const value = remoteUrl.trim();
+  if (!value) {
+    return null;
+  }
 
   // SCP-like SSH syntax: git@github.com:owner/repo.git
   const scpMatch = value.match(
     /^(?:[^@/:\s]+@)?github\.com:([^/:\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i,
   );
   if (scpMatch) {
-    return scpMatch[1].toLowerCase() === "goofansu";
+    return {
+      owner: scpMatch[1],
+      repo: trimGitSuffix(scpMatch[2]),
+    };
   }
 
   try {
@@ -30,18 +48,26 @@ export function isTrustedGitHubRemote(remoteUrl: string): boolean {
       (parsed.protocol !== "https:" && parsed.protocol !== "ssh:") ||
       parsed.hostname.toLowerCase() !== "github.com"
     ) {
-      return false;
+      return null;
     }
 
     const parts = parsed.pathname.replace(/^\/|\/$/g, "").split("/");
-    return (
-      parts.length === 2 &&
-      parts[0].toLowerCase() === "goofansu" &&
-      parts[1].length > 0
-    );
+    if (parts.length !== 2 || parts.some((part) => !part)) {
+      return null;
+    }
+
+    return {
+      owner: decodeURIComponent(parts[0]),
+      repo: trimGitSuffix(decodeURIComponent(parts[1])),
+    };
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function isTrustedGitHubRemote(remoteUrl: string): boolean {
+  const repo = parseGitHubRemoteUrl(remoteUrl);
+  return !!repo && TRUSTED_GITHUB_OWNERS.has(repo.owner.toLowerCase());
 }
 
 async function getOriginRemoteUrls(
@@ -52,8 +78,9 @@ async function getOriginRemoteUrls(
     const result = await pi.exec(
       "git",
       ["remote", "get-url", "--all", "origin"],
-      { cwd, timeout: 5_000 },
+      { cwd, timeout: GIT_TIMEOUT_MS },
     );
+
     if (result.code !== 0) {
       return [];
     }
