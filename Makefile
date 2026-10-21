@@ -4,7 +4,6 @@ install: packages skills
 
 packages:
 	pi install .
-	pi install ../pi-subagent
 	pi install ../pi-web
 	pi install npm:@earendil-works/pi-voice
 	pi install npm:@earendil-works/pi-radius-web-search
